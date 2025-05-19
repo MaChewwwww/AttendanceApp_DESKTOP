@@ -1,10 +1,15 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from PIL import Image, ImageTk
 import os
 import sys
+import cv2
+import threading
+import time
+import io
+import numpy as np
 
 class RegisterScreen(ttk.Frame):
     def __init__(self, parent, controller):
@@ -16,6 +21,12 @@ class RegisterScreen(ttk.Frame):
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
         self.rowconfigure(0, weight=1)
+        
+        # Camera variables
+        self.camera = None
+        self.is_camera_active = False
+        self.face_image = None
+        self.face_image_data = None
         
         # Create registration form
         self.create_register_form()
@@ -165,7 +176,56 @@ class RegisterScreen(ttk.Frame):
         confirm_password_entry = ttk.Entry(confirm_password_frame, textvariable=self.confirm_password_var, show="•")
         confirm_password_entry.pack(side="left", padx=5, fill="x", expand=True)
         
-        # Buttons frame
+        # Face Image Section
+        face_frame = ttk.LabelFrame(scrollable_frame, text="Face Registration", padding=10)
+        face_frame.pack(fill="x", pady=10, padx=5)
+        
+        # Create a frame for the webcam feed/image preview
+        self.face_preview_frame = ttk.Frame(face_frame, width=320, height=240)
+        self.face_preview_frame.pack(pady=10)
+        
+        # Default preview label
+        self.preview_label = ttk.Label(
+            self.face_preview_frame, 
+            text="No face image captured",
+            font=("TkDefaultFont", 10),
+            bootstyle="secondary"
+        )
+        self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
+        
+        # Buttons for face capture
+        face_buttons_frame = ttk.Frame(face_frame)
+        face_buttons_frame.pack(fill="x", pady=5)
+        
+        self.camera_button = ttk.Button(
+            face_buttons_frame,
+            text="Open Camera",
+            command=self.toggle_camera,
+            bootstyle="info",
+            width=15
+        )
+        self.camera_button.pack(side="left", padx=5)
+        
+        self.capture_button = ttk.Button(
+            face_buttons_frame,
+            text="Capture",
+            command=self.capture_face,
+            bootstyle="success",
+            width=15,
+            state="disabled"
+        )
+        self.capture_button.pack(side="left", padx=5)
+        
+        self.browse_button = ttk.Button(
+            face_buttons_frame,
+            text="Browse...",
+            command=self.browse_face_image,
+            bootstyle="secondary",
+            width=15
+        )
+        self.browse_button.pack(side="left", padx=5)
+        
+        # Buttons frame for registration
         buttons_frame = ttk.Frame(scrollable_frame)
         buttons_frame.pack(pady=20)
         
@@ -192,6 +252,278 @@ class RegisterScreen(ttk.Frame):
         # Set focus to first name field
         first_name_entry.focus_set()
         
+    def toggle_camera(self):
+        """Toggle the camera on/off"""
+        if self.is_camera_active:
+            self.stop_camera()
+            self.camera_button.configure(text="Open Camera")
+            self.capture_button.configure(state="disabled")
+        else:
+            if self.start_camera():
+                self.camera_button.configure(text="Close Camera")
+                self.capture_button.configure(state="normal")
+            
+    def start_camera(self):
+        """Start the camera feed"""
+        try:
+            self.camera = cv2.VideoCapture(0)  # Use default camera (0)
+            if not self.camera.isOpened():
+                messagebox.showerror("Camera Error", "Could not open camera. Please check your camera connection.")
+                return False
+                
+            self.is_camera_active = True
+            
+            # Create a label for the camera feed if it doesn't exist
+            if hasattr(self, 'preview_label'):
+                self.preview_label.destroy()
+            
+            self.camera_label = ttk.Label(self.face_preview_frame)
+            self.camera_label.place(x=0, y=0)
+            
+            # Start the video feed in a separate thread
+            self.camera_thread = threading.Thread(target=self.update_camera_feed)
+            self.camera_thread.daemon = True
+            self.camera_thread.start()
+            
+            return True
+        except Exception as e:
+            messagebox.showerror("Camera Error", f"Error starting camera: {str(e)}")
+            return False
+            
+    def update_camera_feed(self):
+        """Update the camera feed in the UI"""
+        while self.is_camera_active:
+            ret, frame = self.camera.read()
+            if ret:
+                # Convert to RGB for PIL
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                
+                # Convert to PIL Image
+                img = Image.fromarray(frame_rgb)
+                
+                # Resize to fit the preview frame
+                img = img.resize((320, 240), Image.LANCZOS)
+                
+                # Convert to PhotoImage
+                img_tk = ImageTk.PhotoImage(image=img)
+                
+                # Update label
+                if hasattr(self, 'camera_label') and self.camera_label.winfo_exists():
+                    self.camera_label.configure(image=img_tk)
+                    self.camera_label.image = img_tk  # Keep a reference
+            
+            time.sleep(0.03)  # ~30 FPS
+            
+    def stop_camera(self):
+        """Stop the camera feed"""
+        self.is_camera_active = False
+        if hasattr(self, 'camera_thread'):
+            self.camera_thread.join(0.2)  # Wait briefly for thread to finish
+            
+        if self.camera and self.camera.isOpened():
+            self.camera.release()
+            self.camera = None
+            
+        # Clear camera label if it exists and show preview label
+        if hasattr(self, 'camera_label') and self.camera_label.winfo_exists():
+            self.camera_label.destroy()
+            
+        # Show preview if we have an image
+        if self.face_image:
+            self.show_face_preview(self.face_image)
+        else:
+            self.preview_label = ttk.Label(
+                self.face_preview_frame, 
+                text="No face image captured",
+                font=("TkDefaultFont", 10),
+                bootstyle="secondary"
+            )
+            self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
+            
+    def capture_face(self):
+        """Capture the current camera frame as the face image"""
+        if not self.camera or not self.is_camera_active:
+            return
+            
+        # Capture the current frame
+        ret, frame = self.camera.read()
+        if ret:
+            # Convert to RGB for PIL
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            
+            # Validate face before saving
+            validation_result = self.validate_face_image(frame)
+            if not validation_result[0]:
+                messagebox.showwarning("Face Validation Failed", validation_result[1])
+                return
+                
+            # Save to PIL Image
+            self.face_image = Image.fromarray(frame_rgb)
+            
+            # Convert to bytes for database storage
+            img_byte_arr = io.BytesIO()
+            self.face_image.save(img_byte_arr, format='PNG')
+            self.face_image_data = img_byte_arr.getvalue()
+            
+            # Check file size
+            if len(self.face_image_data) > 5 * 1024 * 1024:  # 5MB in bytes
+                messagebox.showwarning(
+                    "Image Too Large", 
+                    "The captured image exceeds the 5MB limit. Please try again with a smaller resolution."
+                )
+                self.face_image = None
+                self.face_image_data = None
+                return
+            
+            # Stop the camera
+            self.stop_camera()
+            
+            # Show success message
+            messagebox.showinfo("Success", "Face image captured successfully!")
+            
+            # Update UI
+            self.camera_button.configure(text="Open Camera")
+            
+            # Show the captured image
+            self.show_face_preview(self.face_image)
+            
+    def show_face_preview(self, image):
+        """Show the face image preview"""
+        # Clear any existing preview
+        for widget in self.face_preview_frame.winfo_children():
+            widget.destroy()
+            
+        # Resize image to fit the preview area
+        preview_img = image.copy()
+        preview_img = preview_img.resize((320, 240), Image.LANCZOS)
+        
+        # Convert to PhotoImage
+        photo = ImageTk.PhotoImage(preview_img)
+        
+        # Create label to show the image
+        preview_label = ttk.Label(self.face_preview_frame, image=photo)
+        preview_label.image = photo  # Keep a reference
+        preview_label.place(x=0, y=0)
+
+    def validate_face_image(self, image):
+        """
+        Validate face image for registration:
+        1. Check if a face is detected
+        2. Check if only one face is present
+        3. Check if the person isn't wearing sunglasses
+        
+        Returns: (success, message)
+        """
+        try:
+            # Load face detection model
+            face_cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+            eye_cascade_path = cv2.data.haarcascades + 'haarcascade_eye.xml'
+            
+            if not os.path.exists(face_cascade_path) or not os.path.exists(eye_cascade_path):
+                # If cascade files not found, return success but show a warning
+                print("Warning: Face detection cascades not found. Skipping face validation.")
+                return (True, "Face validation skipped")
+                
+            face_cascade = cv2.CascadeClassifier(face_cascade_path)
+            eye_cascade = cv2.CascadeClassifier(eye_cascade_path)
+            
+            # Convert to grayscale for detection
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            
+            # Detect faces
+            faces = face_cascade.detectMultiScale(
+                gray,
+                scaleFactor=1.1,
+                minNeighbors=5,
+                minSize=(30, 30)
+            )
+            
+            # Check if at least one face is detected
+            if len(faces) == 0:
+                return (False, "No face detected. Please ensure your face is clearly visible.")
+                
+            # Check if only one face is present
+            if len(faces) > 1:
+                return (False, "Multiple faces detected. Please ensure only your face is in the image.")
+                
+            # Check for eyes to detect if sunglasses are being worn
+            (x, y, w, h) = faces[0]
+            roi_gray = gray[y:y+h, x:x+w]
+            
+            eyes = eye_cascade.detectMultiScale(
+                roi_gray,
+                scaleFactor=1.1,
+                minNeighbors=5,
+                minSize=(30, 30)
+            )
+            
+            if len(eyes) < 2:
+                return (False, "Eyes not clearly visible. Please remove sunglasses or any accessories covering your face.")
+                
+            # All checks passed
+            return (True, "Face validation successful")
+            
+        except Exception as e:
+            print(f"Face validation error: {str(e)}")
+            # In case of errors, we'll allow the image but log the error
+            return (True, "Face validation skipped due to an error")
+        
+            
+    def browse_face_image(self):
+        """Allow user to select a face image from file system"""
+        # Stop camera if it's running
+        if self.is_camera_active:
+            self.stop_camera()
+            self.camera_button.configure(text="Open Camera")
+            
+        # Open file dialog
+        filetypes = [
+            ("Image files", "*.png;*.jpg;*.jpeg;*.bmp"),
+            ("All files", "*.*")
+        ]
+        filename = filedialog.askopenfilename(filetypes=filetypes, title="Select Face Image")
+        
+        if filename:
+            try:
+                # Check file size first (5MB limit)
+                file_size = os.path.getsize(filename)
+                if file_size > 5 * 1024 * 1024:  # 5MB in bytes
+                    messagebox.showwarning(
+                        "File Too Large", 
+                        "The selected image exceeds the 5MB limit. Please select a smaller image."
+                    )
+                    return
+                
+                # Load the image
+                image = Image.open(filename)
+                
+                # Convert to OpenCV format for face validation
+                opencv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+                
+                # Validate face
+                validation_result = self.validate_face_image(opencv_image)
+                if not validation_result[0]:
+                    messagebox.showwarning("Face Validation Failed", validation_result[1])
+                    return
+                
+                # Resize if too large
+                max_size = (800, 600)
+                image.thumbnail(max_size, Image.LANCZOS)
+                
+                # Save as face image
+                self.face_image = image
+                
+                # Convert to bytes for database storage
+                img_byte_arr = io.BytesIO()
+                image.save(img_byte_arr, format='PNG')
+                self.face_image_data = img_byte_arr.getvalue()
+                
+                # Show the image preview
+                self.show_face_preview(image)
+                
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not load image: {str(e)}")
+                
     def handle_register(self):
         """Handle registration form submission"""
         # Get form values
@@ -212,18 +544,25 @@ class RegisterScreen(ttk.Frame):
             messagebox.showwarning("Registration Failed", "Passwords do not match.")
             return
             
+        # Check if face image is provided
+        if not self.face_image_data:
+            if not messagebox.askyesno("Face Image Missing", 
+                                     "No face image provided. This is recommended for attendance tracking. Continue anyway?"):
+                return
+            
         # Display a loading indicator
         self.config(cursor="wait")
         self.update_idletasks()
         
-        # Attempt registration (implement this method in db_manager.py)
+        # Attempt registration
         success, result = self.db_manager.register(
             first_name=first_name,
             middle_name=middle_name if middle_name else None,
             last_name=last_name,
             email=email,
             student_number=student_number,
-            password=password
+            password=password,
+            face_image=self.face_image_data
         )
         
         # Reset cursor
@@ -240,4 +579,13 @@ class RegisterScreen(ttk.Frame):
             
     def handle_back(self):
         """Go back to login screen"""
+        # Clean up camera resources if active
+        if self.is_camera_active:
+            self.stop_camera()
+            
         self.controller.show_login()
+        
+    def on_closing(self):
+        """Clean up resources when closing"""
+        if self.is_camera_active:
+            self.stop_camera()

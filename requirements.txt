@@ -4,3 +4,7 @@ python-dotenv
 mysql-connector-python
 opencv-python
 face_recognition
+scikit-image
+sqlalchemy
+pydantic
+numpy

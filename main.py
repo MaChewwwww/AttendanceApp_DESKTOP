@@ -11,7 +11,7 @@ from app.config import THEME_NAME, APP_NAME, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW
 from app.db_manager import DatabaseManager
 from app.ui.login import LoginScreen
 from app.ui.register import RegisterScreen
-from app.ui.dashboard import Dashboard
+from app.ui.student.studentdashboard import StudentDashboard
 
 class AttendanceApp(ttk.Window):
     def __init__(self):
@@ -59,19 +59,50 @@ class AttendanceApp(ttk.Window):
         register_frame.pack(fill="both", expand=True)
         
     def show_dashboard(self):
-        # Remove any existing frames
-        for widget in self.container.winfo_children():
-            widget.destroy()
+        """Show the appropriate dashboard based on user role"""
+        # Check if user is logged in
+        if not self.user_data:
+            self.show_login()
+            return
             
-        # Create dashboard frame
-        dashboard_frame = Dashboard(self.container, self)
-        dashboard_frame.pack(fill="both", expand=True)
+        # Determine which dashboard to show based on user role
+        role = self.user_data.get('role', '').lower()
+        
+        if role == 'admin':
+            # TODO: Implement admin dashboard later
+            pass
+        else:
+            # Default to student dashboard
+            self.show_student_dashboard()
         
     def on_closing(self):
         """Clean up resources before closing"""
         if self.db_manager:
             self.db_manager.close()
         self.quit()
+
+    def show_student_dashboard(self):
+        """Show the student dashboard"""
+        # Check login state
+        if not hasattr(self, 'user_data') or not self.user_data:
+            self.show_login()
+            return
+        
+        # Remove any existing frames
+        for widget in self.container.winfo_children():
+            widget.destroy()
+            
+        # Create dashboard frame
+        dashboard_frame = StudentDashboard(self.container, self)
+        dashboard_frame.pack(fill="both", expand=True)
+
+    def logout(self):
+        """Handle user logout"""
+        # Clear user data
+        self.user_data = None
+        
+        # Show login screen
+        self.show_login()
 
 if __name__ == "__main__":
     app = AttendanceApp()

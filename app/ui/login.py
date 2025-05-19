@@ -71,7 +71,7 @@ class LoginScreen(ttk.Frame):
         # Title
         title_label = ttk.Label(
             form_frame, 
-            text="Student Login", 
+            text="Login", 
             font=("TkDefaultFont", 16, "bold")
         )
         title_label.pack(pady=(0, 20))
@@ -156,8 +156,15 @@ class LoginScreen(ttk.Frame):
                 f"Welcome {result['first_name']} {result['last_name']}!"
             )
             
-            # Navigate to dashboard
-            self.controller.show_dashboard()
+            # Navigate based on role
+            if result.get('role') == "Student":
+                self.controller.show_student_dashboard()
+            elif result.get('role') == "Admin":
+                # Will be implemented later
+                messagebox.showinfo("Not Implemented", "Admin dashboard will be available soon.")
+            else:
+                # Default to student dashboard for now
+                self.controller.show_student_dashboard()
         else:
             messagebox.showerror("Login Failed", result)
             

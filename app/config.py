@@ -4,11 +4,14 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# Database connection settings
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_USER = os.getenv("DB_USER", "root")
-DB_PASS = os.getenv("DB_PASS", "")
-DB_NAME = os.getenv("DB_NAME", "AttendanceApp")
+# SQLite Database settings - using external database
+DEFAULT_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "attendance_app.db")
+DB_FILE = os.environ.get("DB_FILE", DEFAULT_DB_PATH)
+
+# Make sure parent directory exists
+db_dir = os.path.dirname(DB_FILE)
+if not os.path.exists(db_dir):
+    os.makedirs(db_dir, exist_ok=True)
 
 # App settings
 APP_NAME = "Attendance App"
@@ -23,3 +26,4 @@ THEME_NAME = "darkly"  # ttkbootstrap theme
 
 # Paths
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
