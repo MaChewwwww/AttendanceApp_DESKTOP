@@ -54,7 +54,7 @@ class Section(Base):
     __tablename__ = "sections"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
-    course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
+    course_id = Column(Integer, ForeignKey("programs.id"), nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
@@ -74,13 +74,14 @@ class AttendanceLog(Base):
     __tablename__ = "attendance_logs"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
-    section_id = Column(Integer, ForeignKey("sections.id"), nullable=False)
+    assigned_course_id = Column(Integer, ForeignKey("assigned_courses.id"), nullable=False)
     date = Column(DateTime, nullable=False)
     image = Column(LargeBinary, nullable=True)  # Changed from LONGBLOB to LargeBinary
     status = Column(String(50), nullable=False)  # e.g., "present", "absent", "late"
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
+
     
     
 class LoginRequest(BaseModel):
