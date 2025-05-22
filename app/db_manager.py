@@ -3,7 +3,14 @@ import bcrypt
 import base64
 import os
 from datetime import datetime
-from .config import DB_FILE, UPLOAD_DIR
+from .config import DB_PATH
+
+import sqlite3
+import bcrypt
+import base64
+import os
+from datetime import datetime
+from .config import DB_PATH, UPLOAD_DIR  # Changed from DB_FILE to DB_PATH
 
 class DatabaseManager:
     def __init__(self):
@@ -13,10 +20,10 @@ class DatabaseManager:
     def connect(self):
         """Create database connection"""
         try:
-            self.connection = sqlite3.connect(DB_FILE)
+            self.connection = sqlite3.connect(DB_PATH)  # Changed from DB_FILE to DB_PATH
             # Configure SQLite to return rows as dictionaries
             self.connection.row_factory = sqlite3.Row
-            print(f"SQLite connection established: {DB_FILE}")
+            print(f"SQLite connection established: {DB_PATH}")
         except sqlite3.Error as e:
             print(f"Error connecting to SQLite: {e}")
             
@@ -29,6 +36,7 @@ class DatabaseManager:
             cursor.close()
         except sqlite3.Error as e:
             print(f"SQLite connection lost: {e}")
+            self.connect()
             self.connect()
     
     def register(self, first_name, middle_name, last_name, email, student_number, password, face_image=None):
