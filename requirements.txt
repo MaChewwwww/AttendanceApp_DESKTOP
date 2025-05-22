@@ -8,4 +8,4 @@ scikit-image
 sqlalchemy
 pydantic
 numpy
-brcypt
+bcrypt
