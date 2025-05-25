@@ -41,8 +41,8 @@ python main.py
 
 
 
-##🎨 System Design Overview
-###🧩 Components & Tech Stack
+## 🎨 System Design Overview
+### 🧩 Components & Tech Stack
 1. Web App	Student Portal
 - ASP.NET MVC, Razor, Tailwind, JS
 2. Desktop App Admin System	
@@ -57,14 +57,14 @@ python main.py
 - Token-Based API Auth, ASP.NET Sessions
 
 
-##📲 Features
-###✅ Web App (Student Portal)
+## 📲 Features
+### ✅ Web App (Student Portal)
 - Login and face-based attendance submission
 - Visual dashboard with charts showing attendance trends
 - Real-time feedback on absences
 - Personalized analytics (per subject/week)
 
-###🖥 Desktop App (Admin/Faculty)
+### 🖥 Desktop App (Admin/Faculty)
 - Admin/staff login
 - Manage courses, sections, and student records
 - Access and validate attendance logs
