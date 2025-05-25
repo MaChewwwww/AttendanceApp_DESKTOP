@@ -26,7 +26,7 @@ class AttendanceApp:
         
         # Configure window
         self.auth_window.title(APP_NAME)
-        self.auth_window.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
+        self.auth_window.geometry(f"1000x600")
         self.auth_window.minsize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         
         # Center window on screen
@@ -77,7 +77,7 @@ class AttendanceApp:
         # Create a new window for the dashboard
         self.dashboard_window = ttk.Window(themename=THEME_NAME)
         self.dashboard_window.title(f"{APP_NAME} - Dashboard")
-        self.dashboard_window.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
+        self.dashboard_window.geometry(f"1280x720")
         self.dashboard_window.minsize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         
         # Set up close handler
