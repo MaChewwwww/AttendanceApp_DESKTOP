@@ -70,7 +70,7 @@ python main.py
 - Access and validate attendance logs
 - Manual override for special cases
 
-###🌐 Web API (Backend)
+### 🌐 Web API (Backend)
 - RESTful endpoints for login, attendance, and data sync
 - Fast and scalable interface for cross-platform support
 - Secured with token-based authentication
