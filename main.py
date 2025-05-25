@@ -29,8 +29,8 @@ class AttendanceApp:
         
         # Configure window
         self.auth_window.title(APP_NAME)
-        self.auth_window.geometry("1000x600")
-        self.auth_window.minsize(1000, 600)
+        self.auth_window.geometry(f"1000x600")
+        self.auth_window.minsize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         
         # Center window on screen
         screen_width = self.auth_window.winfo_screenwidth()
@@ -80,7 +80,7 @@ class AttendanceApp:
         # Create a new CustomTkinter window for the dashboard
         self.dashboard_window = ctk.CTkToplevel()
         self.dashboard_window.title(f"{APP_NAME} - Dashboard")
-        self.dashboard_window.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
+        self.dashboard_window.geometry(f"1280x720")
         self.dashboard_window.minsize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         
         # Configure appearance
