@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
-import ttkbootstrap as ttk
-from ttkbootstrap.constants import *
+import customtkinter as ctk
 from PIL import Image, ImageTk
 import cv2
 import io
@@ -11,7 +10,7 @@ import base64
 from io import BytesIO
 import numpy as np
 
-class StudentDashboard(ttk.Frame):
+class StudentDashboard(ctk.CTkFrame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
@@ -19,8 +18,8 @@ class StudentDashboard(ttk.Frame):
         self.user_data = controller.user_data
         
         # Configure the grid
-        self.columnconfigure(0, weight=1)
-        self.rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
         
         # Camera variables
         self.camera = None
@@ -31,91 +30,99 @@ class StudentDashboard(ttk.Frame):
         
     def create_dashboard(self):
         """Create a simple dashboard with logout button"""
-        main_frame = ttk.Frame(self)
-        main_frame.grid(row=0, column=0, sticky="nsew")
-        main_frame.columnconfigure(0, weight=1)
-        main_frame.rowconfigure(1, weight=1)
+        main_frame = ctk.CTkFrame(self)
+        main_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        main_frame.grid_columnconfigure(0, weight=1)
+        main_frame.grid_rowconfigure(1, weight=1)
         
         # Header frame
-        header_frame = ttk.Frame(main_frame, bootstyle="primary", padding=10)
-        header_frame.grid(row=0, column=0, sticky="ew")
-        header_frame.columnconfigure(1, weight=1)
+        header_frame = ctk.CTkFrame(main_frame, height=80)
+        header_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 0))
+        header_frame.grid_columnconfigure(1, weight=1)
         
         # Welcome message
         name = f"{self.user_data['first_name']} {self.user_data['last_name']}"
-        welcome_label = ttk.Label(
+        welcome_label = ctk.CTkLabel(
             header_frame,
             text=f"Welcome, {name}!",
-            font=("TkDefaultFont", 14, "bold"),
-            bootstyle="inverse-primary"
+            font=ctk.CTkFont(size=18, weight="bold")
         )
-        welcome_label.grid(row=0, column=0, padx=10)
+        welcome_label.grid(row=0, column=0, padx=20, pady=20)
         
         # Logout button
-        logout_button = ttk.Button(
+        logout_button = ctk.CTkButton(
             header_frame,
             text="Logout",
             command=self.handle_logout,
-            bootstyle="outline-light"
+            width=100,
+            height=35
         )
-        logout_button.grid(row=0, column=2, padx=10)
+        logout_button.grid(row=0, column=2, padx=20, pady=20)
         
         # Content frame
-        content_frame = ttk.Frame(main_frame, padding=20)
-        content_frame.grid(row=1, column=0, sticky="nsew")
-        content_frame.columnconfigure(0, weight=1)
-        content_frame.rowconfigure(0, weight=1)
+        content_frame = ctk.CTkFrame(main_frame)
+        content_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+        content_frame.grid_columnconfigure(0, weight=1)
+        content_frame.grid_rowconfigure(0, weight=1)
         
         # Face validation section
-        validation_frame = ttk.LabelFrame(content_frame, text="Face Validation", padding=20)
-        validation_frame.grid(row=0, column=0, sticky="nsew", pady=20)
+        validation_frame = ctk.CTkFrame(content_frame)
+        validation_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
+        validation_frame.grid_columnconfigure(0, weight=1)
+        
+        # Title label
+        title_label = ctk.CTkLabel(
+            validation_frame,
+            text="Face Validation",
+            font=ctk.CTkFont(size=16, weight="bold")
+        )
+        title_label.grid(row=0, column=0, pady=(20, 10))
         
         # Instructions
-        instruction_label = ttk.Label(
+        instruction_label = ctk.CTkLabel(
             validation_frame,
             text="Use the camera to validate your identity and record attendance",
-            font=("TkDefaultFont", 12)
+            font=ctk.CTkFont(size=12)
         )
-        instruction_label.pack(pady=(0, 20))
+        instruction_label.grid(row=1, column=0, pady=(0, 20))
         
         # Camera container
-        self.camera_container = ttk.Frame(validation_frame, width=640, height=480, relief="solid")
-        self.camera_container.pack(pady=10)
-        self.camera_container.pack_propagate(False)  # Don't shrink
+        self.camera_container = ctk.CTkFrame(validation_frame, width=640, height=480)
+        self.camera_container.grid(row=2, column=0, pady=10)
+        self.camera_container.grid_propagate(False)  # Don't shrink
         
         # Camera placeholder
-        self.camera_placeholder = ttk.Label(
+        self.camera_placeholder = ctk.CTkLabel(
             self.camera_container,
             text="Camera will appear here\nClick 'Start Camera' to begin",
-            font=("TkDefaultFont", 12),
-            bootstyle="secondary"
+            font=ctk.CTkFont(size=12)
         )
         self.camera_placeholder.place(relx=0.5, rely=0.5, anchor="center")
         
         # Button frame
-        button_frame = ttk.Frame(validation_frame)
-        button_frame.pack(pady=20)
+        button_frame = ctk.CTkFrame(validation_frame, fg_color="transparent")
+        button_frame.grid(row=3, column=0, pady=20)
         
         # Start camera button
-        self.camera_button = ttk.Button(
+        self.camera_button = ctk.CTkButton(
             button_frame,
             text="Start Camera",
             command=self.toggle_camera,
-            bootstyle="info",
-            width=15
+            width=150,
+            height=40
         )
-        self.camera_button.pack(side="left", padx=5)
+        self.camera_button.pack(side="left", padx=10)
         
         # Validate button
-        self.validate_button = ttk.Button(
+        self.validate_button = ctk.CTkButton(
             button_frame,
             text="Validate Face",
             command=self.validate_face,
-            bootstyle="success",
-            width=15,
+            width=150,
+            height=40,
             state="disabled"
         )
-        self.validate_button.pack(side="left", padx=5)
+        self.validate_button.pack(side="left", padx=10)
     
     def toggle_camera(self):
         """Toggle camera on/off"""
@@ -139,7 +146,7 @@ class StudentDashboard(ttk.Frame):
             self.is_camera_active = True
             
             # Create a label for the camera feed
-            self.camera_label = ttk.Label(self.camera_container)
+            self.camera_label = tk.Label(self.camera_container)
             self.camera_label.place(relx=0.5, rely=0.5, anchor="center")
             
             # Hide placeholder
@@ -233,7 +240,7 @@ class StudentDashboard(ttk.Frame):
             similarity = self.compare_images(stored_gray_resized, current_gray)
             
             # Display a loading indicator
-            self.config(cursor="wait")
+            self.configure(cursor="wait")
             self.update_idletasks()
             
             # Threshold for similarity (adjust as needed)
@@ -258,7 +265,7 @@ class StudentDashboard(ttk.Frame):
                 )
                 
                 # Reset cursor
-                self.config(cursor="")
+                self.configure(cursor="")
                 
                 if success:
                     messagebox.showinfo(
@@ -274,7 +281,7 @@ class StudentDashboard(ttk.Frame):
                     messagebox.showerror("Error", f"Failed to record attendance: {result}")
             else:
                 # Reset cursor
-                self.config(cursor="")
+                self.configure(cursor="")
                 messagebox.showwarning(
                     "Face Validation Failed",
                     "Face does not match the registered image. Please try again."
@@ -282,7 +289,7 @@ class StudentDashboard(ttk.Frame):
                 
         except Exception as e:
             # Reset cursor
-            self.config(cursor="")
+            self.configure(cursor="")
             messagebox.showerror("Error", f"Error during face validation: {str(e)}")
     
     def compare_images(self, img1, img2):

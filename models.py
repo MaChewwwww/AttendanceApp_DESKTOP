@@ -62,10 +62,19 @@ class Assigned_Course(Base):
     __tablename__ = "assigned_courses"
     id = Column(Integer, primary_key=True, index=True)
     course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
-    faculty_id = Column(Integer, ForeignKey("faculties.id"), nullable=False)
     section_id = Column(Integer, ForeignKey("sections.id"), nullable=False)
     semester = Column(String(50), nullable=False)
     school_year = Column(String(50), nullable=False)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
+class Schedule(Base):
+    __tablename__ = "schedules"
+    id = Column(Integer, primary_key=True, index=True)
+    assigned_course_id = Column(Integer, ForeignKey("assigned_courses.id"), nullable=False)
+    day_of_week = Column(String(50), nullable=False)  # e.g., "Monday", "Tuesday"
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 

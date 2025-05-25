@@ -1,9 +1,12 @@
 import tkinter as tk
-import ttkbootstrap as ttk
-from ttkbootstrap.constants import *
+import customtkinter as ctk
 import os
 import sys
 from tkinter import messagebox
+
+# Set CustomTkinter appearance
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("dark-blue")
 
 # Add parent directory to path so we can import our modules
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -26,8 +29,8 @@ class AttendanceApp:
         
         # Configure window
         self.auth_window.title(APP_NAME)
-        self.auth_window.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
-        self.auth_window.minsize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
+        self.auth_window.geometry("1000x600")
+        self.auth_window.minsize(1000, 600)
         
         # Center window on screen
         screen_width = self.auth_window.winfo_screenwidth()
@@ -74,18 +77,21 @@ class AttendanceApp:
             
     def show_student_dashboard(self):
         """Show the student dashboard in a new window"""
-        # Create a new window for the dashboard
-        self.dashboard_window = ttk.Window(themename=THEME_NAME)
+        # Create a new CustomTkinter window for the dashboard
+        self.dashboard_window = ctk.CTkToplevel()
         self.dashboard_window.title(f"{APP_NAME} - Dashboard")
         self.dashboard_window.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
         self.dashboard_window.minsize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
+        
+        # Configure appearance
+        self.dashboard_window.configure(fg_color="#2b2b3b")
         
         # Set up close handler
         self.dashboard_window.protocol("WM_DELETE_WINDOW", self.on_dashboard_closing)
         
         # Create container frame
-        container = ttk.Frame(self.dashboard_window)
-        container.pack(fill="both", expand=True)
+        container = ctk.CTkFrame(self.dashboard_window, fg_color="transparent")
+        container.pack(fill="both", expand=True, padx=10, pady=10)
         
         # Create dashboard frame
         dashboard = StudentDashboard(container, self)
@@ -98,6 +104,10 @@ class AttendanceApp:
         x = (self.dashboard_window.winfo_screenwidth() - width) // 2
         y = (self.dashboard_window.winfo_screenheight() - height) // 2
         self.dashboard_window.geometry(f"+{x}+{y}")
+        
+        # Make the dashboard window modal to the auth window
+        self.dashboard_window.transient(self.auth_window)
+        self.dashboard_window.grab_set()
         
         # Show the window
         self.dashboard_window.deiconify()
