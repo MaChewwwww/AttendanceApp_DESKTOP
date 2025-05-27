@@ -13,8 +13,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app.config import THEME_NAME, APP_NAME, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT
 from app.db_manager import DatabaseManager
-from app.ui.auth import LoginRegister
+from app.ui.auth.auth import LoginRegister
 from app.ui.student.studentdashboard import StudentDashboard
+from app.ui.auth.initial_screen import InitialScreen
 
 class AttendanceApp:
     """Main application controller for the Attendance App"""
@@ -24,11 +25,40 @@ class AttendanceApp:
         self.db_manager = DatabaseManager()
         self.user_data = None
         
+        # Create and configure initial screen
+        self.initial_screen = InitialScreen(
+            on_student_click=self.show_student_auth,
+            on_faculty_click=self.show_faculty_auth
+        )
+        
+        # Configure window
+        self.initial_screen.title(APP_NAME)
+        self.initial_screen.geometry(f"1000x600")
+        self.initial_screen.minsize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
+        
+        # Center window on screen
+        screen_width = self.initial_screen.winfo_screenwidth()
+        screen_height = self.initial_screen.winfo_screenheight()
+        x = (screen_width - WINDOW_WIDTH) // 2
+        y = (screen_height - WINDOW_HEIGHT) // 2
+        self.initial_screen.geometry(f"+{x}+{y}")
+        
+        # Set up close handler
+        self.initial_screen.protocol("WM_DELETE_WINDOW", self.on_closing)
+        
+        # Initialize auth and dashboard windows
+        self.auth_window = None
+        self.dashboard_window = None
+        
+    def show_student_auth(self):
+        """Show student authentication window"""
+        self.initial_screen.withdraw()
+        
         # Create and configure login/registration window
         self.auth_window = LoginRegister(self.db_manager)
         
         # Configure window
-        self.auth_window.title(APP_NAME)
+        self.auth_window.title(f"{APP_NAME} - Student Login")
         self.auth_window.geometry(f"1000x600")
         self.auth_window.minsize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         
@@ -43,10 +73,22 @@ class AttendanceApp:
         self.auth_window.set_login_success_callback(self.on_login_success)
         
         # Set up close handler
-        self.auth_window.protocol("WM_DELETE_WINDOW", self.on_closing)
+        self.auth_window.protocol("WM_DELETE_WINDOW", self.on_auth_closing)
         
-        # Initialize student dashboard window reference
-        self.dashboard_window = None
+        # Show the window
+        self.auth_window.deiconify()
+        
+    def show_faculty_auth(self):
+        """Show faculty authentication window"""
+        # TODO: Implement faculty authentication
+        messagebox.showinfo("Coming Soon", "Faculty authentication will be available soon!")
+        
+    def on_auth_closing(self):
+        """Handle auth window closing"""
+        if self.auth_window:
+            self.auth_window.destroy()
+            self.auth_window = None
+        self.initial_screen.deiconify()
         
     def on_login_success(self, user_data):
         """Callback for when login is successful"""
@@ -63,7 +105,8 @@ class AttendanceApp:
             return
         
         # Hide the auth window
-        self.auth_window.withdraw()
+        if self.auth_window:
+            self.auth_window.withdraw()
         
         # Determine which dashboard to show based on user role
         role = self.user_data.get('role', '').lower()
@@ -106,7 +149,8 @@ class AttendanceApp:
         self.dashboard_window.geometry(f"+{x}+{y}")
         
         # Make the dashboard window modal to the auth window
-        self.dashboard_window.transient(self.auth_window)
+        if self.auth_window:
+            self.dashboard_window.transient(self.auth_window)
         self.dashboard_window.grab_set()
         
         # Show the window
@@ -122,9 +166,8 @@ class AttendanceApp:
             self.dashboard_window.destroy()
             self.dashboard_window = None
         
-        # Show login screen again
-        self.auth_window.deiconify()
-        self.auth_window.show_login()
+        # Show initial screen again
+        self.initial_screen.deiconify()
         
     def on_dashboard_closing(self):
         """Handle dashboard window closing"""
@@ -151,14 +194,16 @@ class AttendanceApp:
         # Close all windows
         if self.dashboard_window:
             self.dashboard_window.destroy()
+        if self.auth_window:
+            self.auth_window.destroy()
             
-        # Destroy auth window and exit
-        self.auth_window.quit()
-        self.auth_window.destroy()
+        # Destroy initial screen and exit
+        self.initial_screen.quit()
+        self.initial_screen.destroy()
         
     def run(self):
         """Start the application"""
-        self.auth_window.mainloop()
+        self.initial_screen.mainloop()
 
 if __name__ == "__main__":
     app = AttendanceApp()
