@@ -16,7 +16,7 @@ from .register import RegisterForm
 ctk.set_appearance_mode("dark")  
 ctk.set_default_color_theme("dark-blue")  
 
-class LoginRegister(ctk.CTk):
+class LoginRegister(ctk.CTkToplevel):  # Changed from CTk to CTkToplevel
     def __init__(self, db_manager=None):
         super().__init__()
         
@@ -123,5 +123,8 @@ class LoginRegister(ctk.CTk):
 
 # For testing as standalone
 if __name__ == "__main__":
+    # For standalone testing, we need a root window first
+    root = ctk.CTk()
+    root.withdraw()  # Hide the root window
     app = LoginRegister()
     app.mainloop()

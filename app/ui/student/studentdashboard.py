@@ -145,9 +145,15 @@ class StudentDashboard(ctk.CTkFrame):
                 
             self.is_camera_active = True
             
-            # Create a label for the camera feed
-            self.camera_label = tk.Label(self.camera_container)
-            self.camera_label.place(relx=0.5, rely=0.5, anchor="center")
+            # Create a canvas for the camera feed instead of label
+            self.camera_canvas = tk.Canvas(
+                self.camera_container,
+                width=640,
+                height=480,
+                bg="#2b2b3b",
+                highlightthickness=0
+            )
+            self.camera_canvas.place(relx=0.5, rely=0.5, anchor="center")
             
             # Hide placeholder
             self.camera_placeholder.place_forget()
@@ -161,31 +167,61 @@ class StudentDashboard(ctk.CTkFrame):
         except Exception as e:
             messagebox.showerror("Camera Error", f"Error starting camera: {str(e)}")
             return False
-    
+
     def update_camera_feed(self):
         """Update the camera feed in the UI"""
         while self.is_camera_active:
-            ret, frame = self.camera.read()
-            if ret:
-                # Convert to RGB for PIL
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                
-                # Convert to PIL Image
-                img = Image.fromarray(frame_rgb)
-                
-                # Resize to fit the camera container
-                img = img.resize((640, 480), Image.LANCZOS)
-                
-                # Convert to PhotoImage
-                img_tk = ImageTk.PhotoImage(image=img)
-                
-                # Update label
-                if hasattr(self, 'camera_label') and self.camera_label.winfo_exists():
-                    self.camera_label.configure(image=img_tk)
-                    self.camera_label.image = img_tk  # Keep a reference
+            try:
+                ret, frame = self.camera.read()
+                if ret:
+                    # Convert to RGB for PIL
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    
+                    # Convert to PIL Image (do this in thread)
+                    img = Image.fromarray(frame_rgb)
+                    
+                    # Resize to fit the camera container
+                    img = img.resize((640, 480), Image.LANCZOS)
+                    
+                    # Schedule GUI update on main thread
+                    if (hasattr(self, 'camera_canvas') and 
+                        self.camera_canvas and 
+                        self.camera_canvas.winfo_exists()):
+                        
+                        def update_canvas(image=img):
+                            try:
+                                if (hasattr(self, 'camera_canvas') and 
+                                    self.camera_canvas and 
+                                    self.camera_canvas.winfo_exists()):
+                                    
+                                    # Convert to PhotoImage on main thread
+                                    img_tk = ImageTk.PhotoImage(image=image)
+                                    
+                                    # Clear canvas and display image
+                                    self.camera_canvas.delete("all")
+                                    self.camera_canvas.create_image(320, 240, image=img_tk, anchor="center")
+                                    
+                                    # Keep a reference to prevent garbage collection
+                                    self.camera_canvas.image = img_tk
+                                    
+                            except tk.TclError:
+                                # Widget was destroyed, stop the camera feed
+                                self.is_camera_active = False
+                            except Exception as e:
+                                print(f"Camera canvas update error: {e}")
+                        
+                        # Schedule the update on main thread
+                        self.after(0, update_canvas)
+                    else:
+                        # Canvas doesn't exist, stop the feed
+                        break
+                        
+            except Exception as e:
+                print(f"Camera feed error: {e}")
+                break
             
             time.sleep(0.03)  # ~30 FPS
-    
+
     def stop_camera(self):
         """Stop the camera feed"""
         self.is_camera_active = False
@@ -196,9 +232,9 @@ class StudentDashboard(ctk.CTkFrame):
             self.camera.release()
             self.camera = None
             
-        # Clear camera label if it exists
-        if hasattr(self, 'camera_label') and self.camera_label.winfo_exists():
-            self.camera_label.destroy()
+        # Clear camera canvas if it exists
+        if hasattr(self, 'camera_canvas') and self.camera_canvas.winfo_exists():
+            self.camera_canvas.destroy()
             
         # Show placeholder again
         self.camera_placeholder.place(relx=0.5, rely=0.5, anchor="center")

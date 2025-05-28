@@ -53,9 +53,12 @@ class AttendanceApp:
         """Show student authentication window"""
         self.initial_screen.withdraw()
         
-        # Create and configure login/registration window
+        # Create and configure login/registration window as CTkToplevel
         self.auth_window = LoginRegister(self.db_manager)
         self.auth_window.initial_screen = self.initial_screen  # Pass the initial screen reference
+        
+        # Make it a child of the initial screen to maintain proper threading context
+        self.auth_window.transient(self.initial_screen)
         
         # Configure window
         self.auth_window.title(f"{APP_NAME} - Student Login")
@@ -133,30 +136,42 @@ class AttendanceApp:
         # Set up close handler
         self.dashboard_window.protocol("WM_DELETE_WINDOW", self.on_dashboard_closing)
         
+        # IMPORTANT: Make sure the dashboard window is properly initialized
+        # and becomes the active window for threading operations
+        self.dashboard_window.update_idletasks()
+        self.dashboard_window.focus_set()
+        
         # Create container frame
         container = ctk.CTkFrame(self.dashboard_window, fg_color="transparent")
         container.pack(fill="both", expand=True, padx=10, pady=10)
         
-        # Create dashboard frame
+        # Create dashboard frame - AFTER window is fully initialized
         dashboard = StudentDashboard(container, self)
         dashboard.pack(fill="both", expand=True)
         
         # Center the window
-        self.dashboard_window.update_idletasks()
         width = self.dashboard_window.winfo_width()
         height = self.dashboard_window.winfo_height()
         x = (self.dashboard_window.winfo_screenwidth() - width) // 2
         y = (self.dashboard_window.winfo_screenheight() - height) // 2
         self.dashboard_window.geometry(f"+{x}+{y}")
         
-        # Make the dashboard window modal to the auth window
+        # DON'T make it modal - this can cause threading issues
+        # Remove these lines that can interfere with main thread:
+        # if self.auth_window:
+        #     self.dashboard_window.transient(self.auth_window)
+        # self.dashboard_window.grab_set()
+        
+        # Hide auth window instead of making dashboard modal
         if self.auth_window:
-            self.dashboard_window.transient(self.auth_window)
-        self.dashboard_window.grab_set()
+            self.auth_window.withdraw()
         
         # Show the window
         self.dashboard_window.deiconify()
         
+        # Ensure window is ready for threading operations
+        self.dashboard_window.after(100, lambda: None)  # Small delay to ensure window is ready
+
     def logout(self):
         """Handle user logout"""
         # Clear user data
