@@ -24,10 +24,10 @@ class FaceVerificationDialog:
     def create_dialog(self):
         """Create the face verification dialog"""
         self.dialog = ctk.CTkToplevel(self.parent)
-        self.dialog.title("Complete Registration")
-        self.dialog.geometry("500x700")
+        self.dialog.title("Face Verification")
+        self.dialog.geometry("454x390")
         self.dialog.resizable(False, False)
-        self.dialog.configure(fg_color="#2b2b3b")
+        self.dialog.configure(fg_color="#222222")
 
         # Make dialog modal
         self.dialog.grab_set()
@@ -47,99 +47,77 @@ class FaceVerificationDialog:
 
     def _create_dialog_content(self):
         """Create content for the face verification dialog"""
-        # Inner frame to center content
-        inner_frame = ctk.CTkFrame(self.dialog, fg_color="transparent")
-        inner_frame.pack(expand=True, fill="both", padx=20, pady=20)
+        # Card Frame
+        card = ctk.CTkFrame(self.dialog, width=454, height=390, corner_radius=12, fg_color="#ffffff", border_width=0)
+        card.place(x=0, y=0)
+        card.pack_propagate(False)
 
-        # Title
-        ctk.CTkLabel(
-            inner_frame,
-            text="Complete Registration",
-            font=ctk.CTkFont("Roboto", 16, "bold"),
-            text_color="#ffffff"
-        ).pack(pady=(0, 10))
+        # Info icon (top right)
+        info_btn = ctk.CTkButton(card, text="i", width=24, height=24, corner_radius=12, fg_color="#f5f5f5", text_color="#222", font=ctk.CTkFont("Roboto", 14, "bold"), hover_color="#e0e0e0", command=lambda: messagebox.showinfo("Info", """Please ensure you're in a well-lit environment before capturing your photo for the best image quality"""))
+        info_btn.place(x=420, y=10)
 
-        # Face Registration Section
-        face_frame = ctk.CTkFrame(inner_frame, fg_color="#2b2b3b")
-        face_frame.pack(fill="x", pady=10)
-
-        # Face Preview Frame
-        self.face_preview_frame = ctk.CTkFrame(face_frame, width=320, height=240, fg_color="#3a3a4a")
-        self.face_preview_frame.pack(pady=10)
+        # Camera Preview Frame
+        self.face_preview_frame = ctk.CTkFrame(card, width=410, height=170, fg_color="#fafafa", border_width=1, border_color="#d1d1d1")
+        self.face_preview_frame.place(x=22, y=38)
         self.face_preview_frame.pack_propagate(False)
 
-        # Default Preview Label
+        # Default Preview Label (centered)
         self.preview_label = ctk.CTkLabel(
             self.face_preview_frame,
-            text="No face image captured",
-            font=ctk.CTkFont("Roboto", 10),
-            text_color="#a0a0a0"
+            text="",
+            image=None
         )
         self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
 
-        # Camera Controls Frame
-        face_buttons_frame = ctk.CTkFrame(face_frame, fg_color="transparent")
-        face_buttons_frame.pack(fill="x", pady=5)
-        
-        # Add a spacer frame on the left for centering
-        left_spacer = ctk.CTkFrame(face_buttons_frame, fg_color="transparent", width=20)
-        left_spacer.pack(side="left", expand=True)
-
         # Open Camera Button
         self.camera_button = ctk.CTkButton(
-            face_buttons_frame,
+            card,
             text="Open Camera",
-            width=120,
-            height=30,
-            corner_radius=8,
-            font=ctk.CTkFont("Roboto", 11),
-            fg_color="#6363ff",
-            hover_color="#4b4bff",
+            width=410,
+            height=32,
+            corner_radius=6,
+            font=ctk.CTkFont("Roboto", 13, "bold"),
+            fg_color="#ffffff",
+            text_color="#222",
+            border_width=1,
+            border_color="#d1d1d1",
+            hover_color="#f5f5f5",
             command=self.toggle_camera
         )
-        self.camera_button.pack(side="left", padx=5)
+        self.camera_button.place(x=22, y=220)
 
-        # Capture Button
-        self.capture_button = ctk.CTkButton(
-            face_buttons_frame,
-            text="Capture",
-            width=120,
-            height=30,
+        # Retake and Capture Buttons
+        self.retake_button = ctk.CTkButton(
+            card,
+            text="Retake",
+            width=200,
+            height=38,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 11),
-            fg_color="#6363ff",
-            hover_color="#4b4bff",
+            font=ctk.CTkFont("Roboto", 13, "bold"),
+            fg_color="#e5e5e5",
+            text_color="#707070",
+            border_width=0,
+            hover_color="#cccccc",
+            state="disabled",
+            command=self.toggle_camera
+        )
+        self.retake_button.place(x=22, y=270)
+
+        self.capture_button = ctk.CTkButton(
+            card,
+            text="Capture",
+            width=200,
+            height=38,
+            corner_radius=8,
+            font=ctk.CTkFont("Roboto", 13, "bold"),
+            fg_color="#1E3A8A",
+            text_color="#fff",
+            border_width=0,
+            hover_color="#152a63",
             state="disabled",
             command=self.capture_face
         )
-        self.capture_button.pack(side="left", padx=5)
-        
-        # Add a spacer frame on the right for centering
-        right_spacer = ctk.CTkFrame(face_buttons_frame, fg_color="transparent", width=20)
-        right_spacer.pack(side="left", expand=True)
-
-        # Instructions Label
-        ctk.CTkLabel(
-            inner_frame,
-            text="* Face image is required for registration",
-            font=ctk.CTkFont("Roboto", 10, weight="normal", slant="italic"),
-            text_color="#ff9f9f",
-            justify="left"
-        ).pack(pady=(5, 0))
-        
-        # Submit Button
-        self.submit_button = ctk.CTkButton(
-            inner_frame,
-            text="Submit Registration",
-            width=200,
-            height=35,
-            corner_radius=8,
-            font=ctk.CTkFont("Roboto", 12, "bold"),
-            fg_color="#4CAF50",
-            hover_color="#388E3C",
-            command=self.handle_register
-        )
-        self.submit_button.pack(pady=15)
+        self.capture_button.place(x=232, y=270)
 
     def toggle_camera(self):
         """Toggle camera on/off"""
