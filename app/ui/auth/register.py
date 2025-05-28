@@ -37,122 +37,128 @@ class RegisterForm(ctk.CTkFrame):
         
     def _create_register_form(self):
         """Create the registration form UI"""
-        # Title "Sign up as"
+        # Header container for title
+        header_container = ctk.CTkFrame(self, fg_color="transparent")
+        header_container.place(x=40, y=15)  # Increased left margin for better centering
+        
+        # Title "Sign up as Student" on same row
+        title_frame = ctk.CTkFrame(header_container, fg_color="transparent")
+        title_frame.pack(anchor="w")
+        
         ctk.CTkLabel(
-            self,
-            text="Sign up as",
-            font=ctk.CTkFont("Roboto", 24, "bold"),
+            title_frame,
+            text="Sign up as ",
+            font=ctk.CTkFont("Roboto", 20, "bold"),
             text_color="#000000"
-        ).place(x=20, y=20)
+        ).pack(side="left")
         
-        # Student label
         ctk.CTkLabel(
-            self,
+            title_frame,
             text="Student",
-            font=ctk.CTkFont("Roboto", 24, "bold"),
+            font=ctk.CTkFont("Roboto", 20, "bold"),
             text_color="#1E3A8A"
-        ).place(x=20, y=45)
+        ).pack(side="left")
         
-        # Divider
+        # Divider - extended to cover full title width
         divider = ctk.CTkFrame(
-            self,
+            header_container,
             fg_color="#1E3A8A",
-            width=50,
+            width=180,
             height=2
         )
-        divider.place(x=20, y=75)
+        divider.pack(anchor="w", pady=(5, 0))
         
-        # Card Frame
+        # Card Frame - better centered
         card_frame = ctk.CTkFrame(
             self,
-            width=455,
-            height=493,
-            corner_radius=15,
+            width=420,
+            height=510,
+            corner_radius=12,
             fg_color="#ffffff",
             border_width=1,
             border_color="#d1d1d1"
         )
-        card_frame.place(x=20, y=100)
+        card_frame.place(x=40, y=70)  # Increased left margin to match header
         card_frame.pack_propagate(False)
         
-        # Create two columns
+        # Create two columns with tighter spacing
         left_column = ctk.CTkFrame(card_frame, fg_color="transparent")
-        left_column.place(x=20, y=10)
+        left_column.place(x=15, y=15)  # Reduced margins
         
         right_column = ctk.CTkFrame(card_frame, fg_color="transparent")
-        right_column.place(x=237, y=10)
+        right_column.place(x=215, y=15)  # Adjusted for smaller width
         
         # First Name Label and Input (Left Column)
         ctk.CTkLabel(
             left_column,
             text="First Name",
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 11),  # Smaller font
             text_color="#707070"
         ).pack(anchor="w")
         
         self.first_name_entry = ctk.CTkEntry(
             left_column,
-            width=200,
-            height=23,
-            corner_radius=6,
+            width=180,  # Reduced width
+            height=26,  # Reduced height
+            corner_radius=5,
             border_width=1,
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 11),  # Smaller font
             fg_color="#ffffff",
             border_color="#d1d1d1",
             text_color="#000000",
             textvariable=self.first_name_var
         )
-        self.first_name_entry.pack(pady=(2, 5))
+        self.first_name_entry.pack(pady=(2, 10))  # Reduced spacing
         
         # Last Name Label and Input (Right Column)
         ctk.CTkLabel(
             right_column,
             text="Last Name",
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 11),  # Smaller font
             text_color="#707070"
         ).pack(anchor="w")
         
         self.last_name_entry = ctk.CTkEntry(
             right_column,
-            width=200,
-            height=23,
-            corner_radius=6,
+            width=180,  # Reduced width
+            height=26,  # Reduced height
+            corner_radius=5,
             border_width=1,
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 11),  # Smaller font
             fg_color="#ffffff",
             border_color="#d1d1d1",
             text_color="#000000",
             textvariable=self.last_name_var
         )
-        self.last_name_entry.pack(pady=(2, 5))
+        self.last_name_entry.pack(pady=(2, 10))  # Reduced spacing
         
-        # Date of Birth Row
+        # Date of Birth Row - more compact
         dob_container = ctk.CTkFrame(card_frame, fg_color="transparent")
-        dob_container.place(x=20, y=75)
+        dob_container.place(x=15, y=75)  # Adjusted position
         
         # Date of Birth Label
         ctk.CTkLabel(
             dob_container,
             text="Date of Birth",
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 11),  # Smaller font
             text_color="#707070"
         ).pack(anchor="w")
         
         # Date Input Fields Container
         date_fields = ctk.CTkFrame(dob_container, fg_color="transparent")
-        date_fields.pack(pady=(2, 5))
+        date_fields.pack(pady=(2, 0))
         
-        # Month Dropdown Container (first position)
+        # Month Dropdown Container - smaller
         month_container = ctk.CTkFrame(
             date_fields,
-            width=132,
-            height=25,
-            corner_radius=6,
+            width=120,  # Reduced width
+            height=28,
+            corner_radius=5,
             fg_color="#ffffff",
             border_width=1,
             border_color="#d1d1d1"
         )
-        month_container.pack(side="left", padx=(0, 10))
+        month_container.pack(side="left", padx=(0, 8))  # Reduced padding
         month_container.pack_propagate(False)
         
         # Month Dropdown with month names
@@ -162,10 +168,10 @@ class RegisterForm(ctk.CTkFrame):
         ]
         self.month_dropdown = ctk.CTkOptionMenu(
             month_container,
-            width=130,
-            height=23,
-            corner_radius=6,
-            font=ctk.CTkFont("Roboto", 12),
+            width=118,
+            height=26,
+            corner_radius=5,
+            font=ctk.CTkFont("Roboto", 10),  # Smaller font
             fg_color="#ffffff",
             button_color="#ffffff",
             button_hover_color="#f5f5f5",
@@ -177,28 +183,27 @@ class RegisterForm(ctk.CTkFrame):
             command=self._on_month_year_change
         )
         self.month_dropdown.place(x=1, y=1)
-        self.month_dropdown.set("June")  # Default value
+        self.month_dropdown.set("June")
         
-        # Day Dropdown Container (second position)
+        # Day Dropdown Container - smaller
         day_container = ctk.CTkFrame(
             date_fields,
-            width=132,
-            height=25,
-            corner_radius=6,
+            width=80,  # Reduced width
+            height=28,
+            corner_radius=5,
             fg_color="#ffffff",
             border_width=1,
             border_color="#d1d1d1"
         )
-        day_container.pack(side="left", padx=(0, 10))
+        day_container.pack(side="left", padx=(0, 8))  # Reduced padding
         day_container.pack_propagate(False)
         
-        # Day Dropdown - will be populated dynamically
         self.day_dropdown = ctk.CTkOptionMenu(
             day_container,
-            width=130,
-            height=23,
-            corner_radius=6,
-            font=ctk.CTkFont("Roboto", 12),
+            width=78,
+            height=26,
+            corner_radius=5,
+            font=ctk.CTkFont("Roboto", 10),  # Smaller font
             fg_color="#ffffff",
             button_color="#ffffff",
             button_hover_color="#f5f5f5",
@@ -206,16 +211,16 @@ class RegisterForm(ctk.CTkFrame):
             dropdown_fg_color="#ffffff",
             dropdown_text_color="#000000",
             dropdown_hover_color="#f5f5f5",
-            values=["01"]  # Will be updated dynamically
+            values=["01"]
         )
         self.day_dropdown.place(x=1, y=1)
         
-        # Year Dropdown Container (third position)
+        # Year Dropdown Container - smaller
         year_container = ctk.CTkFrame(
             date_fields,
-            width=132,
-            height=25,
-            corner_radius=6,
+            width=100,  # Reduced width
+            height=28,
+            corner_radius=5,
             fg_color="#ffffff",
             border_width=1,
             border_color="#d1d1d1"
@@ -224,22 +229,20 @@ class RegisterForm(ctk.CTkFrame):
         year_container.pack_propagate(False)
         
         # Year Dropdown
-        current_year = datetime.now().year  # Get current year dynamically
-        min_age = 16  # Minimum age requirement
-        max_birth_year = current_year - min_age  # Calculate maximum birth year for min 16 years old
-        min_birth_year = current_year - 80  # Reasonable maximum age limit
-        default_year = max_birth_year - 2  # Set default to slightly older than minimum
+        current_year = datetime.now().year
+        min_age = 16
+        max_birth_year = current_year - min_age
+        min_birth_year = current_year - 80
+        default_year = max_birth_year - 2
         
-        # Create year range from minimum birth year to maximum birth year
         year_values = [str(i) for i in range(min_birth_year, max_birth_year + 1)]
         
-        # Limit the dropdown to show fewer items to control height
         self.year_dropdown = ctk.CTkOptionMenu(
             year_container,
-            width=130,
-            height=23,
-            corner_radius=6,
-            font=ctk.CTkFont("Roboto", 12),
+            width=98,
+            height=26,
+            corner_radius=5,
+            font=ctk.CTkFont("Roboto", 10),  # Smaller font
             fg_color="#ffffff",
             button_color="#ffffff",
             button_hover_color="#f5f5f5",
@@ -252,195 +255,194 @@ class RegisterForm(ctk.CTkFrame):
             dynamic_resizing=False
         )
         self.year_dropdown.place(x=1, y=1)
-        self.year_dropdown.set(str(default_year))  # Default value centered in range
+        self.year_dropdown.set(str(default_year))
         
         # Schedule dropdown height configuration after widget creation
         self.after(100, self._configure_year_dropdown_height)
 
-        # Configure dropdown to show limited items (this limits the visible height)
+        # Configure dropdown to show limited items
         try:
-            # Access the dropdown menu and configure it to show max 10 items at once
             if hasattr(self.year_dropdown, '_dropdown_menu'):
                 self.year_dropdown._dropdown_menu.configure(tearoff=0)
         except:
-            pass  # Fallback if internal structure changes
+            pass
         
         # Initialize days based on default month and year
         self._update_days()
 
-        # Contact Number
+        # Contact Number - more compact
         contact_container = ctk.CTkFrame(card_frame, fg_color="transparent")
-        contact_container.place(x=20, y=145)  # Increased from y=130 to y=145
+        contact_container.place(x=15, y=135)  # Adjusted position
         
         ctk.CTkLabel(
             contact_container,
             text="Contact Number",
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 11),  # Smaller font
             text_color="#707070"
         ).pack(anchor="w")
         
         self.contact_entry = ctk.CTkEntry(
             contact_container,
-            width=200,
-            height=23,
-            corner_radius=6,
+            width=180,  # Reduced width
+            height=26,  # Reduced height
+            corner_radius=5,
             border_width=1,
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 11),  # Smaller font
             fg_color="#ffffff",
             border_color="#d1d1d1",
             text_color="#000000",
             textvariable=self.contact_number_var
         )
-        self.contact_entry.pack(pady=(2, 5))
+        self.contact_entry.pack(pady=(2, 0))
         
-        # Student Number
+        # Student Number - more compact
         student_container = ctk.CTkFrame(card_frame, fg_color="transparent")
-        student_container.place(x=20, y=200)  # Increased from y=185 to y=200
+        student_container.place(x=15, y=185)  # Adjusted position
         
         ctk.CTkLabel(
             student_container,
             text="Student Number",
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 11),  # Smaller font
             text_color="#707070"
         ).pack(anchor="w")
         
         self.student_entry = ctk.CTkEntry(
             student_container,
-            width=419,
-            height=23,
-            corner_radius=6,
+            width=385,  # Adjusted for smaller card
+            height=26,  # Reduced height
+            corner_radius=5,
             border_width=1,
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 11),  # Smaller font
             fg_color="#ffffff",
             border_color="#d1d1d1",
             text_color="#000000",
             textvariable=self.student_number_var
         )
-        self.student_entry.pack(pady=(2, 5))
+        self.student_entry.pack(pady=(2, 0))
         
-        # Webmail Address
+        # Webmail Address - more compact
         webmail_container = ctk.CTkFrame(card_frame, fg_color="transparent")
-        webmail_container.place(x=20, y=255)  # Increased from y=240 to y=255
+        webmail_container.place(x=15, y=235)  # Adjusted position
         
         ctk.CTkLabel(
             webmail_container,
             text="Webmail Address",
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 11),  # Smaller font
             text_color="#707070"
         ).pack(anchor="w")
         
         self.webmail_entry = ctk.CTkEntry(
             webmail_container,
-            width=419,
-            height=23,
-            corner_radius=6,
+            width=385,  # Adjusted for smaller card
+            height=26,  # Reduced height
+            corner_radius=5,
             border_width=1,
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 11),  # Smaller font
             fg_color="#ffffff",
             border_color="#d1d1d1",
             text_color="#000000",
             textvariable=self.email_var
         )
-        self.webmail_entry.pack(pady=(2, 5))
+        self.webmail_entry.pack(pady=(2, 0))
         
-        # Password
+        # Password - more compact
         password_container = ctk.CTkFrame(card_frame, fg_color="transparent")
-        password_container.place(x=20, y=310)  # Increased from y=295 to y=310
+        password_container.place(x=15, y=285)  # Adjusted position
         
         ctk.CTkLabel(
             password_container,
             text="Password",
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 11),  # Smaller font
             text_color="#707070"
         ).pack(anchor="w")
         
         self.password_entry = ctk.CTkEntry(
             password_container,
-            width=419,
-            height=23,
-            corner_radius=6,
+            width=385,  # Adjusted for smaller card
+            height=26,  # Reduced height
+            corner_radius=5,
             border_width=1,
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 11),  # Smaller font
             fg_color="#ffffff",
             border_color="#d1d1d1",
             text_color="#000000",
             show="•",
             textvariable=self.password_var
         )
-        self.password_entry.pack(pady=(2, 5))
+        self.password_entry.pack(pady=(2, 0))
         
-        # Confirm Password
+        # Confirm Password - more compact
         confirm_container = ctk.CTkFrame(card_frame, fg_color="transparent")
-        confirm_container.place(x=20, y=365)  # Increased from y=350 to y=365
+        confirm_container.place(x=15, y=335)  # Adjusted position
         
         ctk.CTkLabel(
             confirm_container,
             text="Confirm Password",
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 11),  # Smaller font
             text_color="#707070"
         ).pack(anchor="w")
         
         self.confirm_entry = ctk.CTkEntry(
             confirm_container,
-            width=419,
-            height=23,
-            corner_radius=6,
+            width=385,  # Adjusted for smaller card
+            height=26,  # Reduced height
+            corner_radius=5,
             border_width=1,
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 11),  # Smaller font
             fg_color="#ffffff",
             border_color="#d1d1d1",
             text_color="#000000",
             show="•",
             textvariable=self.confirm_password_var
         )
-        self.confirm_entry.pack(pady=(2, 5))
+        self.confirm_entry.pack(pady=(2, 0))
         
-        # Terms and Condition Checkbox
+        # Terms and Condition Checkbox - more compact
         terms_container = ctk.CTkFrame(card_frame, fg_color="transparent")
-        terms_container.place(x=20, y=420)  # Increased from y=405 to y=420
+        terms_container.place(x=15, y=400)  # Adjusted position
         
         self.terms_checkbox = ctk.CTkCheckBox(
             terms_container,
             text="I agree to the Terms and Condition",
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 10),  # Smaller font
             text_color="#707070",
             fg_color="#1E3A8A",
             hover_color="#1E3A8A",
             border_color="#d1d1d1",
-            checkbox_width=15,
-            checkbox_height=15,
+            checkbox_width=14,  # Smaller checkbox
+            checkbox_height=14,
             corner_radius=2,
             border_width=1
         )
         self.terms_checkbox.pack(anchor="w")
-        self.terms_checkbox.select()  # Check the checkbox by default
+        self.terms_checkbox.select()
         
-        # Validation Label (initially hidden)
+        # Validation Label (initially hidden) - more compact
         self.validation_label = ctk.CTkLabel(
             card_frame,
             text="",
-            font=ctk.CTkFont("Roboto", 11),
+            font=ctk.CTkFont("Roboto", 10),  # Smaller font
             text_color="#dc2626",
-            wraplength=400,
+            wraplength=380,
             justify="left"
         )
-        self.validation_label.place(x=20, y=445)
-        self.validation_label.place_forget()  # Hide initially
+        self.validation_label.place(x=15, y=410)  # Adjusted position
+        self.validation_label.place_forget()
         
-        # Sign Up Button
+        # Sign Up Button - more compact
         self.signup_button = ctk.CTkButton(
             card_frame,
             text="Sign Up",
-            width=120,
-            height=27,
-            corner_radius=10,
+            width=100,  # Reduced width
+            height=28,  # Reduced height
+            corner_radius=8,
             border_width=1,
-            font=ctk.CTkFont("Roboto", 12, "bold"),
+            font=ctk.CTkFont("Roboto", 11, "bold"),  # Smaller font
             fg_color="#1E3A8A",
             hover_color="#152a63",
             command=self.handle_register
         )
-        self.signup_button.place(x=315, y=470)  # Moved down to accommodate validation label
+        self.signup_button.place(x=290, y=460)  # Adjusted position
 
         # Force update the display after creating all widgets
         self.after(100, self._refresh_test_data)
@@ -494,8 +496,8 @@ class RegisterForm(ctk.CTkFrame):
     def show_validation_error(self, message):
         """Show validation error in the validation label"""
         self.validation_label.configure(text=message)
-        self.validation_label.place(x=20, y=445)
-    
+        self.validation_label.place(x=15, y=430)  # Updated position
+
     def hide_validation_error(self):
         """Hide the validation error label"""
         self.validation_label.place_forget()
@@ -544,17 +546,22 @@ class RegisterForm(ctk.CTkFrame):
             if self.db_manager:
                 try:
                     # Check if email already exists
-                    if email and self.db_manager.check_email_exists(email):
-                        errors.append("• An account with this email address already exists")
+                    if email and hasattr(self.db_manager, 'check_email_exists'):
+                        email_exists, _ = self.db_manager.check_email_exists(email)
+                        if email_exists:
+                            errors.append("• An account with this email address already exists")
                     
-                    # Check if student number already exists
-                    if student_number and self.db_manager.check_student_number_exists(student_number):
-                        errors.append("• An account with this student number already exists")
-                        
+                    # Check if student number already exists  
+                    if student_number and hasattr(self.db_manager, 'check_student_id_exists'):
+                        student_exists, _ = self.db_manager.check_student_id_exists(student_number)
+                        if student_exists:
+                            errors.append("• An account with this student number already exists")
+                            
+
                 except Exception as db_error:
-                    errors.append("• Database connection error. Please try again later")
-            else:
-                errors.append("• Database connection not available")
+                    print(f"Database validation error: {db_error}")
+                    # Don't add to errors list to avoid showing in GUI unless it's a real connection issue
+                    pass
 
             # Show errors if any exist
             if errors:
@@ -777,6 +784,7 @@ class RegisterForm(ctk.CTkFrame):
                     h, w = frame_rgb.shape[:2]
                     center_x, center_y = w // 2, h // 2
                     
+
                     # Draw face positioning guide rectangle - made larger
                     rect_w, rect_h = 160, 180  # Increased from 120, 140 to 160, 180
                     cv2.rectangle(frame_rgb, 
@@ -794,6 +802,7 @@ class RegisterForm(ctk.CTkFrame):
                             self.verification_dialog and 
                             self.verification_dialog.winfo_exists()):
                             
+
                             def update_canvas(img=pil_image):
                                 try:
                                     if (hasattr(self, 'camera_canvas') and 
@@ -816,12 +825,14 @@ class RegisterForm(ctk.CTkFrame):
                                 except Exception as e:
                                     print(f"Canvas update error: {e}")
                             
+
                             # Schedule the update on main thread
                             self.verification_dialog.after(0, update_canvas)
                         else:
                             # Canvas doesn't exist, stop the feed
                             break
                             
+
                     except Exception as img_error:
                         print(f"Image processing error: {img_error}")
                         break
