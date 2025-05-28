@@ -9,12 +9,12 @@ class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
     first_name = Column(String(100), nullable=False)
-    middle_name = Column(String(100), nullable=True)
     last_name = Column(String(100), nullable=False)
-    email = Column(String(255), unique=True, nullable=False, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=False)
+    birthday = Column(DateTime, nullable=False)
     password_hash = Column(String(255), nullable=False)
+    contact_number = Column(String(20), nullable=False)
     role = Column(String(50), nullable=False, default="Student")
-    profile_image = Column(String(255), nullable=True)  # Store image path or URL
     face_image = Column(LargeBinary, nullable=True)  # LargeBinary (LBLOB)
     status = Column(String(50), nullable=False, default="pending")
     created_at = Column(DateTime, nullable=False, server_default=func.now())
