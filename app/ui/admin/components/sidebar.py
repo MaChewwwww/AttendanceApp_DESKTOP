@@ -31,7 +31,7 @@ class Sidebar(ctk.CTkFrame):
         self.header_frame = ctk.CTkFrame(self, fg_color="transparent", corner_radius=0)
         self.header_frame.pack(fill="x", padx=10, pady=(20, 10))
         
-        self.title_label = ctk.CTkLabel(self.header_frame, text="Iskoptrix", 
+        self.title_label = ctk.CTkLabel(self.header_frame, text="Attendify", 
                                        font=ctk.CTkFont(size=20, weight="bold"),
                                        text_color="white")
         self.title_label.pack(side="left", padx=10)
