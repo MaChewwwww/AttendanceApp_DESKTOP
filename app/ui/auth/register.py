@@ -9,9 +9,10 @@ import os
 from PIL import Image, ImageTk
 
 class RegisterForm(ctk.CTkFrame):
-    def __init__(self, parent, db_manager=None):
+    def __init__(self, parent, db_manager=None, on_success=None):
         super().__init__(parent, fg_color="transparent")
         self.db_manager = db_manager
+        self.on_success = on_success
         
         # Face verification variables
         self.face_image = None
@@ -389,33 +390,17 @@ class RegisterForm(ctk.CTkFrame):
 
     def on_registration_success(self, email):
         """Handle successful registration"""
-        # Reset form fields to test data for next registration
-        self.first_name_var.set("John")
-        self.middle_name_var.set("Michael")
-        self.last_name_var.set("Doe")
-        self.email_var.set("john.doe@example.com")
-        self.contact_number_var.set("09123456789")
-        self.student_number_var.set("2021-123456")
-        self.password_var.set("password123")
-        self.confirm_password_var.set("password123")
+        # Reset form fields
+        self.first_name_var.set("")
+        self.last_name_var.set("")
+        self.email_var.set("")
+        self.student_number_var.set("")
+        self.password_var.set("")
+        self.confirm_password_var.set("")
         
-        # Reset date fields
-        self.day_entry.delete(0, tk.END)
-        self.day_entry.insert(0, "15")
-        self.month_entry.delete(0, tk.END)
-        self.month_entry.insert(0, "06")
-        self.year_entry.delete(0, tk.END)
-        self.year_entry.insert(0, "2000")
-        
-        # Check the terms checkbox
-        self.terms_checkbox.select()
-        
-        # Show login screen
-        self.master.show_login()
-        
-        # Set remembered email
-        if email:
-            self.after(100, lambda e=email: self.email_var.set(e))
+        # Call parent success handler
+        if self.on_success:
+            self.on_success(email)
 
     def handle_register(self):
         """Process the registration form submission"""

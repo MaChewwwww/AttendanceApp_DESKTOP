@@ -1,19 +1,17 @@
 import customtkinter as ctk
 import tkinter as tk
 
-class InitialScreen(ctk.CTk):
-    def __init__(self, on_student_click=None):
-        super().__init__()
+class InitialScreen(ctk.CTkFrame):
+    def __init__(self, parent, on_student_click=None):
+        super().__init__(parent, fg_color="transparent")
         
         self.on_student_click = on_student_click
         
-        self.title("Attendify")
-        self.geometry("1000x600")
-        self.resizable(False, False)
-        
+        # Create main container
         self.main_container = ctk.CTkFrame(self, fg_color="transparent")
         self.main_container.pack(fill="both", expand=True)
         
+        # Left panel
         self.left_panel = ctk.CTkFrame(
             self.main_container,
             width=370,
@@ -30,6 +28,7 @@ class InitialScreen(ctk.CTk):
             text_color="#ffffff"
         ).pack(expand=True)
         
+        # Right panel
         self.right_panel = ctk.CTkFrame(
             self.main_container,
             fg_color="#f5f5f5",
@@ -37,9 +36,11 @@ class InitialScreen(ctk.CTk):
         )
         self.right_panel.pack(side="right", fill="both", expand=True)
         
+        # Content container
         container = ctk.CTkFrame(self.right_panel, fg_color="transparent")
         container.place(relx=0.5, rely=0.5, anchor="center")
         
+        # Card
         card = ctk.CTkFrame(
             container,
             fg_color="#ffffff",
@@ -94,7 +95,7 @@ class InitialScreen(ctk.CTk):
             font=ctk.CTkFont("Roboto", 12),
             fg_color="#1E3A8A",
             hover_color="#1E3A8A",
-            command=self.on_student_click
+            command=lambda: self.on_student_click(False) if self.on_student_click else None
         )
         self.student_btn.pack(pady=10)
         
@@ -178,4 +179,4 @@ class InitialScreen(ctk.CTk):
             bg="#ffffff"
         )
         signup_label.pack()
-        signup_label.bind("<Button-1>", lambda e: self.on_student_click(True)) 
+        signup_label.bind("<Button-1>", lambda e: self.on_student_click(True) if self.on_student_click else None)
