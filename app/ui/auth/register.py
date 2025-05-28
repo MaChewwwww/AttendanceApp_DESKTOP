@@ -6,6 +6,7 @@ import threading
 import time
 import io
 import os
+from datetime import datetime
 from PIL import Image, ImageTk
 
 class RegisterForm(ctk.CTkFrame):
@@ -141,57 +142,135 @@ class RegisterForm(ctk.CTkFrame):
         date_fields = ctk.CTkFrame(dob_container, fg_color="transparent")
         date_fields.pack(pady=(2, 5))
         
-        # Day Input
-        self.day_entry = ctk.CTkEntry(
+        # Month Dropdown Container (first position)
+        month_container = ctk.CTkFrame(
             date_fields,
+            width=132,
+            height=25,
+            corner_radius=6,
+            fg_color="#ffffff",
+            border_width=1,
+            border_color="#d1d1d1"
+        )
+        month_container.pack(side="left", padx=(0, 10))
+        month_container.pack_propagate(False)
+        
+        # Month Dropdown with month names
+        month_names = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ]
+        self.month_dropdown = ctk.CTkOptionMenu(
+            month_container,
             width=130,
             height=23,
             corner_radius=6,
-            border_width=1,
             font=ctk.CTkFont("Roboto", 12),
             fg_color="#ffffff",
-            border_color="#d1d1d1",
+            button_color="#ffffff",
+            button_hover_color="#f5f5f5",
             text_color="#000000",
-            placeholder_text="Day"
+            dropdown_fg_color="#ffffff",
+            dropdown_text_color="#000000",
+            dropdown_hover_color="#f5f5f5",
+            values=month_names,
+            command=self._on_month_year_change
         )
-        self.day_entry.pack(side="left", padx=(0, 10))
-        self.day_entry.insert(0, "15")
+        self.month_dropdown.place(x=1, y=1)
+        self.month_dropdown.set("June")  # Default value
         
-        # Month Input
-        self.month_entry = ctk.CTkEntry(
+        # Day Dropdown Container (second position)
+        day_container = ctk.CTkFrame(
             date_fields,
+            width=132,
+            height=25,
+            corner_radius=6,
+            fg_color="#ffffff",
+            border_width=1,
+            border_color="#d1d1d1"
+        )
+        day_container.pack(side="left", padx=(0, 10))
+        day_container.pack_propagate(False)
+        
+        # Day Dropdown - will be populated dynamically
+        self.day_dropdown = ctk.CTkOptionMenu(
+            day_container,
             width=130,
             height=23,
             corner_radius=6,
-            border_width=1,
             font=ctk.CTkFont("Roboto", 12),
             fg_color="#ffffff",
-            border_color="#d1d1d1",
+            button_color="#ffffff",
+            button_hover_color="#f5f5f5",
             text_color="#000000",
-            placeholder_text="Month"
+            dropdown_fg_color="#ffffff",
+            dropdown_text_color="#000000",
+            dropdown_hover_color="#f5f5f5",
+            values=["01"]  # Will be updated dynamically
         )
-        self.month_entry.pack(side="left", padx=(0, 10))
-        self.month_entry.insert(0, "06")
+        self.day_dropdown.place(x=1, y=1)
         
-        # Year Input
-        self.year_entry = ctk.CTkEntry(
+        # Year Dropdown Container (third position)
+        year_container = ctk.CTkFrame(
             date_fields,
+            width=132,
+            height=25,
+            corner_radius=6,
+            fg_color="#ffffff",
+            border_width=1,
+            border_color="#d1d1d1"
+        )
+        year_container.pack(side="left")
+        year_container.pack_propagate(False)
+        
+        # Year Dropdown
+        current_year = datetime.now().year  # Get current year dynamically
+        min_age = 16  # Minimum age requirement
+        max_birth_year = current_year - min_age  # Calculate maximum birth year for min 16 years old
+        min_birth_year = current_year - 80  # Reasonable maximum age limit
+        default_year = max_birth_year - 2  # Set default to slightly older than minimum
+        
+        # Create year range from minimum birth year to maximum birth year
+        year_values = [str(i) for i in range(min_birth_year, max_birth_year + 1)]
+        
+        # Limit the dropdown to show fewer items to control height
+        self.year_dropdown = ctk.CTkOptionMenu(
+            year_container,
             width=130,
             height=23,
             corner_radius=6,
-            border_width=1,
             font=ctk.CTkFont("Roboto", 12),
             fg_color="#ffffff",
-            border_color="#d1d1d1",
+            button_color="#ffffff",
+            button_hover_color="#f5f5f5",
             text_color="#000000",
-            placeholder_text="Year"
+            dropdown_fg_color="#ffffff",
+            dropdown_text_color="#000000",
+            dropdown_hover_color="#f5f5f5",
+            values=year_values,
+            command=self._on_month_year_change,
+            dynamic_resizing=False
         )
-        self.year_entry.pack(side="left")
-        self.year_entry.insert(0, "2000")
+        self.year_dropdown.place(x=1, y=1)
+        self.year_dropdown.set(str(default_year))  # Default value centered in range
         
+        # Schedule dropdown height configuration after widget creation
+        self.after(100, self._configure_year_dropdown_height)
+
+        # Configure dropdown to show limited items (this limits the visible height)
+        try:
+            # Access the dropdown menu and configure it to show max 10 items at once
+            if hasattr(self.year_dropdown, '_dropdown_menu'):
+                self.year_dropdown._dropdown_menu.configure(tearoff=0)
+        except:
+            pass  # Fallback if internal structure changes
+        
+        # Initialize days based on default month and year
+        self._update_days()
+
         # Contact Number
         contact_container = ctk.CTkFrame(card_frame, fg_color="transparent")
-        contact_container.place(x=20, y=130)
+        contact_container.place(x=20, y=145)  # Increased from y=130 to y=145
         
         ctk.CTkLabel(
             contact_container,
@@ -216,7 +295,7 @@ class RegisterForm(ctk.CTkFrame):
         
         # Student Number
         student_container = ctk.CTkFrame(card_frame, fg_color="transparent")
-        student_container.place(x=20, y=185)
+        student_container.place(x=20, y=200)  # Increased from y=185 to y=200
         
         ctk.CTkLabel(
             student_container,
@@ -241,7 +320,7 @@ class RegisterForm(ctk.CTkFrame):
         
         # Webmail Address
         webmail_container = ctk.CTkFrame(card_frame, fg_color="transparent")
-        webmail_container.place(x=20, y=240)
+        webmail_container.place(x=20, y=255)  # Increased from y=240 to y=255
         
         ctk.CTkLabel(
             webmail_container,
@@ -266,7 +345,7 @@ class RegisterForm(ctk.CTkFrame):
         
         # Password
         password_container = ctk.CTkFrame(card_frame, fg_color="transparent")
-        password_container.place(x=20, y=295)
+        password_container.place(x=20, y=310)  # Increased from y=295 to y=310
         
         ctk.CTkLabel(
             password_container,
@@ -292,7 +371,7 @@ class RegisterForm(ctk.CTkFrame):
         
         # Confirm Password
         confirm_container = ctk.CTkFrame(card_frame, fg_color="transparent")
-        confirm_container.place(x=20, y=350)
+        confirm_container.place(x=20, y=365)  # Increased from y=350 to y=365
         
         ctk.CTkLabel(
             confirm_container,
@@ -318,7 +397,7 @@ class RegisterForm(ctk.CTkFrame):
         
         # Terms and Condition Checkbox
         terms_container = ctk.CTkFrame(card_frame, fg_color="transparent")
-        terms_container.place(x=20, y=405)
+        terms_container.place(x=20, y=420)  # Increased from y=405 to y=420
         
         self.terms_checkbox = ctk.CTkCheckBox(
             terms_container,
@@ -336,6 +415,18 @@ class RegisterForm(ctk.CTkFrame):
         self.terms_checkbox.pack(anchor="w")
         self.terms_checkbox.select()  # Check the checkbox by default
         
+        # Validation Label (initially hidden)
+        self.validation_label = ctk.CTkLabel(
+            card_frame,
+            text="",
+            font=ctk.CTkFont("Roboto", 11),
+            text_color="#dc2626",
+            wraplength=400,
+            justify="left"
+        )
+        self.validation_label.place(x=20, y=445)
+        self.validation_label.place_forget()  # Hide initially
+        
         # Sign Up Button
         self.signup_button = ctk.CTkButton(
             card_frame,
@@ -349,8 +440,8 @@ class RegisterForm(ctk.CTkFrame):
             hover_color="#152a63",
             command=self.handle_register
         )
-        self.signup_button.place(x=315, y=450)
-        
+        self.signup_button.place(x=315, y=470)  # Moved down to accommodate validation label
+
         # Force update the display after creating all widgets
         self.after(100, self._refresh_test_data)
     
@@ -400,9 +491,21 @@ class RegisterForm(ctk.CTkFrame):
         if self.on_success:
             self.on_success(email)
 
+    def show_validation_error(self, message):
+        """Show validation error in the validation label"""
+        self.validation_label.configure(text=message)
+        self.validation_label.place(x=20, y=445)
+    
+    def hide_validation_error(self):
+        """Hide the validation error label"""
+        self.validation_label.place_forget()
+
     def handle_register(self):
         """Process the registration form submission"""
         try:
+            # Hide any previous validation errors
+            self.hide_validation_error()
+            
             # Get values from form fields
             first_name = self.first_name_var.get().strip()
             last_name = self.last_name_var.get().strip()
@@ -412,25 +515,58 @@ class RegisterForm(ctk.CTkFrame):
             password = self.password_var.get().strip()
             confirm_password = self.confirm_password_var.get().strip()
 
-            # Validate required fields
-            if not first_name or not last_name or not email or not contact_number or not student_number or not password:
-                messagebox.showwarning("Registration Failed", "Please fill in all required fields.")
-                return
+            # Collect all validation errors
+            errors = []
 
-            if password != confirm_password:
-                messagebox.showwarning("Registration Failed", "Passwords do not match.")
-                return
+            # Validate required fields
+            if not first_name:
+                errors.append("• First name is required")
+            if not last_name:
+                errors.append("• Last name is required")
+            if not email:
+                errors.append("• Email address is required")
+            if not contact_number:
+                errors.append("• Contact number is required")
+            if not student_number:
+                errors.append("• Student number is required")
+            if not password:
+                errors.append("• Password is required")
+
+            # Validate password match
+            if password and confirm_password and password != confirm_password:
+                errors.append("• Passwords do not match")
 
             # Check terms and conditions
             if not self.terms_checkbox.get():
-                messagebox.showwarning("Registration Failed", "Please agree to the Terms and Conditions.")
+                errors.append("• Please agree to the Terms and Conditions")
+
+            # Validate email and student ID uniqueness before camera
+            if self.db_manager:
+                try:
+                    # Check if email already exists
+                    if email and self.db_manager.check_email_exists(email):
+                        errors.append("• An account with this email address already exists")
+                    
+                    # Check if student number already exists
+                    if student_number and self.db_manager.check_student_number_exists(student_number):
+                        errors.append("• An account with this student number already exists")
+                        
+                except Exception as db_error:
+                    errors.append("• Database connection error. Please try again later")
+            else:
+                errors.append("• Database connection not available")
+
+            # Show errors if any exist
+            if errors:
+                error_message = "\n".join(errors)
+                self.show_validation_error(error_message)
                 return
 
-            # Open face verification dialog
+            # Open face verification dialog only after all validations pass
             self.open_face_verification_dialog()
             
         except Exception as e:
-            messagebox.showerror("Registration Error", f"An unexpected error occurred: {str(e)}")
+            self.show_validation_error(f"• An unexpected error occurred: {str(e)}")
             import traceback
             traceback.print_exc()
 
@@ -844,9 +980,16 @@ class RegisterForm(ctk.CTkFrame):
             password = self.password_var.get().strip()
             
             # Get date of birth
-            day = self.day_entry.get().strip()
-            month = self.month_entry.get().strip()
-            year = self.year_entry.get().strip()
+            day = self.day_dropdown.get()
+            month_name = self.month_dropdown.get()
+            year = self.year_dropdown.get()
+            
+            # Convert month name to number
+            month_names = [
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+            ]
+            month = str(month_names.index(month_name) + 1).zfill(2)
             
             # Validate date of birth (basic validation)
             try:
@@ -856,20 +999,14 @@ class RegisterForm(ctk.CTkFrame):
                     month_int = int(month)
                     year_int = int(year)
                     
-                    if not (1 <= day_int <= 31):
-                        raise ValueError("Invalid day")
-                    if not (1 <= month_int <= 12):
-                        raise ValueError("Invalid month")
-                    if not (1900 <= year_int <= 2020):
-                        raise ValueError("Invalid year")
-                        
-                    date_of_birth = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+                    # Validation is simpler now since dropdowns constrain values
+                    date_of_birth = f"{year}-{month}-{day}"
                 else:
                     date_of_birth = None
             except ValueError:
                 messagebox.showwarning(
                     "Invalid Date",
-                    "Please enter a valid date of birth.",
+                    "Please select a valid date of birth.",
                     parent=self.verification_dialog
                 )
                 self.verification_dialog.configure(cursor="")
@@ -1045,3 +1182,95 @@ class RegisterForm(ctk.CTkFrame):
         self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
         
         self.start_camera()
+
+    def _on_month_year_change(self, value=None):
+        """Called when month or year changes to update available days"""
+        self._update_days()
+    
+    def _update_days(self):
+        """Update the day dropdown based on selected month and year"""
+        try:
+            month_name = self.month_dropdown.get()
+            year = int(self.year_dropdown.get())
+            
+            # Convert month name to number
+            month_names = [
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+            ]
+            month_num = month_names.index(month_name) + 1
+            
+            # Get number of days in the month
+            days_in_month = self._get_days_in_month(month_num, year)
+            
+            # Get current selected day
+            current_day = self.day_dropdown.get()
+            
+            # Create new day values
+            day_values = [str(i).zfill(2) for i in range(1, days_in_month + 1)]
+            
+            # Update the dropdown values
+            self.day_dropdown.configure(values=day_values)
+            
+            # Restore selection if still valid, otherwise set to last valid day
+            if current_day and int(current_day) <= days_in_month:
+                self.day_dropdown.set(current_day)
+            else:
+                self.day_dropdown.set(str(days_in_month).zfill(2))
+                
+        except (ValueError, AttributeError):
+            # Fallback to 31 days if something goes wrong
+            day_values = [str(i).zfill(2) for i in range(1, 32)]
+            self.day_dropdown.configure(values=day_values)
+            self.day_dropdown.set("15")
+    
+    def _get_days_in_month(self, month, year):
+        """Get the number of days in a given month and year"""
+        if month in [1, 3, 5, 7, 8, 10, 12]:  # 31 days
+            return 31
+        elif month in [4, 6, 9, 11]:  # 30 days
+            return 30
+        elif month == 2:  # February
+            return 29 if self._is_leap_year(year) else 28
+        else:
+            return 31  # Fallback
+    
+    def _is_leap_year(self, year):
+        """Check if a year is a leap year"""
+        return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+
+    def _configure_year_dropdown_height(self):
+        """Configure the year dropdown to limit its height"""
+        try:
+            # Try to access and configure the internal dropdown menu
+            if hasattr(self.year_dropdown, '_dropdown_menu') and self.year_dropdown._dropdown_menu:
+                # Limit the height by setting a maximum number of visible items
+                self.year_dropdown._dropdown_menu.configure(tearoff=0)
+                # Try to limit the height if the method exists
+                if hasattr(self.year_dropdown._dropdown_menu, 'configure'):
+                    try:
+                        # Set maximum height to show approximately 10 items
+                        self.year_dropdown._dropdown_menu.configure(postcommand=lambda: self._limit_dropdown_height())
+                    except:
+                        pass
+        except Exception as e:
+            print(f"Could not configure dropdown height: {e}")
+    
+    def _limit_dropdown_height(self):
+        """Limit the dropdown menu height"""
+        try:
+            if hasattr(self.year_dropdown, '_dropdown_menu') and self.year_dropdown._dropdown_menu:
+                # Get the menu widget
+                menu = self.year_dropdown._dropdown_menu
+                # Try to configure the menu to show limited items
+                if menu.winfo_exists():
+                    # Calculate position to center around 2000
+                    total_items = len(self.year_dropdown.cget("values"))
+                    if total_items > 10:  # Only limit if we have more than 10 items
+                        # Try to scroll to center around 2000
+                        center_index = self.year_dropdown.cget("values").index("2000")
+                        if center_index > 5:
+                            # Scroll the menu to show 2000 near the center
+                            menu.yview_scroll(center_index - 5, "units")
+        except:
+            pass  # Silently fail if internal structure is different

@@ -120,7 +120,7 @@ class DatabaseManager:
                 contact_number,
                 "Student",
                 face_image,
-                "active",
+                "Pending",
                 current_time,
                 current_time
             ))
