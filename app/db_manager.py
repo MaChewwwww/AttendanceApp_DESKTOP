@@ -31,7 +31,7 @@ class DatabaseManager:
             conn = self.get_connection()
             cursor = conn.cursor()
             
-            cursor.execute("SELECT COUNT(*) FROM users WHERE email = ?", (email,))
+            cursor.execute("SELECT COUNT(*) FROM users WHERE email = ? AND verified = 1", (email,))
             count = cursor.fetchone()[0]
             
             conn.close()
@@ -55,7 +55,7 @@ class DatabaseManager:
             conn = self.get_connection()
             cursor = conn.cursor()
             
-            cursor.execute("SELECT COUNT(*) FROM students WHERE student_number = ?", (student_id,))
+            cursor.execute("SELECT COUNT(*) FROM students s JOIN users u ON s.user_id = u.id WHERE s.student_number = ? AND u.verified = 1", (student_id,))
             count = cursor.fetchone()[0]
             
             conn.close()
@@ -105,10 +105,10 @@ class DatabaseManager:
             # Begin transaction
             conn.execute("BEGIN TRANSACTION")
             
-            # Insert user with new schema fields
+            # Insert user with new schema fields including verified
             user_query = """
-            INSERT INTO users (first_name, last_name, email, birthday, password_hash, contact_number, role, face_image, status, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users (first_name, last_name, email, birthday, password_hash, contact_number, role, face_image, status, verified, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
             current_time = datetime.now().isoformat()
             cursor.execute(user_query, (
@@ -121,6 +121,7 @@ class DatabaseManager:
                 "Student",
                 face_image,
                 "Pending",
+                0,  # verified = 0 (False) by default
                 current_time,
                 current_time
             ))

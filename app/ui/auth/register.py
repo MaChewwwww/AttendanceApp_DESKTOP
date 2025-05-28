@@ -6,6 +6,8 @@ import threading
 import time
 import io
 import os
+import winsound  # For Windows sound effects
+import re  # For regex pattern matching
 from datetime import datetime
 from PIL import Image, ImageTk
 
@@ -23,14 +25,18 @@ class RegisterForm(ctk.CTkFrame):
         self.camera_thread = None
         self.verification_dialog = None
         
-        # Create StringVar for form fields with test data (removed middle_name)
-        self.first_name_var = tk.StringVar(value="John")
-        self.last_name_var = tk.StringVar(value="Doe")
-        self.email_var = tk.StringVar(value="john.doe@example.com")
-        self.contact_number_var = tk.StringVar(value="09123456789")
-        self.student_number_var = tk.StringVar(value="2021-123456")
-        self.password_var = tk.StringVar(value="password123")
-        self.confirm_password_var = tk.StringVar(value="password123")
+        # Animation variables
+        self.shake_animation_running = False
+        self.original_card_x = None
+        
+        # Create StringVar for form fields - no test data
+        self.first_name_var = tk.StringVar()
+        self.last_name_var = tk.StringVar()
+        self.email_var = tk.StringVar()
+        self.contact_number_var = tk.StringVar()
+        self.student_number_var = tk.StringVar()
+        self.password_var = tk.StringVar()
+        self.confirm_password_var = tk.StringVar()
         
         # Create the registration form
         self._create_register_form()
@@ -39,7 +45,7 @@ class RegisterForm(ctk.CTkFrame):
         """Create the registration form UI"""
         # Header container for title
         header_container = ctk.CTkFrame(self, fg_color="transparent")
-        header_container.place(x=40, y=15)  # Increased left margin for better centering
+        header_container.place(x=40, y=15)
         
         # Title "Sign up as Student" on same row
         title_frame = ctk.CTkFrame(header_container, fg_color="transparent")
@@ -69,7 +75,7 @@ class RegisterForm(ctk.CTkFrame):
         divider.pack(anchor="w", pady=(5, 0))
         
         # Card Frame - better centered
-        card_frame = ctk.CTkFrame(
+        self.card_frame = ctk.CTkFrame(
             self,
             width=420,
             height=510,
@@ -78,14 +84,17 @@ class RegisterForm(ctk.CTkFrame):
             border_width=1,
             border_color="#d1d1d1"
         )
-        card_frame.place(x=40, y=70)  # Increased left margin to match header
-        card_frame.pack_propagate(False)
+        self.card_frame.place(x=40, y=70)
+        self.card_frame.pack_propagate(False)
         
+        # Store original position for shake animation
+        self.original_card_x = 40
+
         # Create two columns with tighter spacing
-        left_column = ctk.CTkFrame(card_frame, fg_color="transparent")
+        left_column = ctk.CTkFrame(self.card_frame, fg_color="transparent")
         left_column.place(x=15, y=15)  # Reduced margins
         
-        right_column = ctk.CTkFrame(card_frame, fg_color="transparent")
+        right_column = ctk.CTkFrame(self.card_frame, fg_color="transparent")
         right_column.place(x=215, y=15)  # Adjusted for smaller width
         
         # First Name Label and Input (Left Column)
@@ -133,7 +142,7 @@ class RegisterForm(ctk.CTkFrame):
         self.last_name_entry.pack(pady=(2, 10))  # Reduced spacing
         
         # Date of Birth Row - more compact
-        dob_container = ctk.CTkFrame(card_frame, fg_color="transparent")
+        dob_container = ctk.CTkFrame(self.card_frame, fg_color="transparent")
         dob_container.place(x=15, y=75)  # Adjusted position
         
         # Date of Birth Label
@@ -183,7 +192,7 @@ class RegisterForm(ctk.CTkFrame):
             command=self._on_month_year_change
         )
         self.month_dropdown.place(x=1, y=1)
-        self.month_dropdown.set("June")
+        self.month_dropdown.set("January")  # Changed from "June" to "January"
         
         # Day Dropdown Container - smaller
         day_container = ctk.CTkFrame(
@@ -233,7 +242,6 @@ class RegisterForm(ctk.CTkFrame):
         min_age = 16
         max_birth_year = current_year - min_age
         min_birth_year = current_year - 80
-        default_year = max_birth_year - 2
         
         year_values = [str(i) for i in range(min_birth_year, max_birth_year + 1)]
         
@@ -255,7 +263,7 @@ class RegisterForm(ctk.CTkFrame):
             dynamic_resizing=False
         )
         self.year_dropdown.place(x=1, y=1)
-        self.year_dropdown.set(str(default_year))
+        self.year_dropdown.set("2001")  # Changed to 2001
         
         # Schedule dropdown height configuration after widget creation
         self.after(100, self._configure_year_dropdown_height)
@@ -271,7 +279,7 @@ class RegisterForm(ctk.CTkFrame):
         self._update_days()
 
         # Contact Number - more compact
-        contact_container = ctk.CTkFrame(card_frame, fg_color="transparent")
+        contact_container = ctk.CTkFrame(self.card_frame, fg_color="transparent")
         contact_container.place(x=15, y=135)  # Adjusted position
         
         ctk.CTkLabel(
@@ -296,7 +304,7 @@ class RegisterForm(ctk.CTkFrame):
         self.contact_entry.pack(pady=(2, 0))
         
         # Student Number - more compact
-        student_container = ctk.CTkFrame(card_frame, fg_color="transparent")
+        student_container = ctk.CTkFrame(self.card_frame, fg_color="transparent")
         student_container.place(x=15, y=185)  # Adjusted position
         
         ctk.CTkLabel(
@@ -321,7 +329,7 @@ class RegisterForm(ctk.CTkFrame):
         self.student_entry.pack(pady=(2, 0))
         
         # Webmail Address - more compact
-        webmail_container = ctk.CTkFrame(card_frame, fg_color="transparent")
+        webmail_container = ctk.CTkFrame(self.card_frame, fg_color="transparent")
         webmail_container.place(x=15, y=235)  # Adjusted position
         
         ctk.CTkLabel(
@@ -346,7 +354,7 @@ class RegisterForm(ctk.CTkFrame):
         self.webmail_entry.pack(pady=(2, 0))
         
         # Password - more compact
-        password_container = ctk.CTkFrame(card_frame, fg_color="transparent")
+        password_container = ctk.CTkFrame(self.card_frame, fg_color="transparent")
         password_container.place(x=15, y=285)  # Adjusted position
         
         ctk.CTkLabel(
@@ -372,7 +380,7 @@ class RegisterForm(ctk.CTkFrame):
         self.password_entry.pack(pady=(2, 0))
         
         # Confirm Password - more compact
-        confirm_container = ctk.CTkFrame(card_frame, fg_color="transparent")
+        confirm_container = ctk.CTkFrame(self.card_frame, fg_color="transparent")
         confirm_container.place(x=15, y=335)  # Adjusted position
         
         ctk.CTkLabel(
@@ -398,7 +406,7 @@ class RegisterForm(ctk.CTkFrame):
         self.confirm_entry.pack(pady=(2, 0))
         
         # Terms and Condition Checkbox - more compact
-        terms_container = ctk.CTkFrame(card_frame, fg_color="transparent")
+        terms_container = ctk.CTkFrame(self.card_frame, fg_color="transparent")
         terms_container.place(x=15, y=400)  # Adjusted position
         
         self.terms_checkbox = ctk.CTkCheckBox(
@@ -419,7 +427,7 @@ class RegisterForm(ctk.CTkFrame):
         
         # Validation Label (initially hidden) - more compact
         self.validation_label = ctk.CTkLabel(
-            card_frame,
+            self.card_frame,
             text="",
             font=ctk.CTkFont("Roboto", 10),  # Smaller font
             text_color="#dc2626",
@@ -431,7 +439,7 @@ class RegisterForm(ctk.CTkFrame):
         
         # Sign Up Button - more compact
         self.signup_button = ctk.CTkButton(
-            card_frame,
+            self.card_frame,
             text="Sign Up",
             width=100,  # Reduced width
             height=28,  # Reduced height
@@ -443,29 +451,6 @@ class RegisterForm(ctk.CTkFrame):
             command=self.handle_register
         )
         self.signup_button.place(x=290, y=460)  # Adjusted position
-
-        # Force update the display after creating all widgets
-        self.after(100, self._refresh_test_data)
-    
-    def _refresh_test_data(self):
-        """Refresh test data in the form fields"""
-        # Ensure test data is displayed (removed middle_name)
-        self.first_name_var.set("John")
-        self.last_name_var.set("Doe")
-        self.email_var.set("john.doe@example.com")
-        self.contact_number_var.set("09123456789")
-        self.student_number_var.set("2021-123456")
-        self.password_var.set("password123")
-        self.confirm_password_var.set("password123")
-        
-        # Update the entry widgets
-        self.first_name_entry.update()
-        self.last_name_entry.update()
-        self.webmail_entry.update()
-        self.contact_entry.update()
-        self.student_entry.update()
-        self.password_entry.update()
-        self.confirm_entry.update()
 
     def get_form_data(self):
         """Get all form data as a dictionary"""
@@ -493,10 +478,68 @@ class RegisterForm(ctk.CTkFrame):
         if self.on_success:
             self.on_success(email)
 
+    def play_error_sound(self):
+        """Play error sound effect"""
+        try:
+            # Use Windows system error sound
+            winsound.MessageBeep(winsound.MB_ICONHAND)
+        except Exception as e:
+            # Fallback to system beep if winsound fails
+            try:
+                print('\a')  # ASCII bell character
+            except:
+                pass  # Silent fallback
+
+    def shake_card(self):
+        """Animate the card with a shake effect"""
+        if self.shake_animation_running:
+            return
+            
+        self.shake_animation_running = True
+        
+        # Shake parameters
+        shake_distance = 8
+        shake_duration = 400  # milliseconds
+        shake_steps = 8
+        step_duration = shake_duration // shake_steps
+        
+        def animate_step(step):
+            if step >= shake_steps:
+                # Return to original position
+                self.card_frame.place(x=self.original_card_x, y=70)
+                self.shake_animation_running = False
+                return
+            
+            # Calculate shake offset
+            if step % 2 == 0:
+                offset = shake_distance
+            else:
+                offset = -shake_distance
+                
+            # Reduce shake intensity over time
+            intensity = 1 - (step / shake_steps)
+            actual_offset = int(offset * intensity)
+            
+            # Apply shake
+            self.card_frame.place(x=self.original_card_x + actual_offset, y=70)
+            
+            # Schedule next step
+            self.after(step_duration, lambda: animate_step(step + 1))
+        
+        # Start animation
+        animate_step(0)
+
     def show_validation_error(self, message):
-        """Show validation error in the validation label"""
+        """Show validation error with sound and animation"""
+        # Play error sound
+        self.play_error_sound()
+        
+        # Start shake animation
+        self.shake_card()
+        
+        # Show error message
         self.validation_label.configure(text=message)
-        self.validation_label.place(x=15, y=430)  # Updated position
+        self.validation_label.place(x=15, y=425)
 
     def hide_validation_error(self):
         """Hide the validation error label"""
@@ -533,6 +576,28 @@ class RegisterForm(ctk.CTkFrame):
                 errors.append("• Student number is required")
             if not password:
                 errors.append("• Password is required")
+
+            # Validate email format
+            if email and not email.endswith("@iskolarngbayan.pup.edu.ph"):
+                errors.append("• Email must be a valid PUP email ending with @iskolarngbayan.pup.edu.ph")
+
+            # Validate contact number (11 digits)
+            if contact_number:
+                if not contact_number.isdigit():
+                    errors.append("• Contact number must contain only digits")
+                elif len(contact_number) != 11:
+                    errors.append("• Contact number must be exactly 11 digits")
+
+            # Validate password requirements
+            if password:
+                if len(password) < 6:
+                    errors.append("• Password must be at least 6 characters long")
+                if not re.search(r'[a-z]', password):
+                    errors.append("• Password must contain at least one lowercase letter")
+                if not re.search(r'[A-Z]', password):
+                    errors.append("• Password must contain at least one uppercase letter")
+                if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+                    errors.append("• Password must contain at least one special character")
 
             # Validate password match
             if password and confirm_password and password != confirm_password:
@@ -1251,37 +1316,65 @@ class RegisterForm(ctk.CTkFrame):
         return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
 
     def _configure_year_dropdown_height(self):
-        """Configure the year dropdown to limit its height"""
+        """Configure the year dropdown to limit its height and enable scrolling"""
         try:
-            # Try to access and configure the internal dropdown menu
+            # Access the internal dropdown menu
             if hasattr(self.year_dropdown, '_dropdown_menu') and self.year_dropdown._dropdown_menu:
-                # Limit the height by setting a maximum number of visible items
-                self.year_dropdown._dropdown_menu.configure(tearoff=0)
-                # Try to limit the height if the method exists
-                if hasattr(self.year_dropdown._dropdown_menu, 'configure'):
-                    try:
-                        # Set maximum height to show approximately 10 items
-                        self.year_dropdown._dropdown_menu.configure(postcommand=lambda: self._limit_dropdown_height())
-                    except:
-                        pass
+                menu = self.year_dropdown._dropdown_menu
+                
+                # Configure the menu to be scrollable with limited height
+                menu.configure(
+                    tearoff=0,
+                    postcommand=self._setup_year_dropdown_scroll
+                )
+                
         except Exception as e:
             print(f"Could not configure dropdown height: {e}")
     
-    def _limit_dropdown_height(self):
-        """Limit the dropdown menu height"""
+    def _setup_year_dropdown_scroll(self):
+        """Setup scrolling for the year dropdown menu"""
         try:
             if hasattr(self.year_dropdown, '_dropdown_menu') and self.year_dropdown._dropdown_menu:
-                # Get the menu widget
                 menu = self.year_dropdown._dropdown_menu
-                # Try to configure the menu to show limited items
-                if menu.winfo_exists():
-                    # Calculate position to center around 2000
-                    total_items = len(self.year_dropdown.cget("values"))
-                    if total_items > 10:  # Only limit if we have more than 10 items
-                        # Try to scroll to center around 2000
-                        center_index = self.year_dropdown.cget("values").index("2000")
-                        if center_index > 5:
-                            # Scroll the menu to show 2000 near the center
-                            menu.yview_scroll(center_index - 5, "units")
-        except:
-            pass  # Silently fail if internal structure is different
+                
+                # Get screen height to calculate max menu height
+                screen_height = self.winfo_screenheight()
+                max_menu_height = min(300, screen_height // 3)  # Limit to 300px or 1/3 of screen
+                
+                # Calculate the number of items that can fit
+                item_height = 25  # Approximate height per menu item
+                max_visible_items = max_menu_height // item_height
+                
+                # If we have more items than can fit, enable scrolling
+                total_items = len(self.year_dropdown.cget("values"))
+                if total_items > max_visible_items:
+                    # Find the index of the current selection (2001)
+                    current_value = self.year_dropdown.get()
+                    try:
+                        current_index = self.year_dropdown.cget("values").index(current_value)
+                        
+                        # Calculate scroll position to center around current value
+                        start_index = max(0, current_index - max_visible_items // 2)
+                        
+                        # Set the view to start at the calculated position
+                        menu.yview_moveto(start_index / total_items)
+                        
+                    except (ValueError, AttributeError):
+                        # If we can't find the current value, scroll to a reasonable position
+                        # Try to find 2001 or scroll to middle
+                        try:
+                            year_2001_index = self.year_dropdown.cget("values").index("2001")
+                            start_index = max(0, year_2001_index - max_visible_items // 2)
+                            menu.yview_moveto(start_index / total_items)
+                        except ValueError:
+                            # Just scroll to middle if 2001 not found
+                            menu.yview_moveto(0.5)
+                            
+        except Exception as e:
+            print(f"Error setting up dropdown scroll: {e}")
+    
+    def _limit_dropdown_height(self):
+        """Legacy method - replaced by _setup_year_dropdown_scroll"""
+        # This method is kept for compatibility but the new _setup_year_dropdown_scroll
+        # provides better scrolling functionality
+        self._setup_year_dropdown_scroll()

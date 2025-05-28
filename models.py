@@ -17,6 +17,7 @@ class User(Base):
     role = Column(String(50), nullable=False, default="Student")
     face_image = Column(LargeBinary, nullable=True)  # LargeBinary (LBLOB)
     status = Column(String(50), nullable=False, default="pending")
+    verified = Column(Integer, nullable=False, default=0)  # 0 for False, 1 for True
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
