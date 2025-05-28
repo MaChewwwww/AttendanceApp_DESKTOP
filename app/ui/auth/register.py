@@ -22,9 +22,8 @@ class RegisterForm(ctk.CTkFrame):
         self.camera_thread = None
         self.verification_dialog = None
         
-        # Create StringVar for form fields with test data
+        # Create StringVar for form fields with test data (removed middle_name)
         self.first_name_var = tk.StringVar(value="John")
-        self.middle_name_var = tk.StringVar(value="Michael")
         self.last_name_var = tk.StringVar(value="Doe")
         self.email_var = tk.StringVar(value="john.doe@example.com")
         self.contact_number_var = tk.StringVar(value="09123456789")
@@ -357,7 +356,7 @@ class RegisterForm(ctk.CTkFrame):
     
     def _refresh_test_data(self):
         """Refresh test data in the form fields"""
-        # Ensure test data is displayed
+        # Ensure test data is displayed (removed middle_name)
         self.first_name_var.set("John")
         self.last_name_var.set("Doe")
         self.email_var.set("john.doe@example.com")
@@ -379,7 +378,6 @@ class RegisterForm(ctk.CTkFrame):
         """Get all form data as a dictionary"""
         return {
             'first_name': self.first_name_var.get(),
-            'middle_name': self.middle_name_var.get(),
             'last_name': self.last_name_var.get(),
             'email': self.email_var.get(),
             'contact_number': self.contact_number_var.get(),
@@ -408,7 +406,6 @@ class RegisterForm(ctk.CTkFrame):
             # Get values from form fields
             first_name = self.first_name_var.get().strip()
             last_name = self.last_name_var.get().strip()
-            middle_name = self.middle_name_var.get().strip()
             email = self.email_var.get().strip()
             contact_number = self.contact_number_var.get().strip()
             student_number = self.student_number_var.get().strip()
@@ -526,7 +523,7 @@ class RegisterForm(ctk.CTkFrame):
             text_color="#707070",
             border_width=0,
             hover_color="#cccccc",
-            state="disabled",
+            state="disabled",  # Start disabled
             command=self.retake_photo
         )
         self.retake_button.place(x=22, y=335)  # Adjusted from y=375 to y=335
@@ -838,28 +835,61 @@ class RegisterForm(ctk.CTkFrame):
             self.verification_dialog.configure(cursor="wait")
             self.verification_dialog.update_idletasks()
             
-            # Get form data
+            # Get form data (removed middle_name)
             first_name = self.first_name_var.get().strip()
             last_name = self.last_name_var.get().strip()
-            middle_name = self.middle_name_var.get().strip()
             email = self.email_var.get().strip()
             contact_number = self.contact_number_var.get().strip()
             student_number = self.student_number_var.get().strip()
             password = self.password_var.get().strip()
             
-            # Attempt registration
+            # Get date of birth
+            day = self.day_entry.get().strip()
+            month = self.month_entry.get().strip()
+            year = self.year_entry.get().strip()
+            
+            # Validate date of birth (basic validation)
+            try:
+                if day and month and year:
+                    # Basic date validation
+                    day_int = int(day)
+                    month_int = int(month)
+                    year_int = int(year)
+                    
+                    if not (1 <= day_int <= 31):
+                        raise ValueError("Invalid day")
+                    if not (1 <= month_int <= 12):
+                        raise ValueError("Invalid month")
+                    if not (1900 <= year_int <= 2020):
+                        raise ValueError("Invalid year")
+                        
+                    date_of_birth = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+                else:
+                    date_of_birth = None
+            except ValueError:
+                messagebox.showwarning(
+                    "Invalid Date",
+                    "Please enter a valid date of birth.",
+                    parent=self.verification_dialog
+                )
+                self.verification_dialog.configure(cursor="")
+                return
+            
+            # Attempt registration with database (removed middle_name parameter)
             if self.db_manager:
                 success, result = self.db_manager.register(
                     first_name=first_name,
-                    middle_name=middle_name,
                     last_name=last_name,
                     email=email,
                     student_number=student_number,
                     password=password,
-                    face_image=self.face_image_data
+                    face_image=self.face_image_data,
+                    contact_number=contact_number,
+                    date_of_birth=date_of_birth
                 )
             else:
-                success, result = False, "Database manager not initialized"
+                success = False
+                result = "Database manager not initialized"
             
             # Reset cursor
             self.verification_dialog.configure(cursor="")
@@ -871,21 +901,29 @@ class RegisterForm(ctk.CTkFrame):
             if success:
                 messagebox.showinfo(
                     "Registration Successful",
-                    "Your account has been created! You can now log in.",
+                    f"Account created successfully!\n\nStudent Number: {student_number}\nEmail: {email}\n\nYou can now log in with your credentials.",
                     parent=self.verification_dialog
                 )
                 
                 # Close dialog
                 self.verification_dialog.destroy()
                 
-                # Call success handler
+                # Call success handler with email for login pre-fill
                 self.on_registration_success(email)
             else:
-                messagebox.showerror("Registration Failed", result, parent=self.verification_dialog)
+                messagebox.showerror(
+                    "Registration Failed", 
+                    f"Failed to create account:\n{result}",
+                    parent=self.verification_dialog
+                )
                 
         except Exception as e:
             self.verification_dialog.configure(cursor="")
-            messagebox.showerror("Registration Error", f"An unexpected error occurred: {str(e)}", parent=self.verification_dialog)
+            messagebox.showerror(
+                "Registration Error", 
+                f"An unexpected error occurred during registration:\n{str(e)}",
+                parent=self.verification_dialog
+            )
             import traceback
             traceback.print_exc()
 
@@ -895,6 +933,10 @@ class RegisterForm(ctk.CTkFrame):
             # Stop camera and clean up
             if self.is_camera_active:
                 self.stop_camera()
+            
+            # Reset face capture state
+            self.face_image = None
+            self.face_image_data = None
             
             # Destroy dialog
             if self.verification_dialog:
@@ -907,6 +949,8 @@ class RegisterForm(ctk.CTkFrame):
         """Update UI after camera window is closed"""
         self.camera_button.configure(text="Open Camera")
         self.capture_button.configure(state="disabled")
+        
+        # Only show preview label if no face is captured
         if not self.face_image:
             self.preview_label = ctk.CTkLabel(
                 self.face_preview_frame,
@@ -915,27 +959,6 @@ class RegisterForm(ctk.CTkFrame):
                 text_color="#a0a0a0"
             )
             self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
-
-    def retake_photo(self):
-        """Retake photo - restart camera"""
-        self.face_image = None
-        self.face_image_data = None
-        self.register_button.configure(state="disabled")
-        self.retake_button.configure(state="disabled")
-        
-        # Clear preview
-        for widget in self.face_preview_frame.winfo_children():
-            widget.destroy()
-        
-        self.preview_label = ctk.CTkLabel(
-            self.face_preview_frame,
-            text="Camera will appear here\nClick 'Open Camera' to begin",
-            font=ctk.CTkFont("Roboto", 12),
-            text_color="#a0a0a0"
-        )
-        self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
-        
-        self.start_camera()
 
     def capture_face(self):
         """Capture face using the Capture button"""
@@ -980,12 +1003,45 @@ class RegisterForm(ctk.CTkFrame):
             self.stop_camera()
             self.show_face_preview()
             
-            # Enable buttons
+            # Enable buttons now that face is captured
             self.register_button.configure(state="normal")
-            self.retake_button.configure(state="normal")
+            self.retake_button.configure(
+                state="normal",
+                fg_color="#dc2626",  # Red color for retake
+                text_color="#ffffff",
+                hover_color="#b91c1c"
+            )
             
             messagebox.showinfo("Success", "Face image captured successfully! You can now proceed with registration.", parent=self.verification_dialog)
             
         except Exception as e:
             print(f"Capture error: {e}")
             messagebox.showerror("Error", f"Failed to capture image: {str(e)}", parent=self.verification_dialog)
+
+    def retake_photo(self):
+        """Retake photo - restart camera"""
+        self.face_image = None
+        self.face_image_data = None
+        
+        # Disable buttons since no face is captured
+        self.register_button.configure(state="disabled")
+        self.retake_button.configure(
+            state="disabled",
+            fg_color="#e5e5e5",
+            text_color="#707070",
+            hover_color="#cccccc"
+        )
+        
+        # Clear preview
+        for widget in self.face_preview_frame.winfo_children():
+            widget.destroy()
+        
+        self.preview_label = ctk.CTkLabel(
+            self.face_preview_frame,
+            text="Camera will appear here\nClick 'Open Camera' to begin",
+            font=ctk.CTkFont("Roboto", 12),
+            text_color="#a0a0a0"
+        )
+        self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
+        
+        self.start_camera()

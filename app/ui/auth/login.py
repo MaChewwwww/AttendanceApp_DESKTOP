@@ -10,7 +10,7 @@ class LoginForm(ctk.CTkFrame):
         self.on_login_success = on_login_success
         
         # Initialize variables
-        self.student_number = tk.StringVar()
+        self.email_var = tk.StringVar()  # Changed from student_number to email
         self.password = tk.StringVar()
         self.remember_me = tk.BooleanVar()
         
@@ -68,17 +68,17 @@ class LoginForm(ctk.CTkFrame):
         )
         divider.place(relx=0.5, rely=0.5, anchor="center")
         
-        # Student Number
+        # Email (changed from Student Number)
         ctk.CTkLabel(
             padding_frame,
-            text="Student Number",
+            text="Email Address",
             font=ctk.CTkFont("Roboto", 12),
             text_color="#707070"
         ).pack(anchor="w", padx=17, pady=(0, 3))
         
-        student_number_entry = ctk.CTkEntry(
+        email_entry = ctk.CTkEntry(
             padding_frame,
-            textvariable=self.student_number,
+            textvariable=self.email_var,
             width=420,
             height=27,
             corner_radius=8,
@@ -87,7 +87,7 @@ class LoginForm(ctk.CTkFrame):
             border_color="#d1d1d1",
             text_color="#000000"
         )
-        student_number_entry.pack(padx=17, pady=(0, 10))
+        email_entry.pack(padx=17, pady=(0, 10))
         
         # Password
         ctk.CTkLabel(
@@ -157,16 +157,20 @@ class LoginForm(ctk.CTkFrame):
         
     def handle_login(self):
         """Handle login button click"""
-        student_number = self.student_number.get().strip()
+        email = self.email_var.get().strip()
         password = self.password.get().strip()
         
-        if not student_number or not password:
+        if not email or not password:
             messagebox.showerror("Error", "Please fill in all fields")
             return
             
-        # TODO: Implement actual login logic with database
-        if self.on_login_success:
-            self.on_login_success({
-                'student_number': student_number,
-                'role': 'student'
-            }) 
+        # Implement actual login logic with database
+        if self.db_manager:
+            success, result = self.db_manager.login(email, password)
+            if success:
+                if self.on_login_success:
+                    self.on_login_success(result)
+            else:
+                messagebox.showerror("Login Failed", result)
+        else:
+            messagebox.showerror("Error", "Database not available")

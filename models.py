@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, LargeBinary
+from sqlalchemy import Column, Integer, String, DateTime, Date, ForeignKey, LargeBinary
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 
@@ -11,7 +11,7 @@ class User(Base):
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
     email = Column(String(255), unique=True, nullable=False, index=False)
-    birthday = Column(DateTime, nullable=False)
+    birthday = Column(Date, nullable=False)
     password_hash = Column(String(255), nullable=False)
     contact_number = Column(String(20), nullable=False)
     role = Column(String(50), nullable=False, default="Student")
