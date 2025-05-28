@@ -27,8 +27,7 @@ class AttendanceApp:
         
         # Create and configure initial screen
         self.initial_screen = InitialScreen(
-            on_student_click=self.show_student_auth,
-            on_faculty_click=self.show_faculty_auth
+            on_student_click=self.show_student_auth
         )
         
         # Configure window
@@ -50,12 +49,13 @@ class AttendanceApp:
         self.auth_window = None
         self.dashboard_window = None
         
-    def show_student_auth(self):
+    def show_student_auth(self, show_register=False):
         """Show student authentication window"""
         self.initial_screen.withdraw()
         
         # Create and configure login/registration window
         self.auth_window = LoginRegister(self.db_manager)
+        self.auth_window.initial_screen = self.initial_screen  # Pass the initial screen reference
         
         # Configure window
         self.auth_window.title(f"{APP_NAME} - Student Login")
@@ -77,6 +77,7 @@ class AttendanceApp:
         
         # Show the window
         self.auth_window.deiconify()
+        self.auth_window.show_student_auth(show_register)
         
     def show_faculty_auth(self):
         """Show faculty authentication window"""

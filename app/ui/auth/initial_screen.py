@@ -2,11 +2,10 @@ import customtkinter as ctk
 import tkinter as tk
 
 class InitialScreen(ctk.CTk):
-    def __init__(self, on_student_click=None, on_faculty_click=None):
+    def __init__(self, on_student_click=None):
         super().__init__()
         
         self.on_student_click = on_student_click
-        self.on_faculty_click = on_faculty_click
         
         self.title("Attendify")
         self.geometry("1000x600")
@@ -99,19 +98,6 @@ class InitialScreen(ctk.CTk):
         )
         self.student_btn.pack(pady=10)
         
-        self.faculty_btn = ctk.CTkButton(
-            padding_frame,
-            text="Faculty",
-            width=325,
-            height=27,
-            corner_radius=8,
-            font=ctk.CTkFont("Roboto", 11),
-            fg_color="#10B981",
-            hover_color="#10B981",
-            command=self.on_faculty_click
-        )
-        self.faculty_btn.pack(pady=10)
-        
         terms_container = ctk.CTkFrame(padding_frame, fg_color="transparent")
         terms_container.pack(pady=(15, 5))
         
@@ -192,5 +178,4 @@ class InitialScreen(ctk.CTk):
             bg="#ffffff"
         )
         signup_label.pack()
-        signup_label.bind("<Button-1>", lambda e: self.on_student_click())
-        signup_label.config(underline=True) 
+        signup_label.bind("<Button-1>", lambda e: self.on_student_click(True)) 
