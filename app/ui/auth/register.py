@@ -9,6 +9,7 @@ import time
 import io
 import numpy as np
 import os
+from .face_verification_dialog import FaceVerificationDialog
 
 class RegisterForm(ctk.CTkFrame):
     def __init__(self, parent, db_manager=None):
@@ -22,16 +23,26 @@ class RegisterForm(ctk.CTkFrame):
         self.face_image_data = None
         
         # Create StringVar for form fields
-        self.first_name_var = tk.StringVar()
-        self.middle_name_var = tk.StringVar()
-        self.last_name_var = tk.StringVar()
-        self.email_var = tk.StringVar()
-        self.student_number_var = tk.StringVar()
-        self.password_var = tk.StringVar()
-        self.confirm_password_var = tk.StringVar()
+        self.first_name_var = tk.StringVar(value="")
+        self.middle_name_var = tk.StringVar(value="")
+        self.last_name_var = tk.StringVar(value="")
+        self.email_var = tk.StringVar(value="")
+        self.contact_number_var = tk.StringVar(value="")
+        self.student_number_var = tk.StringVar(value="")
+        self.password_var = tk.StringVar(value="")
+        self.confirm_password_var = tk.StringVar(value="")
         
         # Create the registration form
         self._create_register_form()
+        
+        # Add trace to monitor changes
+        self.first_name_var.trace_add("write", lambda *args: print(f"First Name changed to: {self.first_name_var.get()}"))
+        self.last_name_var.trace_add("write", lambda *args: print(f"Last Name changed to: {self.last_name_var.get()}"))
+        self.email_var.trace_add("write", lambda *args: print(f"Email changed to: {self.email_var.get()}"))
+        self.contact_number_var.trace_add("write", lambda *args: print(f"Contact Number changed to: {self.contact_number_var.get()}"))
+        self.student_number_var.trace_add("write", lambda *args: print(f"Student Number changed to: {self.student_number_var.get()}"))
+        self.password_var.trace_add("write", lambda *args: print(f"Password changed to: {self.password_var.get()}"))
+        self.confirm_password_var.trace_add("write", lambda *args: print(f"Confirm Password changed to: {self.confirm_password_var.get()}"))
         
     def _create_register_form(self):
         """Create the registration form UI"""
@@ -41,7 +52,7 @@ class RegisterForm(ctk.CTkFrame):
             text="Sign up as",
             font=ctk.CTkFont("Roboto", 24, "bold"),
             text_color="#000000"
-        ).place(x=20, y=40)
+        ).place(x=20, y=20)
         
         # Student label
         ctk.CTkLabel(
@@ -49,7 +60,7 @@ class RegisterForm(ctk.CTkFrame):
             text="Student",
             font=ctk.CTkFont("Roboto", 24, "bold"),
             text_color="#1E3A8A"
-        ).place(x=20, y=65)
+        ).place(x=20, y=45)
         
         # Divider
         divider = ctk.CTkFrame(
@@ -58,181 +69,329 @@ class RegisterForm(ctk.CTkFrame):
             width=50,
             height=2
         )
-        divider.place(x=20, y=95)
+        divider.place(x=20, y=75)
         
         # Card Frame
         card_frame = ctk.CTkFrame(
             self,
             width=455,
-            height=473,
+            height=493,
             corner_radius=15,
             fg_color="#ffffff",
             border_width=1,
             border_color="#d1d1d1"
         )
-        card_frame.place(x=20, y=120)
+        card_frame.place(x=20, y=100)
         card_frame.pack_propagate(False)
+        
+        # Create two columns
+        left_column = ctk.CTkFrame(card_frame, fg_color="transparent")
+        left_column.place(x=20, y=10)
+        
+        right_column = ctk.CTkFrame(card_frame, fg_color="transparent")
+        right_column.place(x=237, y=10)
+        
+        # First Name Label and Input (Left Column)
+        ctk.CTkLabel(
+            left_column,
+            text="First Name",
+            font=ctk.CTkFont("Roboto", 12),
+            text_color="#707070"
+        ).pack(anchor="w")
+        
+        self.first_name_entry = ctk.CTkEntry(
+            left_column,
+            width=200,
+            height=23,
+            corner_radius=6,
+            border_width=1,
+            font=ctk.CTkFont("Roboto", 12),
+            fg_color="#ffffff",
+            border_color="#d1d1d1",
+            text_color="#000000",
+            textvariable=self.first_name_var
+        )
+        self.first_name_entry.pack(pady=(2, 5))
+        
+        # Last Name Label and Input (Right Column)
+        ctk.CTkLabel(
+            right_column,
+            text="Last Name",
+            font=ctk.CTkFont("Roboto", 12),
+            text_color="#707070"
+        ).pack(anchor="w")
+        
+        self.last_name_entry = ctk.CTkEntry(
+            right_column,
+            width=200,
+            height=23,
+            corner_radius=6,
+            border_width=1,
+            font=ctk.CTkFont("Roboto", 12),
+            fg_color="#ffffff",
+            border_color="#d1d1d1",
+            text_color="#000000",
+            textvariable=self.last_name_var
+        )
+        self.last_name_entry.pack(pady=(2, 5))
+        
+        # Date of Birth Row
+        dob_container = ctk.CTkFrame(card_frame, fg_color="transparent")
+        dob_container.place(x=20, y=75)
+        
+        # Date of Birth Label
+        ctk.CTkLabel(
+            dob_container,
+            text="Date of Birth",
+            font=ctk.CTkFont("Roboto", 12),
+            text_color="#707070"
+        ).pack(anchor="w")
+        
+        # Date Input Fields Container
+        date_fields = ctk.CTkFrame(dob_container, fg_color="transparent")
+        date_fields.pack(pady=(2, 5))
+        
+        # Day Input
+        self.day_entry = ctk.CTkEntry(
+            date_fields,
+            width=130,
+            height=23,
+            corner_radius=6,
+            border_width=1,
+            font=ctk.CTkFont("Roboto", 12),
+            fg_color="#ffffff",
+            border_color="#d1d1d1",
+            text_color="#000000",
+            placeholder_text="Day"
+        )
+        self.day_entry.pack(side="left", padx=(0, 10))
+        
+        # Month Input
+        self.month_entry = ctk.CTkEntry(
+            date_fields,
+            width=130,
+            height=23,
+            corner_radius=6,
+            border_width=1,
+            font=ctk.CTkFont("Roboto", 12),
+            fg_color="#ffffff",
+            border_color="#d1d1d1",
+            text_color="#000000",
+            placeholder_text="Month"
+        )
+        self.month_entry.pack(side="left", padx=(0, 10))
+        
+        # Year Input
+        self.year_entry = ctk.CTkEntry(
+            date_fields,
+            width=130,
+            height=23,
+            corner_radius=6,
+            border_width=1,
+            font=ctk.CTkFont("Roboto", 12),
+            fg_color="#ffffff",
+            border_color="#d1d1d1",
+            text_color="#000000",
+            placeholder_text="Year"
+        )
+        self.year_entry.pack(side="left")
+        
+        # Contact Number
+        contact_container = ctk.CTkFrame(card_frame, fg_color="transparent")
+        contact_container.place(x=20, y=130)
+        
+        ctk.CTkLabel(
+            contact_container,
+            text="Contact Number",
+            font=ctk.CTkFont("Roboto", 12),
+            text_color="#707070"
+        ).pack(anchor="w")
+        
+        self.contact_entry = ctk.CTkEntry(
+            contact_container,
+            width=200,
+            height=23,
+            corner_radius=6,
+            border_width=1,
+            font=ctk.CTkFont("Roboto", 12),
+            fg_color="#ffffff",
+            border_color="#d1d1d1",
+            text_color="#000000",
+            textvariable=self.contact_number_var
+        )
+        self.contact_entry.pack(pady=(2, 5))
+        
+        # Student Number
+        student_container = ctk.CTkFrame(card_frame, fg_color="transparent")
+        student_container.place(x=20, y=185)
+        
+        ctk.CTkLabel(
+            student_container,
+            text="Student Number",
+            font=ctk.CTkFont("Roboto", 12),
+            text_color="#707070"
+        ).pack(anchor="w")
+        
+        self.student_entry = ctk.CTkEntry(
+            student_container,
+            width=419,
+            height=23,
+            corner_radius=6,
+            border_width=1,
+            font=ctk.CTkFont("Roboto", 12),
+            fg_color="#ffffff",
+            border_color="#d1d1d1",
+            text_color="#000000",
+            textvariable=self.student_number_var
+        )
+        self.student_entry.pack(pady=(2, 5))
+        
+        # Webmail Address
+        webmail_container = ctk.CTkFrame(card_frame, fg_color="transparent")
+        webmail_container.place(x=20, y=240)
+        
+        ctk.CTkLabel(
+            webmail_container,
+            text="Webmail Address",
+            font=ctk.CTkFont("Roboto", 12),
+            text_color="#707070"
+        ).pack(anchor="w")
+        
+        self.webmail_entry = ctk.CTkEntry(
+            webmail_container,
+            width=419,
+            height=23,
+            corner_radius=6,
+            border_width=1,
+            font=ctk.CTkFont("Roboto", 12),
+            fg_color="#ffffff",
+            border_color="#d1d1d1",
+            text_color="#000000",
+            textvariable=self.email_var
+        )
+        self.webmail_entry.pack(pady=(2, 5))
+        
+        # Password
+        password_container = ctk.CTkFrame(card_frame, fg_color="transparent")
+        password_container.place(x=20, y=295)
+        
+        ctk.CTkLabel(
+            password_container,
+            text="Password",
+            font=ctk.CTkFont("Roboto", 12),
+            text_color="#707070"
+        ).pack(anchor="w")
+        
+        self.password_entry = ctk.CTkEntry(
+            password_container,
+            width=419,
+            height=23,
+            corner_radius=6,
+            border_width=1,
+            font=ctk.CTkFont("Roboto", 12),
+            fg_color="#ffffff",
+            border_color="#d1d1d1",
+            text_color="#000000",
+            show="•",
+            textvariable=self.password_var
+        )
+        self.password_entry.pack(pady=(2, 5))
+        
+        # Confirm Password
+        confirm_container = ctk.CTkFrame(card_frame, fg_color="transparent")
+        confirm_container.place(x=20, y=350)
+        
+        ctk.CTkLabel(
+            confirm_container,
+            text="Confirm Password",
+            font=ctk.CTkFont("Roboto", 12),
+            text_color="#707070"
+        ).pack(anchor="w")
+        
+        self.confirm_entry = ctk.CTkEntry(
+            confirm_container,
+            width=419,
+            height=23,
+            corner_radius=6,
+            border_width=1,
+            font=ctk.CTkFont("Roboto", 12),
+            fg_color="#ffffff",
+            border_color="#d1d1d1",
+            text_color="#000000",
+            show="•",
+            textvariable=self.confirm_password_var
+        )
+        self.confirm_entry.pack(pady=(2, 5))
+        
+        # Terms and Condition Checkbox
+        terms_container = ctk.CTkFrame(card_frame, fg_color="transparent")
+        terms_container.place(x=20, y=405)
+        
+        self.terms_checkbox = ctk.CTkCheckBox(
+            terms_container,
+            text="I agree to the Terms and Condition",
+            font=ctk.CTkFont("Roboto", 12),
+            text_color="#707070",
+            fg_color="#1E3A8A",
+            hover_color="#1E3A8A",
+            border_color="#d1d1d1",
+            checkbox_width=15,
+            checkbox_height=15,
+            corner_radius=2,
+            border_width=1
+        )
+        self.terms_checkbox.pack(anchor="w")
+        
+        # Sign Up Button
+        self.signup_button = ctk.CTkButton(
+            card_frame,
+            text="Next",
+            width=120,
+            height=27,
+            corner_radius=10,
+            border_width=1,
+            font=ctk.CTkFont("Roboto", 12, "bold"),
+            fg_color="#1E3A8A",
+            hover_color="#152a63",
+            command=self.open_verification_dialog
+        )
+        self.signup_button.place(x=315, y=450)
+
+    def get_form_data(self):
+        """Get all form data as a dictionary"""
+        return {
+            'first_name': self.first_name_var.get(),
+            'middle_name': self.middle_name_var.get(),
+            'last_name': self.last_name_var.get(),
+            'email': self.email_var.get(),
+            'contact_number': self.contact_number_var.get(),
+            'student_number': self.student_number_var.get(),
+            'password': self.password_var.get(),
+            'confirm_password': self.confirm_password_var.get()
+        }
+
+    def on_registration_success(self, email):
+        """Handle successful registration"""
+        # Reset form fields
+        self.first_name_var.set("")
+        self.middle_name_var.set("")
+        self.last_name_var.set("")
+        self.email_var.set("")
+        self.contact_number_var.set("")
+        self.student_number_var.set("")
+        self.password_var.set("")
+        self.confirm_password_var.set("")
+        
+        # Show login screen
+        self.master.show_login()
+        
+        # Set remembered email
+        if email:
+            self.after(100, lambda e=email: self.email_var.set(e))
 
     def open_verification_dialog(self):
         """Open dialog for face verification during registration"""
-        # Basic validation before opening dialog
-        first_name = self.first_name_var.get().strip()
-        last_name = self.last_name_var.get().strip()
-        email = self.email_var.get().strip()
-        student_number = self.student_number_var.get().strip()
-        password = self.password_var.get().strip()
-        confirm_password = self.confirm_password_var.get().strip()
-
-        # Validate required fields
-        if not first_name or not last_name or not email or not student_number or not password:
-            messagebox.showwarning("Registration Failed", "Please fill in all required fields.")
-            return
-
-        if password != confirm_password:
-            messagebox.showwarning("Registration Failed", "Passwords do not match.")
-            return
-            
-        # Show waiting cursor during validation
-        self.master.config(cursor="wait")
-        self.master.update_idletasks()
-        
-        # Check if email or student ID already exists
-        if self.db_manager:
-            # Check email
-            email_exists, _ = self.db_manager.check_email_exists(email)
-            if email_exists:
-                self.master.config(cursor="")
-                messagebox.showwarning("Registration Failed", "This email address is already registered.")
-                return
-                
-            # Check student number 
-            student_id_exists, _ = self.db_manager.check_student_id_exists(student_number)
-            if student_id_exists:
-                self.master.config(cursor="")
-                messagebox.showwarning("Registration Failed", "This student ID is already registered.")
-                return
-        
-        # Restore cursor
-        self.master.config(cursor="")
-        
-        # Create verification dialog
-        self.dialog = ctk.CTkToplevel(self.master)
-        self.dialog.title("Complete Registration")
-        self.dialog.geometry("500x700")
-        self.dialog.resizable(False, False)
-        self.dialog.configure(fg_color="#2b2b3b")
-
-        # Make dialog modal
-        self.dialog.grab_set()
-
-        # Center dialog
-        self.dialog.update_idletasks()
-        width = self.dialog.winfo_width()
-        height = self.dialog.winfo_height()
-        x = (self.dialog.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.dialog.winfo_screenheight() // 2) - (height // 2)
-        self.dialog.geometry(f"{width}x{height}+{x}+{y}")
-
-        self._create_verification_dialog_content()
-
-    def _create_verification_dialog_content(self):
-        """Create content for the face verification dialog"""
-        # Inner frame to center content
-        inner_frame = ctk.CTkFrame(self.dialog, fg_color="transparent")
-        inner_frame.pack(expand=True, fill="both", padx=20, pady=20)
-
-        # Title
-        ctk.CTkLabel(
-            inner_frame,
-            text="Complete Registration",
-            font=ctk.CTkFont("Roboto", 16, "bold"),
-            text_color="#ffffff"
-        ).pack(pady=(0, 10))
-
-        # Face Registration Section
-        face_frame = ctk.CTkFrame(inner_frame, fg_color="#2b2b3b")
-        face_frame.pack(fill="x", pady=10)
-
-        # Face Preview Frame
-        self.face_preview_frame = ctk.CTkFrame(face_frame, width=320, height=240, fg_color="#3a3a4a")
-        self.face_preview_frame.pack(pady=10)
-        self.face_preview_frame.pack_propagate(False)
-
-        # Default Preview Label
-        self.preview_label = ctk.CTkLabel(
-            self.face_preview_frame,
-            text="No face image captured",
-            font=ctk.CTkFont("Roboto", 10),
-            text_color="#a0a0a0"
-        )
-        self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
-
-        # Camera Controls Frame
-        face_buttons_frame = ctk.CTkFrame(face_frame, fg_color="transparent")
-        face_buttons_frame.pack(fill="x", pady=5)
-        
-        # Add a spacer frame on the left for centering
-        left_spacer = ctk.CTkFrame(face_buttons_frame, fg_color="transparent", width=20)
-        left_spacer.pack(side="left", expand=True)
-
-        # Open Camera Button
-        self.camera_button = ctk.CTkButton(
-            face_buttons_frame,
-            text="Open Camera",
-            width=120,
-            height=30,
-            corner_radius=8,
-            font=ctk.CTkFont("Roboto", 11),
-            fg_color="#6363ff",
-            hover_color="#4b4bff",
-            command=self.toggle_camera
-        )
-        self.camera_button.pack(side="left", padx=5)
-
-        # Capture Button
-        self.capture_button = ctk.CTkButton(
-            face_buttons_frame,
-            text="Capture",
-            width=120,
-            height=30,
-            corner_radius=8,
-            font=ctk.CTkFont("Roboto", 11),
-            fg_color="#6363ff",
-            hover_color="#4b4bff",
-            state="disabled",
-            command=self.capture_face
-        )
-        self.capture_button.pack(side="left", padx=5)
-        
-        # Add a spacer frame on the right for centering
-        right_spacer = ctk.CTkFrame(face_buttons_frame, fg_color="transparent", width=20)
-        right_spacer.pack(side="left", expand=True)
-
-        # Instructions Label
-        ctk.CTkLabel(
-            inner_frame,
-            text="* Face image is required for registration",
-            font=ctk.CTkFont("Roboto", 10, weight="normal", slant="italic"),
-            text_color="#ff9f9f",
-            justify="left"
-        ).pack(pady=(5, 0))
-        
-        # Submit Button
-        self.submit_button = ctk.CTkButton(
-            inner_frame,
-            text="Submit Registration",
-            width=200,
-            height=35,
-            corner_radius=8,
-            font=ctk.CTkFont("Roboto", 12, "bold"),
-            fg_color="#4CAF50",
-            hover_color="#388E3C",
-            command=self.handle_register
-        )
-        self.submit_button.pack(pady=15)
-
-        # Bind dialog close to cleanup
-        self.dialog.protocol("WM_DELETE_WINDOW", self.on_dialog_closing)
+        FaceVerificationDialog(self, self.db_manager)
 
     def toggle_camera(self):
         """Toggle camera on/off"""
@@ -470,15 +629,35 @@ class RegisterForm(ctk.CTkFrame):
     def handle_register(self):
         """Process the registration form submission"""
         try:
+            # Get values from form fields
             first_name = self.first_name_var.get().strip()
             last_name = self.last_name_var.get().strip()
             middle_name = self.middle_name_var.get().strip()
             email = self.email_var.get().strip()
+            contact_number = self.contact_number_var.get().strip()
             student_number = self.student_number_var.get().strip()
             password = self.password_var.get().strip()
             confirm_password = self.confirm_password_var.get().strip()
             
-            if not first_name or not last_name or not email or not student_number or not password:
+            # Debug prints
+            print("Form Values:")
+            print(f"First Name: '{first_name}'")
+            print(f"Last Name: '{last_name}'")
+            print(f"Email: '{email}'")
+            print(f"Contact Number: '{contact_number}'")
+            print(f"Student Number: '{student_number}'")
+            print(f"Password: '{password}'")
+            print(f"Confirm Password: '{confirm_password}'")
+
+            # Validate required fields
+            if not first_name or not last_name or not email or not contact_number or not student_number or not password:
+                print("Validation failed - missing fields:")
+                if not first_name: print("First Name is empty")
+                if not last_name: print("Last Name is empty")
+                if not email: print("Email is empty")
+                if not contact_number: print("Contact Number is empty")
+                if not student_number: print("Student Number is empty")
+                if not password: print("Password is empty")
                 messagebox.showwarning("Registration Failed", "Please fill in all required fields.", parent=self.dialog)
                 return
 
@@ -539,13 +718,13 @@ class RegisterForm(ctk.CTkFrame):
                     
                 remembered_email = email
                 
-                self.first_name_var = tk.StringVar()
-                self.middle_name_var = tk.StringVar()
-                self.last_name_var = tk.StringVar()
-                self.email_var = tk.StringVar()
-                self.student_number_var = tk.StringVar()
-                self.password_var = tk.StringVar()
-                self.confirm_password_var = tk.StringVar()
+                self.first_name_var = tk.StringVar(value="")
+                self.middle_name_var = tk.StringVar(value="")
+                self.last_name_var = tk.StringVar(value="")
+                self.email_var = tk.StringVar(value="")
+                self.student_number_var = tk.StringVar(value="")
+                self.password_var = tk.StringVar(value="")
+                self.confirm_password_var = tk.StringVar(value="")
                 
                 self.master.show_login()
                 
