@@ -4,12 +4,12 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# SQLite Database settings - using external database
-DEFAULT_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "attendance_app.db")
-DB_FILE = os.environ.get("DB_FILE", DEFAULT_DB_PATH)
+# Root directory path (parent of app directory)
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(ROOT_DIR, "data", "attendance_app.db")
 
 # Make sure parent directory exists
-db_dir = os.path.dirname(DB_FILE)
+db_dir = os.path.dirname(DB_PATH)
 if not os.path.exists(db_dir):
     os.makedirs(db_dir, exist_ok=True)
 
@@ -25,5 +25,5 @@ WINDOW_MIN_HEIGHT = 600
 THEME_NAME = "darkly"  # ttkbootstrap theme
 
 # Paths
-UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
+UPLOAD_DIR = os.path.join(ROOT_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
