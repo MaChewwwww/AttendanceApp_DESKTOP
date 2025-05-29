@@ -305,16 +305,34 @@ class LoginForm(ctk.CTkFrame):
                 else:
                     # Fallback: import and show admin dashboard directly
                     try:
-                        from ..admin.admindashboard import AdminDashboard
+                        # Import the admin dashboard
+                        import sys
+                        import os
+                        
+                        # Add the admin directory to Python path
+                        admin_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'admin')
+                        if admin_dir not in sys.path:
+                            sys.path.insert(0, admin_dir)
+                        
+                        # Import and create admin dashboard
+                        from admindashboard import AdminDashboard
+                        
                         # Close current window
                         root_window = self.winfo_toplevel()
                         root_window.withdraw()
+                        
                         # Open admin dashboard
                         admin_app = AdminDashboard()
                         admin_app.mainloop()
-                    except ImportError as e:
+                        
+                        # Clean up - remove from path
+                        if admin_dir in sys.path:
+                            sys.path.remove(admin_dir)
+                            
+                    except Exception as e:
                         messagebox.showerror("Error", f"Could not load admin dashboard: {str(e)}")
-                        print(f"Admin dashboard import error: {e}")
+                        print(f"Admin dashboard error: {e}")
+                        
             elif user_role == 'student':
                 # Regular student login
                 if self.on_login_success:
