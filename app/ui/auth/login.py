@@ -338,14 +338,27 @@ class LoginForm(ctk.CTkFrame):
                         def create_admin_dashboard():
                             try:
                                 admin_app = AdminDashboard(on_logout=admin_logout)
+                                admin_app.protocol("WM_DELETE_WINDOW", admin_app.logout)
                                 admin_app.mainloop()
+                                
+                                # Clean up - remove from path
+                                if admin_dir in sys.path:
+                                    sys.path.remove(admin_dir)
+                                    
                             except Exception as e:
                                 print(f"Admin dashboard error: {e}")
                                 # If admin dashboard fails, show main window again
-                                root_window.deiconify()
+                                try:
+                                    root_window.deiconify()
+                                except:
+                                    pass
+                                
+                                # Clean up - remove from path
+                                if admin_dir in sys.path:
+                                    sys.path.remove(admin_dir)
                         
-                        # Schedule the admin dashboard creation
-                        root_window.after_idle(create_admin_dashboard)
+                        # Minimal delay, just enough to hide the main window
+                        root_window.after(50, create_admin_dashboard)
                         
                     except Exception as e:
                         messagebox.showerror("Error", f"Could not load admin dashboard: {str(e)}")

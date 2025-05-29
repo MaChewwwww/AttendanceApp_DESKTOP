@@ -77,27 +77,38 @@ class AdminDashboard(ctk.CTk):
         view.pack(fill="both", expand=True, padx=20, pady=20)
         
     def logout(self):
-        # Handle logout functionality
+        """Handle logout functionality"""
         if self.on_logout:
             try:
-                # Clean up sidebar animations
+                # Immediately disable the entire window to prevent interactions
+                self.configure(cursor="wait")
+                
+                # Clean up sidebar
                 if hasattr(self.sidebar, 'cleanup'):
                     self.sidebar.cleanup()
                 
-                # Cancel any pending after callbacks to prevent animation errors
-                self.after_cancel("all")
+                # Hide the window immediately
+                self.withdraw()
                 
-                # Call the logout callback first
+                # Call logout callback immediately
                 self.on_logout()
                 
-                # Then destroy this window
-                self.destroy()
+                # Schedule destruction after a minimal delay
+                self.after_idle(self.destroy)
+                
             except Exception as e:
                 print(f"Error during logout: {e}")
-                # Fallback - just destroy the window
-                self.destroy()
+                # Emergency fallback
+                try:
+                    if self.on_logout:
+                        self.on_logout()
+                except:
+                    pass
+                try:
+                    self.destroy()
+                except:
+                    pass
         else:
-            # Fallback to quit if no callback provided
             self.quit()
 
 if __name__ == "__main__":
