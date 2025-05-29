@@ -7,6 +7,7 @@ import base64
 from datetime import datetime
 from ...config import ROOT_DIR
 from .forgot_password import ForgotPasswordDialog
+from .login_otp import LoginOTPDialog
 
 class LoginForm(ctk.CTkFrame):
     def __init__(self, master, db_manager=None, on_login_success=None):
@@ -242,6 +243,11 @@ class LoginForm(ctk.CTkFrame):
             messagebox.showerror("Error", "Please fill in all fields")
             return
         
+        # PUP email validation
+        if not email.endswith("@iskolarngbayan.pup.edu.ph"):
+            messagebox.showerror("Error", "Please enter a valid PUP email address ending with @iskolarngbayan.pup.edu.ph")
+            return
+        
         # Save or clear remembered credentials based on checkbox
         if self.remember_me.get():
             self._save_remembered_credentials()
@@ -252,9 +258,42 @@ class LoginForm(ctk.CTkFrame):
         if self.db_manager:
             success, result = self.db_manager.login(email, password)
             if success:
-                if self.on_login_success:
-                    self.on_login_success(result)
+                # Check if OTP verification is needed
+                self.check_otp_requirement(email, result)
             else:
                 messagebox.showerror("Login Failed", result)
         else:
             messagebox.showerror("Error", "Database not available")
+    
+    def check_otp_requirement(self, email, user_data):
+        """Check if OTP verification is required or still valid"""
+        try:
+            if self.db_manager:
+                # Check if user has recent valid OTP verification
+                needs_otp = self.db_manager.check_otp_requirement(user_data['user_id'])
+                
+                if needs_otp:
+                    # Show OTP dialog
+                    self.show_otp_dialog(email, user_data)
+                else:
+                    # OTP still valid, proceed with login
+                    if self.on_login_success:
+                        self.on_login_success(user_data)
+            else:
+                messagebox.showerror("Error", "Database not available")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to check OTP requirement: {str(e)}")
+    
+    def show_otp_dialog(self, email, user_data):
+        """Show the OTP verification dialog"""
+        try:
+            root_window = self.winfo_toplevel()
+            dialog = LoginOTPDialog(
+                root_window, 
+                self.db_manager, 
+                email=email,
+                on_success=self.on_login_success
+            )
+            dialog.focus()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open OTP dialog: {str(e)}")

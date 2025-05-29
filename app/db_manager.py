@@ -251,14 +251,19 @@ class DatabaseManager:
             cursor = conn.cursor()
             
             # Check if user exists and is active
-            cursor.execute("SELECT id, first_name, status FROM users WHERE email = ?", (email,))
+            cursor.execute("SELECT id, first_name, status, verified FROM users WHERE email = ?", (email,))
             user = cursor.fetchone()
             
             if not user:
                 conn.close()
                 return False, "No account found with this email address"
             
-            user_id, first_name, status = user
+            user_id, first_name, status, verified = user
+            
+            # Check if account is verified and active
+            if verified == 0:
+                conn.close()
+                return False, "Account is not verified yet. Please contact administrator."
             
             if status != 'active':
                 conn.close()
@@ -286,14 +291,86 @@ class DatabaseManager:
             success, message = self.email_service.send_login_otp_email(email, first_name, otp_code)
             
             if success:
-                return True, "Login OTP sent successfully to your email"
+                return True, "Login verification code sent successfully to your email"
             else:
-                return False, f"Failed to send OTP email: {message}"
+                return False, f"Failed to send verification code: {message}"
             
         except Exception as e:
             print(f"Error creating login OTP: {e}")
             return False, str(e)
     
+    def check_otp_requirement(self, user_id):
+        """Check if user needs OTP verification or if existing verification is still valid"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Get user's last OTP verification info
+            cursor.execute("""
+                SELECT last_verified_otp, last_verified_otp_expiry
+                FROM users 
+                WHERE id = ?
+            """, (user_id,))
+            
+            result = cursor.fetchone()
+            conn.close()
+            
+            if not result:
+                return True  # User not found, require OTP
+            
+            last_verified = result['last_verified_otp']
+            last_expiry = result['last_verified_otp_expiry']
+            
+            # If no previous OTP verification, require OTP
+            if not last_verified:
+                return True
+            
+            try:
+                # Check if last verification is still valid (within 24 hours)
+                verified_time = datetime.fromisoformat(last_verified)
+                current_time = datetime.now()
+                
+                # OTP verification is valid for 24 hours
+                if current_time - verified_time < timedelta(hours=24):
+                    print(f"OTP verification still valid for user {user_id}")
+                    return False  # OTP still valid, no need for new verification
+                else:
+                    print(f"OTP verification expired for user {user_id}")
+                    return True  # OTP expired, require new verification
+                    
+            except ValueError:
+                # Invalid datetime format, require OTP
+                return True
+            
+        except Exception as e:
+            print(f"Error checking OTP requirement: {e}")
+            return True  # On error, require OTP for security
+
+    def update_login_otp_verification(self, user_id):
+        """Update user's OTP verification timestamp after successful OTP login"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            current_time = datetime.now()
+            expiry_time = current_time + timedelta(hours=24)  # OTP verification valid for 24 hours
+            
+            cursor.execute("""
+                UPDATE users 
+                SET last_verified_otp = ?, last_verified_otp_expiry = ?, updated_at = ?
+                WHERE id = ?
+            """, (current_time.isoformat(), expiry_time.isoformat(), current_time.isoformat(), user_id))
+            
+            conn.commit()
+            conn.close()
+            
+            print(f"Updated OTP verification for user {user_id}")
+            return True
+            
+        except Exception as e:
+            print(f"Error updating OTP verification: {e}")
+            return False
+
     def verify_login_otp(self, email, otp_code):
         """Verify login OTP and return user data if valid"""
         try:
@@ -320,10 +397,15 @@ class DatabaseManager:
             
             user_id = result['user_id']
             
-            # Mark OTP as used by updating user's last verified OTP time
+            # Update user's OTP verification timestamp
+            current_time = datetime.now()
+            expiry_time = current_time + timedelta(hours=24)  # Valid for 24 hours
+            
             cursor.execute("""
-                UPDATE users SET last_verified_otp = ? WHERE id = ?
-            """, (datetime.now().isoformat(), user_id))
+                UPDATE users 
+                SET last_verified_otp = ?, last_verified_otp_expiry = ?, updated_at = ?
+                WHERE id = ?
+            """, (current_time.isoformat(), expiry_time.isoformat(), current_time.isoformat(), user_id))
             
             # Delete used OTP
             cursor.execute("""
@@ -352,7 +434,7 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error verifying login OTP: {e}")
             return False, str(e)
-    
+
     def _initialize_database(self):
         """Initialize database tables if they don't exist"""
         try:

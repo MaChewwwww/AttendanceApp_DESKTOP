@@ -453,6 +453,11 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
             messagebox.showerror("Error", "Please enter your email address.", parent=self)
             return
         
+        # PUP email validation
+        if not email.endswith("@iskolarngbayan.pup.edu.ph"):
+            messagebox.showerror("Error", "Please enter a valid PUP email address ending with @iskolarngbayan.pup.edu.ph", parent=self)
+            return
+        
         # Basic email validation
         if '@' not in email or '.' not in email.split('@')[-1]:
             messagebox.showerror("Error", "Please enter a valid email address.", parent=self)
@@ -488,7 +493,7 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
                 self.configure(cursor="")
             except tk.TclError:
                 pass  # Window was destroyed
-    
+
     def resend_otp(self):
         """Resend OTP"""
         self.send_otp()
