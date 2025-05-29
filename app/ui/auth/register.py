@@ -1112,12 +1112,6 @@ class RegisterForm(ctk.CTkFrame):
                 self.stop_camera()
             
             if success:
-                messagebox.showinfo(
-                    "Registration Successful",
-                    f"Account created successfully!\n\nStudent Number: {student_number}\nEmail: {email}\n\nYou can now log in with your credentials.",
-                    parent=self.verification_dialog
-                )
-                
                 # Close dialog
                 self.verification_dialog.destroy()
                 
