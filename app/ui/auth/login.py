@@ -10,11 +10,12 @@ from .forgot_password import ForgotPasswordDialog
 from .login_otp import LoginOTPDialog
 
 class LoginForm(ctk.CTkFrame):
-    def __init__(self, master, db_manager=None, on_login_success=None):
+    def __init__(self, master, db_manager=None, on_login_success=None, on_admin_login=None):
         super().__init__(master, fg_color="transparent")
         
         self.db_manager = db_manager
         self.on_login_success = on_login_success
+        self.on_admin_login = on_admin_login  # New callback for admin login
         
         # Path for storing remembered credentials
         self.credentials_file = os.path.join(ROOT_DIR, "data", "remembered_credentials.json")
@@ -268,6 +269,15 @@ class LoginForm(ctk.CTkFrame):
     def check_otp_requirement(self, email, user_data):
         """Check if OTP verification is required or still valid"""
         try:
+            # Check if user is admin - admins don't need OTP verification
+            user_role = user_data.get('role', '').lower()
+            
+            if user_role == 'admin':
+                # Admin users skip OTP verification and go directly to admin dashboard
+                self.handle_successful_login(user_data)
+                return
+            
+            # For students, check OTP requirement
             if self.db_manager:
                 # Check if user has recent valid OTP verification
                 needs_otp = self.db_manager.check_otp_requirement(user_data['user_id'])
@@ -277,12 +287,44 @@ class LoginForm(ctk.CTkFrame):
                     self.show_otp_dialog(email, user_data)
                 else:
                     # OTP still valid, proceed with login
-                    if self.on_login_success:
-                        self.on_login_success(user_data)
+                    self.handle_successful_login(user_data)
             else:
                 messagebox.showerror("Error", "Database not available")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to check OTP requirement: {str(e)}")
+    
+    def handle_successful_login(self, user_data):
+        """Handle successful login based on user role"""
+        try:
+            user_role = user_data.get('role', '').lower()
+            
+            if user_role == 'admin':
+                # Redirect to admin dashboard
+                if self.on_admin_login:
+                    self.on_admin_login(user_data)
+                else:
+                    # Fallback: import and show admin dashboard directly
+                    try:
+                        from ..admin.admindashboard import AdminDashboard
+                        # Close current window
+                        root_window = self.winfo_toplevel()
+                        root_window.withdraw()
+                        # Open admin dashboard
+                        admin_app = AdminDashboard()
+                        admin_app.mainloop()
+                    except ImportError as e:
+                        messagebox.showerror("Error", f"Could not load admin dashboard: {str(e)}")
+                        print(f"Admin dashboard import error: {e}")
+            elif user_role == 'student':
+                # Regular student login
+                if self.on_login_success:
+                    self.on_login_success(user_data)
+            else:
+                messagebox.showerror("Error", f"Unknown user role: {user_role}")
+                    
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to handle login: {str(e)}")
+            print(f"Login handling error: {e}")
     
     def show_otp_dialog(self, email, user_data):
         """Show the OTP verification dialog"""
@@ -292,7 +334,8 @@ class LoginForm(ctk.CTkFrame):
                 root_window, 
                 self.db_manager, 
                 email=email,
-                on_success=self.on_login_success
+                user_data=user_data,  # Pass user data to OTP dialog
+                on_success=self.handle_successful_login  # Use the new handler
             )
             dialog.focus()
         except Exception as e:
