@@ -10,11 +10,12 @@ from .forgot_password import ForgotPasswordDialog
 from .login_otp import LoginOTPDialog
 
 class LoginForm(ctk.CTkFrame):
-    def __init__(self, master, db_manager=None, on_login_success=None):
+    def __init__(self, master, db_manager=None, on_login_success=None, on_admin_login=None):
         super().__init__(master, fg_color="transparent")
         
         self.db_manager = db_manager
         self.on_login_success = on_login_success
+        self.on_admin_login = on_admin_login  # New callback for admin login
         
         # Path for storing remembered credentials
         self.credentials_file = os.path.join(ROOT_DIR, "data", "remembered_credentials.json")
@@ -268,6 +269,15 @@ class LoginForm(ctk.CTkFrame):
     def check_otp_requirement(self, email, user_data):
         """Check if OTP verification is required or still valid"""
         try:
+            # Check if user is admin - admins don't need OTP verification
+            user_role = user_data.get('role', '').lower()
+            
+            if user_role == 'admin':
+                # Admin users skip OTP verification and go directly to admin dashboard
+                self.handle_successful_login(user_data)
+                return
+            
+            # For students, check OTP requirement
             if self.db_manager:
                 # Check if user has recent valid OTP verification
                 needs_otp = self.db_manager.check_otp_requirement(user_data['user_id'])
@@ -277,12 +287,93 @@ class LoginForm(ctk.CTkFrame):
                     self.show_otp_dialog(email, user_data)
                 else:
                     # OTP still valid, proceed with login
-                    if self.on_login_success:
-                        self.on_login_success(user_data)
+                    self.handle_successful_login(user_data)
             else:
                 messagebox.showerror("Error", "Database not available")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to check OTP requirement: {str(e)}")
+    
+    def handle_successful_login(self, user_data):
+        """Handle successful login based on user role"""
+        try:
+            user_role = user_data.get('role', '').lower()
+            
+            if user_role == 'admin':
+                # Redirect to admin dashboard
+                if self.on_admin_login:
+                    self.on_admin_login(user_data)
+                else:
+                    # Fallback: import and show admin dashboard directly
+                    try:
+                        # Import the admin dashboard
+                        import sys
+                        import os
+                        
+                        # Add the admin directory to Python path
+                        admin_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'admin')
+                        if admin_dir not in sys.path:
+                            sys.path.insert(0, admin_dir)
+                        
+                        # Import and create admin dashboard
+                        from admindashboard import AdminDashboard
+                        
+                        # Get reference to main app for logout callback
+                        root_window = self.winfo_toplevel()
+                        main_app = getattr(root_window, 'main_app', None)
+                        
+                        # Close current window
+                        root_window.withdraw()
+                        
+                        # Open admin dashboard with logout callback
+                        def admin_logout():
+                            try:
+                                if main_app and hasattr(main_app, 'show_initial_screen'):
+                                    main_app.show_initial_screen()
+                                    # Show the main window again
+                                    root_window.deiconify()
+                            except Exception as e:
+                                print(f"Error during admin logout: {e}")
+                        
+                        # Use after_idle to ensure proper cleanup
+                        def create_admin_dashboard():
+                            try:
+                                admin_app = AdminDashboard(on_logout=admin_logout)
+                                admin_app.protocol("WM_DELETE_WINDOW", admin_app.logout)
+                                admin_app.mainloop()
+                                
+                                # Clean up - remove from path
+                                if admin_dir in sys.path:
+                                    sys.path.remove(admin_dir)
+                                    
+                            except Exception as e:
+                                print(f"Admin dashboard error: {e}")
+                                # If admin dashboard fails, show main window again
+                                try:
+                                    root_window.deiconify()
+                                except:
+                                    pass
+                                
+                                # Clean up - remove from path
+                                if admin_dir in sys.path:
+                                    sys.path.remove(admin_dir)
+                        
+                        # Minimal delay, just enough to hide the main window
+                        root_window.after(50, create_admin_dashboard)
+                        
+                    except Exception as e:
+                        messagebox.showerror("Error", f"Could not load admin dashboard: {str(e)}")
+                        print(f"Admin dashboard error: {e}")
+                        
+            elif user_role == 'student':
+                # Regular student login
+                if self.on_login_success:
+                    self.on_login_success(user_data)
+            else:
+                messagebox.showerror("Error", f"Unknown user role: {user_role}")
+                    
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to handle login: {str(e)}")
+            print(f"Login handling error: {e}")
     
     def show_otp_dialog(self, email, user_data):
         """Show the OTP verification dialog"""
@@ -292,7 +383,8 @@ class LoginForm(ctk.CTkFrame):
                 root_window, 
                 self.db_manager, 
                 email=email,
-                on_success=self.on_login_success
+                user_data=user_data,  # Pass user data to OTP dialog
+                on_success=self.handle_successful_login  # Use the new handler
             )
             dialog.focus()
         except Exception as e:

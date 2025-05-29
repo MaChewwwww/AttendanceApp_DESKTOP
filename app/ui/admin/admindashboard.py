@@ -6,8 +6,10 @@ from views.sections import SectionsView
 from views.programs import ProgramsView
 
 class AdminDashboard(ctk.CTk):
-    def __init__(self):
+    def __init__(self, on_logout=None):
         super().__init__()
+        
+        self.on_logout = on_logout  # Store logout callback
         
         # Configure window
         self.title("Admin Dashboard")
@@ -75,8 +77,39 @@ class AdminDashboard(ctk.CTk):
         view.pack(fill="both", expand=True, padx=20, pady=20)
         
     def logout(self):
-        # Handle logout functionality
-        self.quit()
+        """Handle logout functionality"""
+        if self.on_logout:
+            try:
+                # Immediately disable the entire window to prevent interactions
+                self.configure(cursor="wait")
+                
+                # Clean up sidebar
+                if hasattr(self.sidebar, 'cleanup'):
+                    self.sidebar.cleanup()
+                
+                # Hide the window immediately
+                self.withdraw()
+                
+                # Call logout callback immediately
+                self.on_logout()
+                
+                # Schedule destruction after a minimal delay
+                self.after_idle(self.destroy)
+                
+            except Exception as e:
+                print(f"Error during logout: {e}")
+                # Emergency fallback
+                try:
+                    if self.on_logout:
+                        self.on_logout()
+                except:
+                    pass
+                try:
+                    self.destroy()
+                except:
+                    pass
+        else:
+            self.quit()
 
 if __name__ == "__main__":
     app = AdminDashboard()

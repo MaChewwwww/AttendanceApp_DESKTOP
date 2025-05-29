@@ -189,12 +189,12 @@ class DatabaseManager:
             conn = self.get_connection()
             cursor = conn.cursor()
             
-            # Get user with student information
+            # Get user with student information (for students) or just user info (for admins)
             query = """
             SELECT u.*, s.student_number
             FROM users u
             LEFT JOIN students s ON u.id = s.user_id
-            WHERE u.email = ? AND u.role = 'Student'
+            WHERE u.email = ?
             """
             cursor.execute(query, (email,))
             user = cursor.fetchone()
@@ -205,28 +205,51 @@ class DatabaseManager:
             # Check password
             if not bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
                 return False, "Invalid email or password"
-                
-            # Check if account is active
-            if user['verified'] == 0:
-                return False, "Account is not verified yet. It will take 1-3 Business days to verify your account. Please contact administrator if you have further concerns."
-            elif user['status'] != 'active':
-                return False, "Account is not active. Please contact administrator."
-                
-            # Return user data
-            user_data = {
-                "user_id": user['id'],
-                "first_name": user['first_name'],
-                "last_name": user['last_name'],
-                "email": user['email'],
-                "role": user['role'],
-                "student_number": user['student_number'],
-                "status": user['status'],
-                "contact_number": user['contact_number'],
-                "birthday": user['birthday']
-            }
             
-            print(f"Successful login: {email}")
-            return True, user_data
+            # Check role and handle accordingly
+            user_role = user['role']
+            
+            if user_role.lower() == 'admin':
+                # Admin login - no verification check needed, always allow
+                user_data = {
+                    "user_id": user['id'],
+                    "first_name": user['first_name'],
+                    "last_name": user['last_name'],
+                    "email": user['email'],
+                    "role": user['role'],
+                    "student_number": None,  # Admins don't have student numbers
+                    "status": user['status'],
+                    "contact_number": user['contact_number'],
+                    "birthday": user['birthday']
+                }
+                
+                print(f"Successful admin login: {email}")
+                return True, user_data
+                
+            elif user_role.lower() == 'student':
+                # Student login - check verification and status
+                if user['verified'] == 0:
+                    return False, "Account is not verified yet. It will take 1-3 Business days to verify your account. Please contact administrator if you have further concerns."
+                elif user['status'] != 'active':
+                    return False, "Account is not active. Please contact administrator."
+                    
+                # Return user data for student
+                user_data = {
+                    "user_id": user['id'],
+                    "first_name": user['first_name'],
+                    "last_name": user['last_name'],
+                    "email": user['email'],
+                    "role": user['role'],
+                    "student_number": user['student_number'],
+                    "status": user['status'],
+                    "contact_number": user['contact_number'],
+                    "birthday": user['birthday']
+                }
+                
+                print(f"Successful student login: {email}")
+                return True, user_data
+            else:
+                return False, "Invalid user role"
                 
         except sqlite3.Error as e:
             print(f"Database error during login: {e}")
