@@ -260,3 +260,13 @@ class Sidebar(ctk.CTkFrame):
                     print("Using system default font instead")
         except Exception as e:
             print(f"Font loading issue: {e}")
+
+    def cleanup(self):
+        """Clean up any pending animations or callbacks"""
+        try:
+            # Cancel any pending after callbacks
+            for widget in [self] + list(self.menu_buttons.values()) + [self.logout_button]:
+                if widget and widget.winfo_exists():
+                    widget.after_cancel("all")
+        except Exception as e:
+            print(f"Error during sidebar cleanup: {e}")

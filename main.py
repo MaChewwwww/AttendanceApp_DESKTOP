@@ -32,6 +32,9 @@ class AttendanceApp:
         self.main_window.minsize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         self.main_window.resizable(False, False)
         
+        # Store reference to main app in window for login form access
+        self.main_window.main_app = self
+        
         # Center window on screen
         self.center_window()
         

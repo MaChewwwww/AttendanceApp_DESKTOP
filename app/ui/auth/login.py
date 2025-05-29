@@ -317,18 +317,36 @@ class LoginForm(ctk.CTkFrame):
                         # Import and create admin dashboard
                         from admindashboard import AdminDashboard
                         
-                        # Close current window
+                        # Get reference to main app for logout callback
                         root_window = self.winfo_toplevel()
+                        main_app = getattr(root_window, 'main_app', None)
+                        
+                        # Close current window
                         root_window.withdraw()
                         
-                        # Open admin dashboard
-                        admin_app = AdminDashboard()
-                        admin_app.mainloop()
+                        # Open admin dashboard with logout callback
+                        def admin_logout():
+                            try:
+                                if main_app and hasattr(main_app, 'show_initial_screen'):
+                                    main_app.show_initial_screen()
+                                    # Show the main window again
+                                    root_window.deiconify()
+                            except Exception as e:
+                                print(f"Error during admin logout: {e}")
                         
-                        # Clean up - remove from path
-                        if admin_dir in sys.path:
-                            sys.path.remove(admin_dir)
-                            
+                        # Use after_idle to ensure proper cleanup
+                        def create_admin_dashboard():
+                            try:
+                                admin_app = AdminDashboard(on_logout=admin_logout)
+                                admin_app.mainloop()
+                            except Exception as e:
+                                print(f"Admin dashboard error: {e}")
+                                # If admin dashboard fails, show main window again
+                                root_window.deiconify()
+                        
+                        # Schedule the admin dashboard creation
+                        root_window.after_idle(create_admin_dashboard)
+                        
                     except Exception as e:
                         messagebox.showerror("Error", f"Could not load admin dashboard: {str(e)}")
                         print(f"Admin dashboard error: {e}")
