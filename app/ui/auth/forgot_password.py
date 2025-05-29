@@ -13,7 +13,7 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
         
         # Configure dialog
         self.title("Reset Password")
-        self.geometry("500x450")
+        self.geometry("480x500")
         self.resizable(False, False)
         self.configure(fg_color="#f5f5f5")
         
@@ -40,18 +40,18 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
         """Center the dialog on screen"""
         try:
             self.update_idletasks()
-            x = (self.winfo_screenwidth() - 500) // 2
-            y = (self.winfo_screenheight() - 450) // 2
-            self.geometry(f"500x450+{x}+{y}")
+            x = (self.winfo_screenwidth() - 480) // 2
+            y = (self.winfo_screenheight() - 500) // 2
+            self.geometry(f"480x500+{x}+{y}")
         except Exception as e:
             print(f"Error centering dialog: {e}")
-            self.geometry("500x450+100+100")
+            self.geometry("480x500+100+100")
     
     def create_dialog_content(self):
         """Create the dialog content"""
         # Main container
         main_container = ctk.CTkFrame(self, fg_color="transparent")
-        main_container.pack(fill="both", expand=True, padx=20, pady=20)
+        main_container.pack(fill="both", expand=True, padx=25, pady=25)
         
         # Main card
         self.card = ctk.CTkFrame(
@@ -64,26 +64,26 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
         self.card.pack(fill="both", expand=True)
         
         # Header
-        header_frame = ctk.CTkFrame(self.card, fg_color="transparent", height=70)
-        header_frame.pack(fill="x", padx=30, pady=(25, 0))
+        header_frame = ctk.CTkFrame(self.card, fg_color="transparent", height=60)
+        header_frame.pack(fill="x", padx=25, pady=(15, 0))
         header_frame.pack_propagate(False)
         
         # Title
         self.title_label = ctk.CTkLabel(
             header_frame,
             text="Reset Password",
-            font=ctk.CTkFont("Roboto", 22, "bold"),
+            font=ctk.CTkFont("Roboto", 20, "bold"),
             text_color="#1E3A8A"
         )
-        self.title_label.pack(anchor="w")
+        self.title_label.pack(anchor="w", pady=(10, 0))
         
         # Content frame
         self.content_frame = ctk.CTkFrame(self.card, fg_color="transparent")
-        self.content_frame.pack(fill="both", expand=True, padx=30, pady=(15, 15))
+        self.content_frame.pack(fill="both", expand=True, padx=25, pady=(5, 0))
         
         # Button frame with fixed height
         self.button_frame = ctk.CTkFrame(self.card, fg_color="transparent", height=70)
-        self.button_frame.pack(fill="x", padx=30, pady=(0, 25))
+        self.button_frame.pack(fill="x", padx=25, pady=(5, 15))
         self.button_frame.pack_propagate(False)
         
         # Show initial step
@@ -106,35 +106,35 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
         instruction_label = ctk.CTkLabel(
             self.content_frame,
             text="Enter your email address and we'll send you an OTP code to reset your password.",
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 13),
             text_color="#707070",
-            wraplength=400,
+            wraplength=420,
             justify="left"
         )
-        instruction_label.pack(anchor="w", pady=(0, 20))
+        instruction_label.pack(anchor="w", pady=(10, 25))
         
         # Email label
         email_label = ctk.CTkLabel(
             self.content_frame,
             text="Email Address",
-            font=ctk.CTkFont("Roboto", 12, "bold"),
+            font=ctk.CTkFont("Roboto", 13, "bold"),
             text_color="#333333"
         )
-        email_label.pack(anchor="w", pady=(0, 5))
+        email_label.pack(anchor="w", pady=(0, 8))
         
         # Email entry
         self.email_entry = ctk.CTkEntry(
             self.content_frame,
             textvariable=self.email_var,
-            height=40,
+            height=45,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 13),
             fg_color="#ffffff",
             border_color="#d1d1d1",
             text_color="#000000",
             placeholder_text="Enter your email address"
         )
-        self.email_entry.pack(fill="x", pady=(0, 20))
+        self.email_entry.pack(fill="x", pady=(0, 25))
         
         # Buttons
         self.create_step_1_buttons()
@@ -154,27 +154,27 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
         instruction_label = ctk.CTkLabel(
             self.content_frame,
             text=f"We've sent a 6-digit OTP code to {self.email}. Enter the code below:",
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 13),
             text_color="#707070",
-            wraplength=400,
+            wraplength=420,
             justify="left"
         )
-        instruction_label.pack(anchor="w", pady=(0, 20))
+        instruction_label.pack(anchor="w", pady=(10, 25))
         
         # OTP label
         otp_label = ctk.CTkLabel(
             self.content_frame,
             text="OTP Code",
-            font=ctk.CTkFont("Roboto", 12, "bold"),
+            font=ctk.CTkFont("Roboto", 13, "bold"),
             text_color="#333333"
         )
-        otp_label.pack(anchor="w", pady=(0, 5))
+        otp_label.pack(anchor="w", pady=(0, 8))
         
         # OTP entry
         self.otp_entry = ctk.CTkEntry(
             self.content_frame,
             textvariable=self.otp_var,
-            height=40,
+            height=45,
             corner_radius=8,
             font=ctk.CTkFont("Roboto", 16, "bold"),
             fg_color="#ffffff",
@@ -183,21 +183,21 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
             placeholder_text="Enter 6-digit OTP code",
             justify="center"
         )
-        self.otp_entry.pack(fill="x", pady=(0, 15))
+        self.otp_entry.pack(fill="x", pady=(0, 20))
         
         # Resend link
         resend_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
-        resend_frame.pack(fill="x", pady=(0, 20))
+        resend_frame.pack(fill="x", pady=(0, 25))
         
         resend_btn = ctk.CTkButton(
             resend_frame,
             text="Didn't receive the code? Resend OTP",
-            font=ctk.CTkFont("Roboto", 11, "bold"),
+            font=ctk.CTkFont("Roboto", 12, "bold"),
             text_color="#1E3A8A",
             fg_color="transparent",
             hover_color="#f0f0f0",
-            width=250,
-            height=25,
+            width=280,
+            height=30,
             corner_radius=4,
             command=self.resend_otp
         )
@@ -223,10 +223,10 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
             text="Enter your new password. Make sure it's strong and secure.",
             font=ctk.CTkFont("Roboto", 12),
             text_color="#707070",
-            wraplength=400,
+            wraplength=420,
             justify="left"
         )
-        instruction_label.pack(anchor="w", pady=(0, 12))
+        instruction_label.pack(anchor="w", pady=(5, 15))
         
         # New password label
         password_label = ctk.CTkLabel(
@@ -250,7 +250,7 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
             show="•",
             placeholder_text="Enter new password"
         )
-        self.new_password_entry.pack(fill="x", pady=(0, 8))
+        self.new_password_entry.pack(fill="x", pady=(0, 10))
         
         # Confirm password label
         confirm_label = ctk.CTkLabel(
@@ -274,11 +274,11 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
             show="•",
             placeholder_text="Confirm new password"
         )
-        self.confirm_password_entry.pack(fill="x", pady=(0, 8))
+        self.confirm_password_entry.pack(fill="x", pady=(0, 10))
         
         # Password requirements
-        requirements_frame = ctk.CTkFrame(self.content_frame, fg_color="#f8f9fa", corner_radius=8)
-        requirements_frame.pack(fill="x", pady=(0, 8))
+        requirements_frame = ctk.CTkFrame(self.content_frame, fg_color="#f8f9fa", corner_radius=6)
+        requirements_frame.pack(fill="x", pady=(0, 15))
         
         requirements_text = """Password requirements:
 • At least 6 characters long
@@ -288,11 +288,11 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
         requirements_label = ctk.CTkLabel(
             requirements_frame,
             text=requirements_text,
-            font=ctk.CTkFont("Roboto", 9),
+            font=ctk.CTkFont("Roboto", 10),
             text_color="#666666",
             justify="left"
         )
-        requirements_label.pack(anchor="w", padx=8, pady=6)
+        requirements_label.pack(anchor="w", padx=10, pady=8)
         
         # Buttons
         self.create_step_3_buttons()
@@ -308,16 +308,16 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
         
         # Button container
         button_container = ctk.CTkFrame(self.button_frame, fg_color="transparent")
-        button_container.pack(fill="x")
+        button_container.pack(fill="both", expand=True)
         
         # Cancel button
         cancel_btn = ctk.CTkButton(
             button_container,
             text="Cancel",
-            width=120,
-            height=40,
+            width=100,
+            height=45,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 13),
             fg_color="transparent",
             text_color="#666666",
             border_width=1,
@@ -325,21 +325,21 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
             hover_color="#f5f5f5",
             command=self.on_closing
         )
-        cancel_btn.pack(side="right", padx=(10, 0))
+        cancel_btn.pack(side="right", padx=(15, 0), pady=10)
         
         # Send OTP button
         send_btn = ctk.CTkButton(
             button_container,
             text="Send OTP",
             width=120,
-            height=40,
+            height=45,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 12, "bold"),
+            font=ctk.CTkFont("Roboto", 13, "bold"),
             fg_color="#1E3A8A",
             hover_color="#152a63",
             command=self.send_otp
         )
-        send_btn.pack(side="right")
+        send_btn.pack(side="right", pady=10)
 
     def create_step_2_buttons(self):
         """Create buttons for step 2"""
@@ -349,16 +349,16 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
         
         # Button container
         button_container = ctk.CTkFrame(self.button_frame, fg_color="transparent")
-        button_container.pack(fill="x")
+        button_container.pack(fill="both", expand=True)
         
         # Back button
         back_btn = ctk.CTkButton(
             button_container,
             text="← Back",
             width=80,
-            height=40,
+            height=45,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Roboto", 13),
             fg_color="transparent",
             text_color="#666666",
             border_width=1,
@@ -366,13 +366,68 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
             hover_color="#f5f5f5",
             command=self.show_step_1
         )
-        back_btn.pack(side="left")
+        back_btn.pack(side="left", pady=10)
         
         # Cancel button
         cancel_btn = ctk.CTkButton(
             button_container,
             text="Cancel",
-            width=120,
+            width=100,
+            height=45,
+            corner_radius=8,
+            font=ctk.CTkFont("Roboto", 13),
+            fg_color="transparent",
+            text_color="#666666",
+            border_width=1,
+            border_color="#d1d1d1",
+            hover_color="#f5f5f5",
+            command=self.on_closing
+        )
+        cancel_btn.pack(side="right", padx=(15, 0), pady=10)
+        
+        # Verify button
+        verify_btn = ctk.CTkButton(
+            button_container,
+            text="Verify",
+            width=100,
+            height=45,
+            corner_radius=8,
+            font=ctk.CTkFont("Roboto", 13, "bold"),
+            fg_color="#1E3A8A",
+            hover_color="#152a63",
+            command=self.verify_otp
+        )
+        verify_btn.pack(side="right", pady=10)
+
+    def create_step_3_buttons(self):
+        """Create buttons for step 3"""
+        # Clear button frame
+        for widget in self.button_frame.winfo_children():
+            widget.destroy()
+        
+        # Button container with proper layout
+        button_container = ctk.CTkFrame(self.button_frame, fg_color="transparent")
+        button_container.pack(fill="both", expand=True, pady=5)
+        
+        # Reset Password button (primary action)
+        reset_btn = ctk.CTkButton(
+            button_container,
+            text="Reset Password",
+            width=140,
+            height=40,
+            corner_radius=8,
+            font=ctk.CTkFont("Roboto", 12, "bold"),
+            fg_color="#1E3A8A",
+            hover_color="#152a63",
+            command=self.reset_password
+        )
+        reset_btn.pack(side="right", padx=(10, 0))
+        
+        # Cancel button (secondary action)
+        cancel_btn = ctk.CTkButton(
+            button_container,
+            text="Cancel",
+            width=100,
             height=40,
             corner_radius=8,
             font=ctk.CTkFont("Roboto", 12),
@@ -383,66 +438,7 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
             hover_color="#f5f5f5",
             command=self.on_closing
         )
-        cancel_btn.pack(side="right", padx=(10, 0))
-        
-        # Verify button
-        verify_btn = ctk.CTkButton(
-            button_container,
-            text="Verify",
-            width=120,
-            height=40,
-            corner_radius=8,
-            font=ctk.CTkFont("Roboto", 12, "bold"),
-            fg_color="#1E3A8A",
-            hover_color="#152a63",
-            command=self.verify_otp
-        )
-        verify_btn.pack(side="right")
-
-    def create_step_3_buttons(self):
-        """Create buttons for step 3"""
-        # Clear button frame
-        for widget in self.button_frame.winfo_children():
-            widget.destroy()
-        
-        # Button container with proper centering
-        button_container = ctk.CTkFrame(self.button_frame, fg_color="transparent")
-        button_container.pack(fill="both", expand=True)
-        
-        # Inner container for buttons
-        inner_container = ctk.CTkFrame(button_container, fg_color="transparent")
-        inner_container.pack(expand=True)
-        
-        # Cancel button
-        cancel_btn = ctk.CTkButton(
-            inner_container,
-            text="Cancel",
-            width=110,
-            height=35,
-            corner_radius=8,
-            font=ctk.CTkFont("Roboto", 11),
-            fg_color="transparent",
-            text_color="#666666",
-            border_width=1,
-            border_color="#d1d1d1",
-            hover_color="#f5f5f5",
-            command=self.on_closing
-        )
-        cancel_btn.pack(side="right", padx=(8, 0))
-        
-        # Reset Password button
-        reset_btn = ctk.CTkButton(
-            inner_container,
-            text="Reset Password",
-            width=130,
-            height=35,
-            corner_radius=8,
-            font=ctk.CTkFont("Roboto", 11, "bold"),
-            fg_color="#1E3A8A",
-            hover_color="#152a63",
-            command=self.reset_password
-        )
-        reset_btn.pack(side="right")
+        cancel_btn.pack(side="right")
 
     def send_otp(self):
         """Send OTP to email"""
