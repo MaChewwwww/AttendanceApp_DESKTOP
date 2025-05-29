@@ -11,12 +11,13 @@ from .email_service import EmailService
 class DatabaseManager:
     def __init__(self):
         self.email_service = EmailService()
+        # Initialize database tables on first run
+        self._initialize_database()
     
     def get_connection(self):
         """Create and return a new database connection."""
         conn = sqlite3.connect(DB_PATH, timeout=10)
         conn.row_factory = sqlite3.Row
-        print(f"Database connection opened: {DB_PATH}")
         return conn
     
     def close(self):
@@ -24,7 +25,6 @@ class DatabaseManager:
         Dummy close method to maintain compatibility with application code.
         Since we're using per-operation connections now, this method doesn't need to do anything.
         """
-        print("DatabaseManager.close()")
         return
     
     def check_email_exists(self, email):
@@ -353,6 +353,43 @@ class DatabaseManager:
             print(f"Error verifying login OTP: {e}")
             return False, str(e)
     
+    def _initialize_database(self):
+        """Initialize database tables if they don't exist"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Create otp_requests table if it doesn't exist
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS otp_requests (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    otp_code TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL,
+                    used INTEGER DEFAULT 0,
+                    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                )
+            """)
+            
+            # Add missing columns to users table if they don't exist
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN last_verified_otp TEXT")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+            
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN last_verified_otp_expiry TEXT")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+            
+            conn.commit()
+            conn.close()
+            
+        except Exception as e:
+            print(f"Error initializing database: {e}")
+
     def create_password_reset_otp(self, email):
         """Create and send password reset OTP for a user"""
         try:
@@ -491,7 +528,6 @@ class DatabaseManager:
             conn.commit()
             conn.close()
             
-            print(f"Password reset successful for user: {email}")
             return True, "Password reset successfully"
             
         except Exception as e:

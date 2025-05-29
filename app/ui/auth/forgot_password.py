@@ -8,7 +8,7 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
         super().__init__(parent)
         
         self.db_manager = db_manager
-        self.step = 1  # 1: Email input, 2: OTP verification, 3: New password
+        self.step = 1
         self.email = ""
         
         # Configure dialog
@@ -38,10 +38,14 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
     
     def center_dialog(self):
         """Center the dialog on screen"""
-        self.update_idletasks()
-        x = (self.winfo_screenwidth() // 2) - (250)  # Half of width (500/2)
-        y = (self.winfo_screenheight() // 2) - (225)  # Half of height (450/2)
-        self.geometry(f"500x450+{x}+{y}")
+        try:
+            self.update_idletasks()
+            x = (self.winfo_screenwidth() - 500) // 2
+            y = (self.winfo_screenheight() - 450) // 2
+            self.geometry(f"500x450+{x}+{y}")
+        except Exception as e:
+            print(f"Error centering dialog: {e}")
+            self.geometry("500x450+100+100")
     
     def create_dialog_content(self):
         """Create the dialog content"""
@@ -60,31 +64,31 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
         self.card.pack(fill="both", expand=True)
         
         # Header
-        header_frame = ctk.CTkFrame(self.card, fg_color="transparent", height=80)
-        header_frame.pack(fill="x", padx=30, pady=(30, 0))
+        header_frame = ctk.CTkFrame(self.card, fg_color="transparent", height=70)
+        header_frame.pack(fill="x", padx=30, pady=(25, 0))
         header_frame.pack_propagate(False)
         
         # Title
         self.title_label = ctk.CTkLabel(
             header_frame,
             text="Reset Password",
-            font=ctk.CTkFont("Roboto", 24, "bold"),
+            font=ctk.CTkFont("Roboto", 22, "bold"),
             text_color="#1E3A8A"
         )
         self.title_label.pack(anchor="w")
         
-        # Content frame (will change based on step)
+        # Content frame
         self.content_frame = ctk.CTkFrame(self.card, fg_color="transparent")
-        self.content_frame.pack(fill="both", expand=True, padx=30, pady=(20, 20))
+        self.content_frame.pack(fill="both", expand=True, padx=30, pady=(15, 15))
         
-        # Button frame
-        self.button_frame = ctk.CTkFrame(self.card, fg_color="transparent", height=60)
-        self.button_frame.pack(fill="x", padx=30, pady=(0, 30))
+        # Button frame with fixed height
+        self.button_frame = ctk.CTkFrame(self.card, fg_color="transparent", height=70)
+        self.button_frame.pack(fill="x", padx=30, pady=(0, 25))
         self.button_frame.pack_propagate(False)
         
         # Show initial step
         self.show_step_1()
-    
+
     def clear_content_frame(self):
         """Clear all widgets from content frame"""
         for widget in self.content_frame.winfo_children():
@@ -181,7 +185,7 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
         )
         self.otp_entry.pack(fill="x", pady=(0, 15))
         
-        # Resend link using Button instead of Label
+        # Resend link
         resend_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         resend_frame.pack(fill="x", pady=(0, 20))
         
@@ -213,7 +217,7 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
         # Update title
         self.title_label.configure(text="New Password")
         
-        # Instructions with better spacing
+        # Instructions
         instruction_label = ctk.CTkLabel(
             self.content_frame,
             text="Enter your new password. Make sure it's strong and secure.",
@@ -222,26 +226,22 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
             wraplength=400,
             justify="left"
         )
-        instruction_label.pack(anchor="w", pady=(0, 15))
-        
-        # Password fields container with better spacing
-        password_container = ctk.CTkFrame(self.content_frame, fg_color="transparent")
-        password_container.pack(fill="x", pady=(0, 10))
+        instruction_label.pack(anchor="w", pady=(0, 12))
         
         # New password label
         password_label = ctk.CTkLabel(
-            password_container,
+            self.content_frame,
             text="New Password",
             font=ctk.CTkFont("Roboto", 12, "bold"),
             text_color="#333333"
         )
-        password_label.pack(anchor="w", pady=(0, 5))
+        password_label.pack(anchor="w", pady=(0, 3))
         
         # New password entry
         self.new_password_entry = ctk.CTkEntry(
-            password_container,
+            self.content_frame,
             textvariable=self.new_password_var,
-            height=40,
+            height=35,
             corner_radius=8,
             font=ctk.CTkFont("Roboto", 12),
             fg_color="#ffffff",
@@ -250,22 +250,22 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
             show="•",
             placeholder_text="Enter new password"
         )
-        self.new_password_entry.pack(fill="x", pady=(0, 10))
+        self.new_password_entry.pack(fill="x", pady=(0, 8))
         
         # Confirm password label
         confirm_label = ctk.CTkLabel(
-            password_container,
+            self.content_frame,
             text="Confirm Password",
             font=ctk.CTkFont("Roboto", 12, "bold"),
             text_color="#333333"
         )
-        confirm_label.pack(anchor="w", pady=(0, 5))
+        confirm_label.pack(anchor="w", pady=(0, 3))
         
         # Confirm password entry
         self.confirm_password_entry = ctk.CTkEntry(
-            password_container,
+            self.content_frame,
             textvariable=self.confirm_password_var,
-            height=40,
+            height=35,
             corner_radius=8,
             font=ctk.CTkFont("Roboto", 12),
             fg_color="#ffffff",
@@ -274,11 +274,11 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
             show="•",
             placeholder_text="Confirm new password"
         )
-        self.confirm_password_entry.pack(fill="x", pady=(0, 10))
+        self.confirm_password_entry.pack(fill="x", pady=(0, 8))
         
-        # Password requirements with compact design
+        # Password requirements
         requirements_frame = ctk.CTkFrame(self.content_frame, fg_color="#f8f9fa", corner_radius=8)
-        requirements_frame.pack(fill="x", pady=(0, 15))
+        requirements_frame.pack(fill="x", pady=(0, 8))
         
         requirements_text = """Password requirements:
 • At least 6 characters long
@@ -292,7 +292,7 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
             text_color="#666666",
             justify="left"
         )
-        requirements_label.pack(anchor="w", padx=10, pady=8)
+        requirements_label.pack(anchor="w", padx=8, pady=6)
         
         # Buttons
         self.create_step_3_buttons()
@@ -400,20 +400,24 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
         verify_btn.pack(side="right")
 
     def create_step_3_buttons(self):
-        """Create buttons for step 3 with better positioning"""
+        """Create buttons for step 3"""
         # Clear button frame
         for widget in self.button_frame.winfo_children():
             widget.destroy()
         
-        # Button container with proper spacing
+        # Button container with proper centering
         button_container = ctk.CTkFrame(self.button_frame, fg_color="transparent")
-        button_container.pack(fill="x", pady=(10, 0))
+        button_container.pack(fill="both", expand=True)
+        
+        # Inner container for buttons
+        inner_container = ctk.CTkFrame(button_container, fg_color="transparent")
+        inner_container.pack(expand=True)
         
         # Cancel button
         cancel_btn = ctk.CTkButton(
-            button_container,
+            inner_container,
             text="Cancel",
-            width=100,
+            width=110,
             height=35,
             corner_radius=8,
             font=ctk.CTkFont("Roboto", 11),
@@ -428,9 +432,9 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
         
         # Reset Password button
         reset_btn = ctk.CTkButton(
-            button_container,
+            inner_container,
             text="Reset Password",
-            width=120,
+            width=130,
             height=35,
             corner_radius=8,
             font=ctk.CTkFont("Roboto", 11, "bold"),
@@ -449,19 +453,17 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
             messagebox.showerror("Error", "Please enter your email address.", parent=self)
             return
         
-        # Remove the PUP email validation for now to allow any email for testing
-        # if not email.endswith("@iskolarngbayan.pup.edu.ph"):
-        #     messagebox.showerror("Error", "Please enter a valid PUP email address.", parent=self)
-        #     return
-        
         # Basic email validation
         if '@' not in email or '.' not in email.split('@')[-1]:
             messagebox.showerror("Error", "Please enter a valid email address.", parent=self)
             return
         
-        # Show loading cursor
-        self.configure(cursor="wait")
-        self.update_idletasks()
+        # Show loading cursor - check if window still exists
+        try:
+            self.configure(cursor="wait")
+            self.update_idletasks()
+        except tk.TclError:
+            return  # Window was destroyed
         
         try:
             # Send OTP via database manager
@@ -481,7 +483,11 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
             messagebox.showerror("Error", f"Failed to send OTP: {str(e)}", parent=self)
         
         finally:
-            self.configure(cursor="")
+            # Reset cursor only if window still exists
+            try:
+                self.configure(cursor="")
+            except tk.TclError:
+                pass  # Window was destroyed
     
     def resend_otp(self):
         """Resend OTP"""
@@ -500,9 +506,12 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
             messagebox.showerror("Error", "Please enter a valid 6-digit OTP code.", parent=self)
             return
         
-        # Show loading cursor
-        self.configure(cursor="wait")
-        self.update_idletasks()
+        # Show loading cursor - check if window still exists
+        try:
+            self.configure(cursor="wait")
+            self.update_idletasks()
+        except tk.TclError:
+            return  # Window was destroyed
         
         try:
             # Verify OTP via database manager
@@ -521,7 +530,11 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
             messagebox.showerror("Error", f"Failed to verify OTP: {str(e)}", parent=self)
         
         finally:
-            self.configure(cursor="")
+            # Reset cursor only if window still exists
+            try:
+                self.configure(cursor="")
+            except tk.TclError:
+                pass  # Window was destroyed
     
     def reset_password(self):
         """Reset the password"""
@@ -553,9 +566,12 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
             messagebox.showerror("Password Requirements", "\n".join(errors), parent=self)
             return
         
-        # Show loading cursor
-        self.configure(cursor="wait")
-        self.update_idletasks()
+        # Show loading cursor - check if window still exists
+        try:
+            self.configure(cursor="wait")
+            self.update_idletasks()
+        except tk.TclError:
+            return  # Window was destroyed
         
         try:
             # Reset password via database manager
@@ -574,7 +590,11 @@ class ForgotPasswordDialog(ctk.CTkToplevel):
             messagebox.showerror("Error", f"Failed to reset password: {str(e)}", parent=self)
         
         finally:
-            self.configure(cursor="")
+            # Reset cursor only if window still exists
+            try:
+                self.configure(cursor="")
+            except tk.TclError:
+                pass  # Window was destroyed
     
     def on_closing(self):
         """Handle dialog closing"""

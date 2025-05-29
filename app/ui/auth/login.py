@@ -227,12 +227,12 @@ class LoginForm(ctk.CTkFrame):
     def open_forgot_password_dialog(self):
         """Open the forgot password dialog"""
         try:
-            dialog = ForgotPasswordDialog(self, self.db_manager)
+            root_window = self.winfo_toplevel()
+            dialog = ForgotPasswordDialog(root_window, self.db_manager)
             dialog.focus()
         except Exception as e:
             messagebox.showerror("Error", f"Failed to open forgot password dialog: {str(e)}")
-            print(f"Error opening forgot password dialog: {e}")
-    
+
     def handle_login(self):
         """Handle login button click"""
         email = self.email_var.get().strip()
