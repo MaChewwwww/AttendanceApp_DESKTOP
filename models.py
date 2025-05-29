@@ -18,6 +18,8 @@ class User(Base):
     face_image = Column(LargeBinary, nullable=True)  # LargeBinary (LBLOB)
     status = Column(String(50), nullable=False, default="pending")
     verified = Column(Integer, nullable=False, default=0)  # 0 for False, 1 for True
+    last_verified_otp = Column(DateTime, nullable=True)  # Last OTP verification time
+    last_verified_otp_expiry = Column(DateTime, nullable=True)  # Last OTP expiry time
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
@@ -33,6 +35,15 @@ class Faculty(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     employee_number = Column(String(50), unique=True, nullable=False)
+
+class OTP_Request(Base):
+    __tablename__ = "otp_requests"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    otp_code = Column(String(6), nullable=False)  # Assuming OTP is a 6-digit code
+    type = Column(String(50), nullable=False)  # e.g., "login", "registration", "password_reset"
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    expires_at = Column(DateTime, nullable=False)  # When the OTP expires
 
 class Program(Base):
     __tablename__ = "programs"

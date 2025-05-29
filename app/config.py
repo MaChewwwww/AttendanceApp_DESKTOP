@@ -27,3 +27,14 @@ THEME_NAME = "darkly"  # ttkbootstrap theme
 # Paths
 UPLOAD_DIR = os.path.join(ROOT_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# Email settings
+EMAIL_SMTP_SERVER = "smtp.gmail.com"
+EMAIL_SMTP_PORT = 587
+EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS", "")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", "")  # Google App Password
+EMAIL_USE_TLS = True
+
+# Email templates
+EMAIL_VERIFICATION_SUBJECT = "Verify Your Email - AttendanceApp"
+EMAIL_PASSWORD_RESET_SUBJECT = "Password Reset - AttendanceApp"

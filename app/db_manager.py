@@ -2,10 +2,16 @@ import sqlite3
 import bcrypt
 import base64
 import os
-from datetime import datetime
+import random
+import string
+from datetime import datetime, timedelta
 from .config import DB_PATH, UPLOAD_DIR
+from .email_service import EmailService
 
 class DatabaseManager:
+    def __init__(self):
+        self.email_service = EmailService()
+    
     def get_connection(self):
         """Create and return a new database connection."""
         conn = sqlite3.connect(DB_PATH, timeout=10)
@@ -31,7 +37,7 @@ class DatabaseManager:
             conn = self.get_connection()
             cursor = conn.cursor()
             
-            cursor.execute("SELECT COUNT(*) FROM users WHERE email = ? AND verified = 1", (email,))
+            cursor.execute("SELECT COUNT(*) FROM users WHERE email = ?", (email,))
             count = cursor.fetchone()[0]
             
             conn.close()
@@ -55,7 +61,7 @@ class DatabaseManager:
             conn = self.get_connection()
             cursor = conn.cursor()
             
-            cursor.execute("SELECT COUNT(*) FROM students s JOIN users u ON s.user_id = u.id WHERE s.student_number = ? AND u.verified = 1", (student_id,))
+            cursor.execute("SELECT COUNT(*) FROM students WHERE student_number = ?", (student_id,))
             count = cursor.fetchone()[0]
             
             conn.close()
@@ -105,7 +111,7 @@ class DatabaseManager:
             # Begin transaction
             conn.execute("BEGIN TRANSACTION")
             
-            # Insert user with new schema fields including verified
+            # Insert user - set as pending for admin verification
             user_query = """
             INSERT INTO users (first_name, last_name, email, birthday, password_hash, contact_number, role, face_image, status, verified, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -120,8 +126,8 @@ class DatabaseManager:
                 contact_number,
                 "Student",
                 face_image,
-                "Pending",
-                0,  # verified = 0 (False) by default
+                "pending",  # Set as pending - admin needs to activate
+                0,  # verified = 0 (False) - admin needs to verify
                 current_time,
                 current_time
             ))
@@ -141,7 +147,13 @@ class DatabaseManager:
             # Commit transaction
             conn.commit()
             
-            print(f"Successfully registered user: {email} (ID: {user_id})")
+            print(f"Successfully registered user: {email} (ID: {user_id}) - Pending admin approval")
+            
+            # Send registration confirmation email (not welcome email)
+            try:
+                self.email_service.send_registration_confirmation_email(email, first_name)
+            except Exception as e:
+                print(f"Warning: Could not send registration confirmation email: {e}")
             
             return True, {
                 "user_id": user_id,
@@ -149,7 +161,7 @@ class DatabaseManager:
                 "email": email,
                 "role": "Student",
                 "student_number": student_number,
-                "status": "active"
+                "status": "pending"
             }
                 
         except sqlite3.Error as e:
@@ -177,7 +189,7 @@ class DatabaseManager:
             conn = self.get_connection()
             cursor = conn.cursor()
             
-            # Get user with student information (updated field names)
+            # Get user with student information
             query = """
             SELECT u.*, s.student_number
             FROM users u
@@ -195,10 +207,12 @@ class DatabaseManager:
                 return False, "Invalid email or password"
                 
             # Check if account is active
-            if user['status'] != 'active':
+            if user['verified'] == 0:
+                return False, "Account is not verified yet. It will take 1-3 Business days to verify your account. Please contact administrator if you have further concerns."
+            elif user['status'] != 'active':
                 return False, "Account is not active. Please contact administrator."
                 
-            # Return user data with updated field names
+            # Return user data
             user_data = {
                 "user_id": user['id'],
                 "first_name": user['first_name'],
@@ -208,7 +222,7 @@ class DatabaseManager:
                 "student_number": user['student_number'],
                 "status": user['status'],
                 "contact_number": user['contact_number'],
-                "birthday": user['birthday']  # Changed from date_of_birth to birthday
+                "birthday": user['birthday']
             }
             
             print(f"Successful login: {email}")
@@ -225,3 +239,285 @@ class DatabaseManager:
                 cursor.close()
             if conn:
                 conn.close()
+    
+    def generate_otp(self, length=6):
+        """Generate a random OTP code"""
+        return ''.join(random.choices(string.digits, k=length))
+    
+    def create_login_otp(self, email):
+        """Create and send login OTP for a user"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Check if user exists and is active
+            cursor.execute("SELECT id, first_name, status FROM users WHERE email = ?", (email,))
+            user = cursor.fetchone()
+            
+            if not user:
+                conn.close()
+                return False, "No account found with this email address"
+            
+            user_id, first_name, status = user
+            
+            if status != 'active':
+                conn.close()
+                return False, "Account is not active. Please contact administrator."
+            
+            # Generate OTP
+            otp_code = self.generate_otp()
+            expires_at = datetime.now() + timedelta(minutes=10)  # OTP expires in 10 minutes
+            
+            # Store OTP in database
+            cursor.execute("""
+                INSERT INTO otp_requests (user_id, otp_code, type, created_at, expires_at)
+                VALUES (?, ?, ?, ?, ?)
+            """, (user_id, otp_code, 'login', datetime.now().isoformat(), expires_at.isoformat()))
+            
+            # Update user's last OTP info
+            cursor.execute("""
+                UPDATE users SET last_verified_otp_expiry = ? WHERE id = ?
+            """, (expires_at.isoformat(), user_id))
+            
+            conn.commit()
+            conn.close()
+            
+            # Send OTP email
+            success, message = self.email_service.send_login_otp_email(email, first_name, otp_code)
+            
+            if success:
+                return True, "Login OTP sent successfully to your email"
+            else:
+                return False, f"Failed to send OTP email: {message}"
+            
+        except Exception as e:
+            print(f"Error creating login OTP: {e}")
+            return False, str(e)
+    
+    def verify_login_otp(self, email, otp_code):
+        """Verify login OTP and return user data if valid"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Find valid OTP
+            cursor.execute("""
+                SELECT o.user_id, u.first_name, u.last_name, u.email, u.role, u.status, u.contact_number, u.birthday, s.student_number
+                FROM otp_requests o
+                JOIN users u ON o.user_id = u.id
+                LEFT JOIN students s ON u.id = s.user_id
+                WHERE u.email = ? AND o.otp_code = ? AND o.type = 'login' 
+                AND o.expires_at > ? 
+                ORDER BY o.created_at DESC
+                LIMIT 1
+            """, (email, otp_code, datetime.now().isoformat()))
+            
+            result = cursor.fetchone()
+            
+            if not result:
+                conn.close()
+                return False, "Invalid or expired OTP code"
+            
+            user_id = result['user_id']
+            
+            # Mark OTP as used by updating user's last verified OTP time
+            cursor.execute("""
+                UPDATE users SET last_verified_otp = ? WHERE id = ?
+            """, (datetime.now().isoformat(), user_id))
+            
+            # Delete used OTP
+            cursor.execute("""
+                DELETE FROM otp_requests WHERE user_id = ? AND otp_code = ? AND type = 'login'
+            """, (user_id, otp_code))
+            
+            conn.commit()
+            conn.close()
+            
+            # Return user data
+            user_data = {
+                "user_id": result['user_id'],
+                "first_name": result['first_name'],
+                "last_name": result['last_name'],
+                "email": result['email'],
+                "role": result['role'],
+                "student_number": result['student_number'],
+                "status": result['status'],
+                "contact_number": result['contact_number'],
+                "birthday": result['birthday']
+            }
+            
+            print(f"Successful OTP login: {email}")
+            return True, user_data
+            
+        except Exception as e:
+            print(f"Error verifying login OTP: {e}")
+            return False, str(e)
+    
+    def create_password_reset_otp(self, email):
+        """Create and send password reset OTP for a user"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Check if user exists
+            cursor.execute("SELECT id, first_name FROM users WHERE email = ?", (email,))
+            user = cursor.fetchone()
+            
+            if not user:
+                conn.close()
+                return False, "No account found with this email address"
+            
+            user_id, first_name = user
+            
+            # Generate OTP
+            otp_code = self.generate_otp()
+            expires_at = datetime.now() + timedelta(minutes=15)  # Password reset OTP expires in 15 minutes
+            
+            # Store OTP in database
+            cursor.execute("""
+                INSERT INTO otp_requests (user_id, otp_code, type, created_at, expires_at)
+                VALUES (?, ?, ?, ?, ?)
+            """, (user_id, otp_code, 'password_reset', datetime.now().isoformat(), expires_at.isoformat()))
+            
+            conn.commit()
+            conn.close()
+            
+            # Send password reset OTP email
+            success, message = self.email_service.send_password_reset_otp_email(email, first_name, otp_code)
+            
+            if success:
+                return True, "Password reset OTP sent successfully to your email"
+            else:
+                return False, f"Failed to send OTP email: {message}"
+            
+        except Exception as e:
+            print(f"Error creating password reset OTP: {e}")
+            return False, str(e)
+    
+    def verify_password_reset_otp(self, email, otp_code):
+        """Verify password reset OTP"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Find valid OTP
+            cursor.execute("""
+                SELECT o.user_id
+                FROM otp_requests o
+                JOIN users u ON o.user_id = u.id
+                WHERE u.email = ? AND o.otp_code = ? AND o.type = 'password_reset' 
+                AND o.expires_at > ?
+                ORDER BY o.created_at DESC
+                LIMIT 1
+            """, (email, otp_code, datetime.now().isoformat()))
+            
+            result = cursor.fetchone()
+            
+            if not result:
+                conn.close()
+                return False, "Invalid or expired OTP code"
+            
+            user_id = result['user_id']
+            
+            # Don't delete the OTP yet - keep it for password reset completion
+            # Just mark when it was verified
+            cursor.execute("""
+                UPDATE users SET last_verified_otp = ? WHERE id = ?
+            """, (datetime.now().isoformat(), user_id))
+            
+            conn.commit()
+            conn.close()
+            
+            return True, {"user_id": user_id, "message": "OTP verified successfully"}
+            
+        except Exception as e:
+            print(f"Error verifying password reset OTP: {e}")
+            return False, str(e)
+    
+    def reset_password_with_otp(self, email, otp_code, new_password):
+        """Reset password using verified OTP"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Find valid OTP that was recently verified
+            cursor.execute("""
+                SELECT o.user_id, u.last_verified_otp
+                FROM otp_requests o
+                JOIN users u ON o.user_id = u.id
+                WHERE u.email = ? AND o.otp_code = ? AND o.type = 'password_reset' 
+                AND o.expires_at > ?
+                ORDER BY o.created_at DESC
+                LIMIT 1
+            """, (email, otp_code, datetime.now().isoformat()))
+            
+            result = cursor.fetchone()
+            
+            if not result:
+                conn.close()
+                return False, "Invalid or expired OTP code"
+            
+            user_id = result['user_id']
+            last_verified = result['last_verified_otp']
+            
+            # Check if OTP was verified within the last 5 minutes
+            if last_verified:
+                verified_time = datetime.fromisoformat(last_verified)
+                if datetime.now() - verified_time > timedelta(minutes=5):
+                    conn.close()
+                    return False, "OTP verification expired. Please verify OTP again."
+            else:
+                conn.close()
+                return False, "OTP not verified. Please verify OTP first."
+            
+            # Hash new password
+            hashed_pw = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+            
+            # Update password
+            cursor.execute("""
+                UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?
+            """, (hashed_pw.decode('utf-8'), datetime.now().isoformat(), user_id))
+            
+            # Delete used OTP
+            cursor.execute("""
+                DELETE FROM otp_requests WHERE user_id = ? AND otp_code = ? AND type = 'password_reset'
+            """, (user_id, otp_code))
+            
+            # Clear last verified OTP info
+            cursor.execute("""
+                UPDATE users SET last_verified_otp = NULL, last_verified_otp_expiry = NULL WHERE id = ?
+            """, (user_id,))
+            
+            conn.commit()
+            conn.close()
+            
+            print(f"Password reset successful for user: {email}")
+            return True, "Password reset successfully"
+            
+        except Exception as e:
+            print(f"Error resetting password: {e}")
+            return False, str(e)
+    
+    def cleanup_expired_otps(self):
+        """Clean up expired OTP requests"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Delete expired OTPs
+            cursor.execute("""
+                DELETE FROM otp_requests WHERE expires_at < ?
+            """, (datetime.now().isoformat(),))
+            
+            deleted_count = cursor.rowcount
+            conn.commit()
+            conn.close()
+            
+            if deleted_count > 0:
+                print(f"Cleaned up {deleted_count} expired OTP requests")
+            
+            return True, f"Cleaned up {deleted_count} expired OTPs"
+            
+        except Exception as e:
+            print(f"Error cleaning up expired OTPs: {e}")
+            return False, str(e)

@@ -1,6 +1,12 @@
 import customtkinter as ctk
 import tkinter as tk
 from tkinter import messagebox
+import json
+import os
+import base64
+from datetime import datetime
+from ...config import ROOT_DIR
+from .forgot_password import ForgotPasswordDialog
 
 class LoginForm(ctk.CTkFrame):
     def __init__(self, master, db_manager=None, on_login_success=None):
@@ -9,14 +15,76 @@ class LoginForm(ctk.CTkFrame):
         self.db_manager = db_manager
         self.on_login_success = on_login_success
         
+        # Path for storing remembered credentials
+        self.credentials_file = os.path.join(ROOT_DIR, "data", "remembered_credentials.json")
+        
         # Initialize variables
         self.email_var = tk.StringVar()  # Changed from student_number to email
         self.password = tk.StringVar()
         self.remember_me = tk.BooleanVar()
         
+        # Load remembered credentials if they exist
+        self._load_remembered_credentials()
+        
         # Create the login form
         self._create_login_form()
         
+    def _encode_password(self, password):
+        """Simple encoding for password storage (not encryption, just obfuscation)"""
+        return base64.b64encode(password.encode()).decode()
+    
+    def _decode_password(self, encoded_password):
+        """Decode the stored password"""
+        try:
+            return base64.b64decode(encoded_password.encode()).decode()
+        except:
+            return ""
+        
+    def _load_remembered_credentials(self):
+        """Load saved credentials if remember me was checked"""
+        try:
+            if os.path.exists(self.credentials_file):
+                with open(self.credentials_file, 'r') as f:
+                    data = json.load(f)
+                    
+                if data.get('remember_me', False):
+                    self.email_var.set(data.get('email', ''))
+                    # Load and decode password
+                    encoded_password = data.get('password', '')
+                    if encoded_password:
+                        self.password.set(self._decode_password(encoded_password))
+                    self.remember_me.set(True)
+                    
+        except Exception as e:
+            print(f"Error loading remembered credentials: {e}")
+    
+    def _save_remembered_credentials(self):
+        """Save credentials if remember me is checked"""
+        try:
+            # Ensure data directory exists
+            os.makedirs(os.path.dirname(self.credentials_file), exist_ok=True)
+            
+            data = {
+                'remember_me': self.remember_me.get(),
+                'email': self.email_var.get() if self.remember_me.get() else '',
+                'password': self._encode_password(self.password.get()) if self.remember_me.get() else '',
+                'saved_at': datetime.now().isoformat()
+            }
+            
+            with open(self.credentials_file, 'w') as f:
+                json.dump(data, f, indent=2)
+                
+        except Exception as e:
+            print(f"Error saving remembered credentials: {e}")
+    
+    def _clear_remembered_credentials(self):
+        """Clear saved credentials"""
+        try:
+            if os.path.exists(self.credentials_file):
+                os.remove(self.credentials_file)
+        except Exception as e:
+            print(f"Error clearing remembered credentials: {e}")
+
     def _create_login_form(self):
         # Create container frame
         container = ctk.CTkFrame(self, fg_color="transparent")
@@ -154,7 +222,17 @@ class LoginForm(ctk.CTkFrame):
             bg="#ffffff"
         )
         forgot_password.pack()
-        
+        forgot_password.bind("<Button-1>", lambda e: self.open_forgot_password_dialog())
+    
+    def open_forgot_password_dialog(self):
+        """Open the forgot password dialog"""
+        try:
+            dialog = ForgotPasswordDialog(self, self.db_manager)
+            dialog.focus()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open forgot password dialog: {str(e)}")
+            print(f"Error opening forgot password dialog: {e}")
+    
     def handle_login(self):
         """Handle login button click"""
         email = self.email_var.get().strip()
@@ -163,6 +241,12 @@ class LoginForm(ctk.CTkFrame):
         if not email or not password:
             messagebox.showerror("Error", "Please fill in all fields")
             return
+        
+        # Save or clear remembered credentials based on checkbox
+        if self.remember_me.get():
+            self._save_remembered_credentials()
+        else:
+            self._clear_remembered_credentials()
             
         # Implement actual login logic with database
         if self.db_manager:

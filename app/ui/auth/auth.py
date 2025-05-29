@@ -1,5 +1,6 @@
 import customtkinter as ctk
 import tkinter as tk
+from tkinter import messagebox
 from .login import LoginForm
 from .register import RegisterForm
 
@@ -67,3 +68,13 @@ class LoginRegister(ctk.CTkFrame):
         # Pre-fill email if needed
         if hasattr(self.login_form, 'email_var'):
             self.login_form.email_var.set(email)
+        
+        # Show success message
+        messagebox.showinfo(
+            "Registration Successful", 
+            f"Account registered successfully!\n\n" +
+            f"Your account is now pending admin approval. You will be notified via email when your account is activated.\n\n" +
+            f"This process typically takes 1-3 business days.\n\n" +
+            f"Email: {email}",
+            parent=self
+        )
