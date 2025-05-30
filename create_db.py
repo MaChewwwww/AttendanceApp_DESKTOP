@@ -58,3 +58,21 @@ except Exception as e:
 
 print(f"Database successfully created at: {DB_PATH}")
 print(f"Tables created: {', '.join(tables)}")
+
+# Automatically run the seeder
+print("\nRunning database seeder...")
+try:
+    import subprocess
+    import sys
+    
+    # Run the seeder
+    result = subprocess.run([sys.executable, "seed_db.py"], 
+                          capture_output=True, text=True, check=True)
+    print(result.stdout)
+    
+except subprocess.CalledProcessError as e:
+    print(f"Error running seeder: {e}")
+    print(f"Stderr: {e.stderr}")
+except Exception as e:
+    print(f"Error running seeder: {e}")
+    print("You can manually run 'python seed_db.py' to seed the database.")

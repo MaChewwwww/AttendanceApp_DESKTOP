@@ -4,11 +4,12 @@ from tkinter import messagebox
 from datetime import datetime, timedelta
 
 class LoginOTPDialog(ctk.CTkToplevel):
-    def __init__(self, parent, db_manager=None, email="", on_success=None):
+    def __init__(self, parent, db_manager=None, email="", user_data=None, on_success=None):
         super().__init__(parent)
         
         self.db_manager = db_manager
         self.email = email
+        self.user_data = user_data  # Store user data passed from login
         self.on_success = on_success
         self.resend_timer_id = None  # Track timer for cleanup
         
@@ -291,9 +292,10 @@ class LoginOTPDialog(ctk.CTkToplevel):
                     except tk.TclError:
                         pass
                     
-                    # Store the callback and result before destroying
+                    # Store the callback and user data before destroying
                     success_callback = self.on_success
-                    user_data = result
+                    # Use the stored user_data instead of result from OTP verification
+                    user_data = self.user_data or result
                     
                     # Destroy the dialog
                     self.destroy()
