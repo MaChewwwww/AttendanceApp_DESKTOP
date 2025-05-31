@@ -78,7 +78,7 @@ class RegisterForm(ctk.CTkFrame):
         self.card_frame = ctk.CTkFrame(
             self,
             width=420,
-            height=510,
+            height=560,
             corner_radius=12,
             fg_color="#ffffff",
             border_width=1,
@@ -411,19 +411,21 @@ class RegisterForm(ctk.CTkFrame):
         
         self.terms_checkbox = ctk.CTkCheckBox(
             terms_container,
-            text="I agree to the Terms and Condition",
-            font=ctk.CTkFont("Roboto", 10),  # Smaller font
-            text_color="#707070",
+            text="I agree to the Terms and Conditions",
+            font=ctk.CTkFont("Roboto", 10),
+            text_color="#1E3A8A",  # Changed to blue to highlight clickable text
             fg_color="#1E3A8A",
             hover_color="#1E3A8A",
             border_color="#d1d1d1",
-            checkbox_width=14,  # Smaller checkbox
+            checkbox_width=14,
             checkbox_height=14,
             corner_radius=2,
             border_width=1
         )
         self.terms_checkbox.pack(anchor="w")
-        self.terms_checkbox.select()
+        
+        # Bind click event to open terms modal when clicking on the text
+        self.terms_checkbox.bind("<Button-1>", self._on_terms_checkbox_click)
         
         # Validation Label (initially hidden) - more compact
         self.validation_label = ctk.CTkLabel(
@@ -434,15 +436,15 @@ class RegisterForm(ctk.CTkFrame):
             wraplength=380,
             justify="left"
         )
-        self.validation_label.place(x=15, y=410)  # Adjusted position
+        self.validation_label.place(x=15, y=425)  # Adjusted position
         self.validation_label.place_forget()
         
         # Sign Up Button - more compact
         self.signup_button = ctk.CTkButton(
             self.card_frame,
             text="Sign Up",
-            width=100,  # Reduced width
-            height=28,  # Reduced height
+            width=140,  # Reduced width
+            height=34,  # Reduced height
             corner_radius=8,
             border_width=1,
             font=ctk.CTkFont("Roboto", 11, "bold"),  # Smaller font
@@ -450,7 +452,7 @@ class RegisterForm(ctk.CTkFrame):
             hover_color="#152a63",
             command=self.handle_register
         )
-        self.signup_button.place(x=290, y=460)  # Adjusted position
+        self.signup_button.place(x=260, y=505)  # Adjusted position
 
     def get_form_data(self):
         """Get all form data as a dictionary"""
@@ -1424,3 +1426,204 @@ class RegisterForm(ctk.CTkFrame):
         # This method is kept for compatibility but the new _setup_year_dropdown_scroll
         # provides better scrolling functionality
         self._setup_year_dropdown_scroll()
+
+    def open_terms_modal(self, event=None):
+        """Open the Terms and Conditions modal"""
+        # Create modal dialog
+        self.terms_modal = ctk.CTkToplevel(self)
+        self.terms_modal.title("Terms and Conditions")
+        self.terms_modal.geometry("600x500")
+        self.terms_modal.resizable(True, True)
+        self.terms_modal.configure(fg_color="#ffffff")
+        
+        # Make modal and center it
+        self.terms_modal.grab_set()
+        self.terms_modal.update_idletasks()
+        
+        # Center the modal
+        width = self.terms_modal.winfo_width()
+        height = self.terms_modal.winfo_height()
+        x = (self.terms_modal.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.terms_modal.winfo_screenheight() // 2) - (height // 2)
+        self.terms_modal.geometry(f"{width}x{height}+{x}+{y}")
+        
+        # Header
+        header_frame = ctk.CTkFrame(self.terms_modal, fg_color="transparent", height=50)
+        header_frame.pack(fill="x", padx=20, pady=(20, 0))
+        header_frame.pack_propagate(False)
+        
+        ctk.CTkLabel(
+            header_frame,
+            text="Terms and Conditions",
+            font=ctk.CTkFont("Roboto", 20, "bold"),
+            text_color="#1E3A8A"
+        ).pack(anchor="w")
+        
+        # Scrollable text frame
+        text_frame = ctk.CTkScrollableFrame(
+            self.terms_modal,
+            width=560,
+            height=350,
+            fg_color="#f8f9fa",
+            border_width=1,
+            border_color="#e9ecef"
+        )
+        text_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        
+        # Terms and Conditions Content
+        terms_content = """
+POLYTECHNIC UNIVERSITY OF THE PHILIPPINES
+ATTENDANCE MANAGEMENT SYSTEM
+TERMS AND CONDITIONS
+
+Last Updated: December 2024
+
+1. ACCEPTANCE OF TERMS
+By registering for and using the PUP Attendance Management System ("the System"), you agree to be bound by these Terms and Conditions. If you do not agree to these terms, you may not use the System.
+
+2. DESCRIPTION OF SERVICE
+The Attendance Management System is a digital platform designed to track and manage student attendance at Polytechnic University of the Philippines. The System uses facial recognition technology and other identification methods to record attendance.
+
+3. USER ELIGIBILITY
+- You must be a currently enrolled student at PUP
+- You must provide accurate and complete information during registration
+- You must be at least 16 years of age
+- You are responsible for maintaining the confidentiality of your account
+
+4. FACIAL RECOGNITION AND BIOMETRIC DATA
+- By using this System, you consent to the collection and processing of your facial biometric data
+- Facial data is used solely for attendance verification purposes
+- Your biometric data will be stored securely and will not be shared with third parties
+- You have the right to request deletion of your biometric data upon graduation or withdrawal
+
+5. DATA PRIVACY AND PROTECTION
+- We collect personal information including name, student number, email, and facial biometric data
+- Your data is protected in accordance with the Data Privacy Act of 2012 (Republic Act No. 10173)
+- Personal information will only be used for attendance tracking and academic administration
+- We implement appropriate security measures to protect your data
+
+6. USER RESPONSIBILITIES
+- Provide accurate and truthful information during registration
+- Use the System only for legitimate attendance purposes
+- Report any suspected unauthorized access to your account
+- Comply with all PUP policies and regulations
+- Do not attempt to circumvent or manipulate the attendance system
+
+7. PROHIBITED ACTIVITIES
+Users are strictly prohibited from:
+- Attempting to mark attendance for other students
+- Sharing account credentials with others
+- Using the System for any fraudulent purposes
+- Attempting to hack, disrupt, or damage the System
+- Using another person's identity for registration
+
+8. ACCURACY OF INFORMATION
+- You are responsible for ensuring all provided information is accurate and current
+- Notify the system administrator immediately of any changes to your personal information
+- False information may result in account suspension or academic disciplinary action
+
+9. SYSTEM AVAILABILITY
+- We strive to maintain system availability but cannot guarantee 100% uptime
+- Scheduled maintenance may temporarily interrupt service
+- Alternative attendance methods may be provided during system downtime
+
+10. DISCIPLINARY ACTION
+Violation of these terms may result in:
+- Account suspension or termination
+- Academic disciplinary action
+- Referral to appropriate university authorities
+- Legal action if warranted
+
+11. INTELLECTUAL PROPERTY
+- The System and its content are owned by PUP and protected by applicable laws
+- Users are granted limited access for attendance purposes only
+- Unauthorized copying or distribution is prohibited
+
+12. LIMITATION OF LIABILITY
+- PUP is not liable for any indirect, incidental, or consequential damages
+- System usage is at your own risk
+- PUP's liability is limited to the extent permitted by law
+
+13. MODIFICATIONS TO TERMS
+- These terms may be updated periodically
+- Users will be notified of significant changes
+- Continued use after changes constitutes acceptance of new terms
+
+14. TECHNICAL REQUIREMENTS
+- Users must have access to appropriate devices with camera capabilities
+- System compatibility is not guaranteed on all devices
+- Users are responsible for their own internet connectivity
+
+15. SUPPORT AND CONTACT
+For technical support or questions regarding these terms, contact:
+- PUP IT Services: itservices@pup.edu.ph
+- Student Affairs: studentaffairs@pup.edu.ph
+
+16. GOVERNING LAW
+These terms are governed by the laws of the Republic of the Philippines. Any disputes will be resolved in the appropriate courts of Metro Manila.
+
+17. SEVERABILITY
+If any provision of these terms is deemed invalid or unenforceable, the remaining provisions will continue in full force and effect.
+
+18. ENTIRE AGREEMENT
+These Terms and Conditions constitute the entire agreement between you and PUP regarding the use of the Attendance Management System.
+
+By clicking "Agree," you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.
+        """
+        
+        # Add terms content to scrollable frame
+        terms_label = ctk.CTkLabel(
+            text_frame,
+            text=terms_content.strip(),
+            font=ctk.CTkFont("Roboto", 11),
+            text_color="#333333",
+            justify="left",
+            wraplength=520
+        )
+        terms_label.pack(anchor="w", padx=10, pady=10)
+        
+        # Button frame for centering
+        button_frame = ctk.CTkFrame(self.terms_modal, fg_color="transparent", height=60)
+        button_frame.pack(fill="x", padx=20, pady=(0, 20))
+        button_frame.pack_propagate(False)
+        
+        # Agree button (centered)
+        agree_button = ctk.CTkButton(
+            button_frame,
+            text="I Agree",
+            width=120,
+            height=35,
+            corner_radius=8,
+            font=ctk.CTkFont("Roboto", 12, "bold"),
+            fg_color="#1E3A8A",
+            hover_color="#152a63",
+            command=self.agree_to_terms
+        )
+        agree_button.pack(anchor="center")
+        
+        # Handle modal close
+        self.terms_modal.protocol("WM_DELETE_WINDOW", self.close_terms_modal)
+    
+    def agree_to_terms(self):
+        """Handle agreeing to terms - check the checkbox and close modal"""
+        self.terms_checkbox.select()  # Check the checkbox
+        self.close_terms_modal()
+    
+    def close_terms_modal(self):
+        """Close the terms modal"""
+        if hasattr(self, 'terms_modal') and self.terms_modal:
+            self.terms_modal.destroy()
+            self.terms_modal = None
+
+    def _on_terms_checkbox_click(self, event):
+        """Handle clicking on terms checkbox - open modal if clicking on text area"""
+        # Get the click position relative to the checkbox widget
+        x = event.x
+        
+        # If click is beyond the checkbox itself (i.e., on the text), open terms modal
+        # Checkbox is about 14px wide, so clicks beyond x=20 are likely on text
+        if x > 20:
+            # Prevent the checkbox from toggling
+            self.after(1, lambda: self.terms_checkbox.deselect() if self.terms_checkbox.get() else self.terms_checkbox.select())
+            # Open terms modal
+            self.open_terms_modal()
