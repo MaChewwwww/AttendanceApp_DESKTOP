@@ -91,12 +91,6 @@ def main():
         
         logger.info("Database seeding completed successfully!")
         
-        # Print summary
-        admin_count = session.query(User).filter_by(role='admin').count()
-        
-        print(f"\nDatabase seeding completed!")
-        print(f"Admin users: {admin_count}")
-        
         print(f"\nLogin credentials:")
         print(f"Admin: admin@iskolarngbayan.pup.edu.ph / admin123")
         

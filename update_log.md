@@ -14,14 +14,6 @@
 - **Simplified User Experience**: No waiting for admin approval - instant account activation
 - **Updated Database Schema**: Modified verification logic to support immediate activation
 
-### 📧 **Enhanced Email Templates**
-- **Color-coded Email Types**:
-  - **Registration OTP**: Yellow theme (#F59E0B) for verification codes
-  - **Login OTP**: Blue theme (#1E3A8A) for security verification
-  - **Password Reset**: Red theme (#dc2626) for password recovery
-- **Professional HTML Templates** with consistent branding
-- **Improved Email Content** with clear instructions and timing information
-
 ### 🛠️ **System Administration**
 - **Single Admin Account**: Simplified to one super admin (`admin@iskolarngbayan.pup.edu.ph`)
 - **Admin Dashboard Integration**: Seamless transition from login to admin interface

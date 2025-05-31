@@ -757,7 +757,7 @@ class RegisterForm(ctk.CTkFrame):
         # Register Button - adjusted position
         self.register_button = ctk.CTkButton(
             card,
-            text="Complete Registration",
+            text="Next",
             width=410,
             height=38,
             corner_radius=8,
