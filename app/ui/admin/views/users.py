@@ -182,7 +182,7 @@ class ActionPopup(ctk.CTkToplevel):
                 border_color="#BDBDBD",
                 corner_radius=0,
                 font=ctk.CTkFont(size=13),
-                command=None  # You can add a filter popup if needed
+                command=lambda: FilterPopup(self)
             )
             filter_btn.pack(side="left", padx=0, pady=0)
 
@@ -529,6 +529,7 @@ class SuccessModal(ctk.CTkToplevel):
         self.configure(fg_color="#FAFAFA")
         self.transient(parent)
         self.grab_set()
+        self._parent_modal = parent
         # Card frame for rounded corners, responsive and matching other modals
         card = ctk.CTkFrame(self, fg_color="#fff", corner_radius=16)
         card.pack(expand=True, fill="both", padx=16, pady=16)
@@ -555,8 +556,15 @@ class SuccessModal(ctk.CTkToplevel):
             hover_color="#16a34a",
             font=ctk.CTkFont(size=15, weight="bold"),
             corner_radius=8,
-            command=lambda: (self.destroy(), on_continue() if on_continue else None)
+            command=self._close_all
         ).pack(expand=True, fill="both", padx=0)
+
+    def _close_all(self):
+        self.destroy()
+        try:
+            self._parent_modal.destroy()
+        except Exception:
+            pass
 
 class UsersView(ctk.CTkFrame):
     def __init__(self, parent):
