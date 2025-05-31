@@ -37,42 +37,63 @@ def hash_password(password):
 
 def seed_admin_users():
     """Seed admin users"""
-    admin_users = [
-        {
-            "email": "admin@iskolarngbayan.pup.edu.ph",
-            "password": "admin123",
-            "first_name": "System",
-            "last_name": "Administrator",
-            "role": "admin",
-            "birthday": date(1990, 1, 1),
-            "contact_number": "+639123456789"
-        }
-    ]
-    
-    for admin_data in admin_users:
-        # Check if admin already exists
-        existing_admin = session.query(User).filter_by(email=admin_data["email"]).first()
+    try:
+        # Check if admin users already exist
+        existing_admin = session.query(User).filter_by(role="Admin").first()
         if existing_admin:
-            logger.info(f"Admin {admin_data['email']} already exists, skipping...")
-            continue
-        
-        # Create admin user
-        admin_user = User(
-            email=admin_data["email"],
-            password_hash=hash_password(admin_data["password"]),
-            first_name=admin_data["first_name"],
-            last_name=admin_data["last_name"],
-            role=admin_data["role"],
-            birthday=admin_data["birthday"],
-            contact_number=admin_data["contact_number"],
-            status="active",
-            verified=1  # 1 for True
-        )
-        
-        session.add(admin_user)
-        logger.info(f"Created admin user: {admin_data['email']}")
-    
-    session.commit()
+            logger.info("Admin users already exist, skipping...")
+            return
+
+        # Create admin users
+        admin_users = [
+            {
+                "first_name": "System",
+                "last_name": "Administrator",
+                "email": "admin@pup.edu.ph",
+                "birthday": date(1990, 1, 1),
+                "password_hash": bcrypt.hashpw("admin123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
+                "contact_number": "09123456789",
+                "role": "Admin",
+                "verified": 1,  # Admin is automatically verified
+                "created_at": datetime.now(),
+                "updated_at": datetime.now()
+            },
+            {
+                "first_name": "Super",
+                "last_name": "Admin",
+                "email": "superadmin@pup.edu.ph",
+                "birthday": date(1985, 5, 15),
+                "password_hash": bcrypt.hashpw("superadmin123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
+                "contact_number": "09987654321",
+                "role": "Admin",
+                "verified": 1,  # Admin is automatically verified
+                "created_at": datetime.now(),
+                "updated_at": datetime.now()
+            }
+        ]
+
+        for admin_data in admin_users:
+            admin_user = User(
+                first_name=admin_data["first_name"],
+                last_name=admin_data["last_name"],
+                email=admin_data["email"],
+                birthday=admin_data["birthday"],
+                password_hash=admin_data["password_hash"],
+                contact_number=admin_data["contact_number"],
+                role=admin_data["role"],
+                verified=admin_data["verified"],
+                created_at=admin_data["created_at"],
+                updated_at=admin_data["updated_at"]
+            )
+            session.add(admin_user)
+
+        session.commit()
+        logger.info("Admin users seeded successfully")
+
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Error seeding admin users: {str(e)}")
+        raise
 
 def main():
     """Main seeding function"""

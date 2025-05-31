@@ -113,8 +113,8 @@ class DatabaseManager:
             
             # Insert user - set as pending for admin verification
             user_query = """
-            INSERT INTO users (first_name, last_name, email, birthday, password_hash, contact_number, role, face_image, status, verified, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users (first_name, last_name, email, birthday, password_hash, contact_number, role, face_image, verified, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
             current_time = datetime.now().isoformat()
             cursor.execute(user_query, (
@@ -126,7 +126,6 @@ class DatabaseManager:
                 contact_number,
                 "Student",
                 face_image,
-                "pending",  # Set as pending - admin needs to activate
                 0,  # verified = 0 (False) - admin needs to verify
                 current_time,
                 current_time
@@ -160,8 +159,7 @@ class DatabaseManager:
                 "name": f"{first_name} {last_name}",
                 "email": email,
                 "role": "Student",
-                "student_number": student_number,
-                "status": "pending"
+                "student_number": student_number
             }
                 
         except sqlite3.Error as e:
@@ -218,7 +216,6 @@ class DatabaseManager:
                     "email": user['email'],
                     "role": user['role'],
                     "student_number": None,  # Admins don't have student numbers
-                    "status": user['status'],
                     "contact_number": user['contact_number'],
                     "birthday": user['birthday']
                 }
@@ -227,11 +224,9 @@ class DatabaseManager:
                 return True, user_data
                 
             elif user_role.lower() == 'student':
-                # Student login - check verification and status
+                # Student login - check verification only
                 if user['verified'] == 0:
                     return False, "Account is not verified yet. It will take 1-3 Business days to verify your account. Please contact administrator if you have further concerns."
-                elif user['status'] != 'active':
-                    return False, "Account is not active. Please contact administrator."
                     
                 # Return user data for student
                 user_data = {
@@ -241,7 +236,6 @@ class DatabaseManager:
                     "email": user['email'],
                     "role": user['role'],
                     "student_number": user['student_number'],
-                    "status": user['status'],
                     "contact_number": user['contact_number'],
                     "birthday": user['birthday']
                 }
@@ -273,24 +267,20 @@ class DatabaseManager:
             conn = self.get_connection()
             cursor = conn.cursor()
             
-            # Check if user exists and is active
-            cursor.execute("SELECT id, first_name, status, verified FROM users WHERE email = ?", (email,))
+            # Check if user exists and is verified
+            cursor.execute("SELECT id, first_name, verified FROM users WHERE email = ?", (email,))
             user = cursor.fetchone()
             
             if not user:
                 conn.close()
                 return False, "No account found with this email address"
             
-            user_id, first_name, status, verified = user
+            user_id, first_name, verified = user
             
-            # Check if account is verified and active
+            # Check if account is verified
             if verified == 0:
                 conn.close()
                 return False, "Account is not verified yet. Please contact administrator."
-            
-            if status != 'active':
-                conn.close()
-                return False, "Account is not active. Please contact administrator."
             
             # Generate OTP
             otp_code = self.generate_otp()
@@ -402,7 +392,7 @@ class DatabaseManager:
             
             # Find valid OTP
             cursor.execute("""
-                SELECT o.user_id, u.first_name, u.last_name, u.email, u.role, u.status, u.contact_number, u.birthday, s.student_number
+                SELECT o.user_id, u.first_name, u.last_name, u.email, u.role, u.contact_number, u.birthday, s.student_number
                 FROM otp_requests o
                 JOIN users u ON o.user_id = u.id
                 LEFT JOIN students s ON u.id = s.user_id
@@ -446,7 +436,6 @@ class DatabaseManager:
                 "email": result['email'],
                 "role": result['role'],
                 "student_number": result['student_number'],
-                "status": result['status'],
                 "contact_number": result['contact_number'],
                 "birthday": result['birthday']
             }
