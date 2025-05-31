@@ -28,7 +28,7 @@ class AttendanceApp:
         # Create main window
         self.main_window = ctk.CTk()
         self.main_window.title(APP_NAME)
-        self.main_window.geometry("1000x720")
+        self.main_window.geometry("1000x650")
         self.main_window.minsize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         self.main_window.resizable(False, False)
         
