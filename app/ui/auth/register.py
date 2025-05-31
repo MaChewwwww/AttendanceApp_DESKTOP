@@ -420,12 +420,22 @@ class RegisterForm(ctk.CTkFrame):
             checkbox_width=14,
             checkbox_height=14,
             corner_radius=2,
-            border_width=1
+            border_width=1,
+            command=self._on_checkbox_click  # Add command to handle clicks
         )
         self.terms_checkbox.pack(anchor="w")
         
-        # Bind click event to open terms modal when clicking on the text
-        self.terms_checkbox.bind("<Button-1>", self._on_terms_checkbox_click)
+        # Create a clickable label overlay just for the text part (not covering checkbox)
+        terms_clickable_label = ctk.CTkLabel(
+            terms_container,
+            text="I agree to the Terms and Conditions",
+            font=ctk.CTkFont("Roboto", 10),
+            text_color="#1E3A8A",
+            cursor="hand2",
+            bg_color="transparent"
+        )
+        terms_clickable_label.place(x=20, y=0)  # Position to the right of checkbox, not covering it
+        terms_clickable_label.bind("<Button-1>", lambda e: self.open_terms_modal())
         
         # Validation Label (initially hidden) - more compact
         self.validation_label = ctk.CTkLabel(
@@ -1610,9 +1620,24 @@ By clicking "I Agree," you acknowledge that you have read, understood, and agree
         # Handle modal close
         self.terms_modal.protocol("WM_DELETE_WINDOW", self.close_terms_modal)
 
+    def _on_checkbox_click(self):
+        """Handle checkbox click - always open modal and revert state"""
+        # Store current state before opening modal
+        current_state = self.terms_checkbox.get()
+        
+        # Revert the checkbox state immediately (since click already changed it)
+        if current_state:
+            self.terms_checkbox.deselect()
+        else:
+            self.terms_checkbox.select()
+        
+        # Open the terms modal
+        self.open_terms_modal()
+
     def agree_to_terms(self):
         """Handle agreeing to terms - check the checkbox and close modal"""
-        self.terms_checkbox.select()  # Check the checkbox
+        # Simply select the checkbox (no need to temporarily enable/disable)
+        self.terms_checkbox.select()
         self.close_terms_modal()
     
     def close_terms_modal(self):
@@ -1622,14 +1647,6 @@ By clicking "I Agree," you acknowledge that you have read, understood, and agree
             self.terms_modal = None
 
     def _on_terms_checkbox_click(self, event):
-        """Handle clicking on terms checkbox - open modal if clicking on text area"""
-        # Get the click position relative to the checkbox widget
-        x = event.x
-        
-        # If click is beyond the checkbox itself (i.e., on the text), open terms modal
-        # Checkbox is about 14px wide, so clicks beyond x=20 are likely on text
-        if x > 20:
-            # Prevent the checkbox from toggling
-            self.after(1, lambda: self.terms_checkbox.deselect() if self.terms_checkbox.get() else self.terms_checkbox.select())
-            # Open terms modal
-            self.open_terms_modal()
+        """Handle clicking on terms checkbox - always open modal"""
+        # Always open terms modal regardless of click position
+        self.open_terms_modal()
