@@ -226,7 +226,7 @@ class DatabaseManager:
             elif user_role.lower() == 'student':
                 # Student login - check verification only
                 if user['verified'] == 0:
-                    return False, "Account is not verified yet. It will take 1-3 Business days to verify your account. Please contact administrator if you have further concerns."
+                    return False, "Account verification is pending. Please check your email for verification instructions or contact support if you need assistance."
                     
                 # Return user data for student
                 user_data = {
@@ -280,7 +280,7 @@ class DatabaseManager:
             # Check if account is verified
             if verified == 0:
                 conn.close()
-                return False, "Account is not verified yet. Please contact administrator."
+                return False, "Account verification is pending. Please contact support for assistance."
             
             # Generate OTP
             otp_code = self.generate_otp()
@@ -577,7 +577,7 @@ class DatabaseManager:
                 
                 print(f"Successfully registered and verified user: {email} (ID: {user_id})")
                 
-                # Send welcome email instead of confirmation email
+                # Send welcome email
                 try:
                     self.email_service.send_welcome_email(email, registration_data['first_name'])
                 except Exception as e:
@@ -600,103 +600,6 @@ class DatabaseManager:
             print(f"Error verifying registration OTP: {e}")
             return False, str(e)
 
-    def register(self, first_name, last_name, email, student_number, password, face_image=None, contact_number=None, date_of_birth=None):
-        """Register a new student with face image and additional details - LEGACY METHOD"""
-        # This method is kept for compatibility but should not be used for new registrations
-        # New registrations should go through OTP verification flow
-        conn = None
-        cursor = None
-        try:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-            
-            # Check if email is already in use
-            cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
-            if cursor.fetchone():
-                return False, "Email is already in use"
-                
-            # Check if student number is already in use
-            cursor.execute("SELECT id FROM students WHERE student_number = ?", (student_number,))
-            if cursor.fetchone():
-                return False, "Student number is already in use"
-                
-            # Hash the password
-            hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-            
-            # Convert date_of_birth string to date format if provided
-            birthday = None
-            if date_of_birth:
-                try:
-                    from datetime import datetime as dt
-                    dt.strptime(date_of_birth, "%Y-%m-%d")
-                    birthday = date_of_birth
-                except ValueError:
-                    return False, "Invalid date format"
-            
-            # Begin transaction
-            conn.execute("BEGIN TRANSACTION")
-            
-            # Insert user - set as verified by default for legacy registration
-            user_query = """
-            INSERT INTO users (first_name, last_name, email, birthday, password_hash, contact_number, role, face_image, verified, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """
-            current_time = datetime.now().isoformat()
-            cursor.execute(user_query, (
-                first_name,
-                last_name,
-                email,
-                birthday,
-                hashed_pw.decode('utf-8'),
-                contact_number,
-                "Student",
-                face_image,
-                1,  # verified = 1 for legacy registration
-                current_time,
-                current_time
-            ))
-            
-            user_id = cursor.lastrowid
-            
-            # Insert student record
-            student_query = """
-            INSERT INTO students (user_id, student_number)
-            VALUES (?, ?)
-            """
-            cursor.execute(student_query, (
-                user_id, 
-                student_number
-            ))
-            
-            # Commit transaction
-            conn.commit()
-            
-            print(f"Successfully registered user (legacy): {email} (ID: {user_id})")
-            
-            return True, {
-                "user_id": user_id,
-                "name": f"{first_name} {last_name}",
-                "email": email,
-                "role": "Student",
-                "student_number": student_number
-            }
-                
-        except sqlite3.Error as e:
-            if conn:
-                conn.rollback()
-            print(f"Database error during registration: {e}")
-            return False, f"Database error: {str(e)}"
-        except Exception as e:
-            if conn:
-                conn.rollback()
-            print(f"Unexpected error during registration: {e}")
-            return False, f"Registration failed: {str(e)}"
-        finally:
-            if cursor:
-                cursor.close()
-            if conn:
-                conn.close()
-    
     def cleanup_expired_otps(self):
         """Clean up expired OTP requests"""
         try:

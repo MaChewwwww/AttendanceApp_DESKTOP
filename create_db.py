@@ -20,6 +20,9 @@ DEFAULT_DB_PATH = DATA_DIR / "attendance_app.db"
 # Get database path from environment variable or use default
 DB_PATH = os.getenv("DB_PATH", str(DEFAULT_DB_PATH))
 
+# Also define the remembered credentials file path
+REMEMBERED_CREDENTIALS_PATH = DATA_DIR / "remembered_credentials.json"
+
 # Delete the database file if it exists
 if os.path.exists(DB_PATH):
     try:
@@ -29,6 +32,16 @@ if os.path.exists(DB_PATH):
     except Exception as e:
         logger.error(f"Failed to remove existing database: {str(e)}")
         exit(1)  # Exit if we can't remove the existing database
+
+# Delete the remembered credentials file if it exists
+if os.path.exists(REMEMBERED_CREDENTIALS_PATH):
+    try:
+        logger.info(f"Removing remembered credentials file at: {REMEMBERED_CREDENTIALS_PATH}")
+        os.remove(REMEMBERED_CREDENTIALS_PATH)
+        logger.info("Remembered credentials file removed successfully")
+    except Exception as e:
+        logger.warning(f"Failed to remove remembered credentials file: {str(e)}")
+        # Don't exit for this - it's not critical
 
 # Ensure directory exists
 DATA_DIR.mkdir(exist_ok=True)  # Create data directory if it doesn't exist
@@ -60,6 +73,7 @@ except Exception as e:
 
 print(f"Database successfully created at: {DB_PATH}")
 print(f"Tables created: {', '.join(tables)}")
+print("Remembered login credentials cleared")
 
 # Automatically run the seeder
 print("\nRunning database seeder...")

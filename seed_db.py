@@ -44,51 +44,36 @@ def seed_admin_users():
             logger.info("Admin users already exist, skipping...")
             return
 
-        # Create admin users
-        admin_users = [
-            {
-                "first_name": "System",
-                "last_name": "Administrator",
-                "email": "admin@pup.edu.ph",
-                "birthday": date(1990, 1, 1),
-                "password_hash": bcrypt.hashpw("admin123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
-                "contact_number": "09123456789",
-                "role": "Admin",
-                "verified": 1,  # Admin is automatically verified
-                "created_at": datetime.now(),
-                "updated_at": datetime.now()
-            },
-            {
-                "first_name": "Super",
-                "last_name": "Admin",
-                "email": "superadmin@pup.edu.ph",
-                "birthday": date(1985, 5, 15),
-                "password_hash": bcrypt.hashpw("superadmin123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
-                "contact_number": "09987654321",
-                "role": "Admin",
-                "verified": 1,  # Admin is automatically verified
-                "created_at": datetime.now(),
-                "updated_at": datetime.now()
-            }
-        ]
+        # Create admin user
+        admin_user_data = {
+            "first_name": "Super",
+            "last_name": "Admin",
+            "email": "admin@iskolarngbayan.pup.edu.ph",
+            "birthday": date(1985, 5, 15),
+            "password_hash": bcrypt.hashpw("admin123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
+            "contact_number": "admin123",
+            "role": "Admin",
+            "verified": 1,  # Admin is automatically verified
+            "created_at": datetime.now(),
+            "updated_at": datetime.now()
+        }
 
-        for admin_data in admin_users:
-            admin_user = User(
-                first_name=admin_data["first_name"],
-                last_name=admin_data["last_name"],
-                email=admin_data["email"],
-                birthday=admin_data["birthday"],
-                password_hash=admin_data["password_hash"],
-                contact_number=admin_data["contact_number"],
-                role=admin_data["role"],
-                verified=admin_data["verified"],
-                created_at=admin_data["created_at"],
-                updated_at=admin_data["updated_at"]
-            )
-            session.add(admin_user)
+        admin_user = User(
+            first_name=admin_user_data["first_name"],
+            last_name=admin_user_data["last_name"],
+            email=admin_user_data["email"],
+            birthday=admin_user_data["birthday"],
+            password_hash=admin_user_data["password_hash"],
+            contact_number=admin_user_data["contact_number"],
+            role=admin_user_data["role"],
+            verified=admin_user_data["verified"],
+            created_at=admin_user_data["created_at"],
+            updated_at=admin_user_data["updated_at"]
+        )
+        session.add(admin_user)
 
         session.commit()
-        logger.info("Admin users seeded successfully")
+        logger.info("Admin user seeded successfully")
 
     except Exception as e:
         session.rollback()

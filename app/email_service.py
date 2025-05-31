@@ -577,95 +577,6 @@ Best regards,
             print(error_msg)
             return False, error_msg
 
-    def send_registration_confirmation_email(self, to_email, first_name):
-        """
-        Send registration confirmation email (not welcome - user is pending approval)
-        
-        Args:
-            to_email (str): Recipient email
-            first_name (str): User's first name
-            
-        Returns:
-            tuple: (success, message)
-        """
-        try:
-            subject = f"{APP_NAME} - Registration Received"
-            
-            # Plain text version
-            body_text = f"""
-Hello {first_name},
-
-Thank you for registering with {APP_NAME}!
-
-Your registration has been received and is currently being reviewed by our administrators.
-
-What happens next:
-- Your account will be verified within 1-3 business days
-- You will receive an email notification when your account is approved
-- Once approved, you can log in using your credentials
-
-If you have any questions, please contact our support team.
-
-Best regards,
-{APP_NAME} Team
-            """.strip()
-            
-            # HTML version
-            body_html = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-        .header {{ background-color: #f59e0b; color: white; padding: 20px; text-align: center; }}
-        .content {{ padding: 20px; background-color: #f9f9f9; }}
-        .step {{ padding: 10px; margin: 10px 0; background-color: white; border-radius: 5px; border-left: 4px solid #f59e0b; }}
-        .footer {{ padding: 20px; text-align: center; color: #666; font-size: 12px; }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>{APP_NAME}</h1>
-            <h2>Registration Received</h2>
-        </div>
-        <div class="content">
-            <h2>Hello {first_name},</h2>
-            <p>Thank you for registering with {APP_NAME}! Your registration has been received and is currently being reviewed.</p>
-            
-            <h3>What happens next:</h3>
-            <div class="step">
-                <strong>📋 Review Process</strong><br>
-                Your account will be verified within 1-3 business days by our administrators.
-            </div>
-            <div class="step">
-                <strong>📧 Email Notification</strong><br>
-                You will receive an email notification when your account is approved.
-            </div>
-            <div class="step">
-                <strong>🚀 Access Granted</strong><br>
-                Once approved, you can log in using your credentials and access all features.
-            </div>
-            
-            <p>If you have any questions during this process, please contact our support team.</p>
-        </div>
-        <div class="footer">
-            <p>© 2024 {APP_NAME}. All rights reserved.</p>
-        </div>
-    </div>
-</body>
-</html>
-            """.strip()
-            
-            return self.send_email(to_email, subject, body_text, body_html)
-            
-        except Exception as e:
-            error_msg = f"Failed to send registration confirmation email: {str(e)}"
-            print(error_msg)
-            return False, error_msg
-
     def send_registration_otp_email(self, to_email, first_name, otp_code):
         """
         Send registration OTP email
@@ -704,14 +615,14 @@ Best regards,
     <style>
         body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
         .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-        .header {{ background-color: #10B981; color: white; padding: 20px; text-align: center; }}
+        .header {{ background-color: #F59E0B; color: white; padding: 20px; text-align: center; }}
         .content {{ padding: 20px; background-color: #f9f9f9; }}
         .otp-code {{ 
             display: inline-block; 
             padding: 15px 25px; 
-            background-color: #f0fdf4; 
-            border: 2px solid #10B981;
-            color: #10B981; 
+            background-color: #fef3c7; 
+            border: 2px solid #F59E0B;
+            color: #F59E0B; 
             font-size: 24px;
             font-weight: bold;
             letter-spacing: 3px;

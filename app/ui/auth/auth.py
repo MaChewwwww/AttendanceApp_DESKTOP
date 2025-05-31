@@ -63,17 +63,13 @@ class LoginRegister(ctk.CTkFrame):
         self.register_form.pack(fill="both", expand=True)
         
     def on_registration_success(self, email):
-        """Handle successful registration"""
+        """Handle successful registration - auto-login flow"""
+        # Switch to login form
         self.show_login()
-        # Pre-fill email if needed
+        
+        # Pre-fill email in login form for fallback scenarios
         if hasattr(self.login_form, 'email_var'):
             self.login_form.email_var.set(email)
         
-        # Show success message - updated for OTP verification flow
-        messagebox.showinfo(
-            "Registration Successful", 
-            f"Account registered and verified successfully!\n\n" +
-            f"You can now log in with your credentials.\n\n" +
-            f"Email: {email}",
-            parent=self
-        )
+        # Note: With OTP verification flow, users are automatically logged in
+        # If auto-login fails, they will see a success message and can login manually

@@ -9,7 +9,7 @@ class RegisterOTPDialog(ctk.CTkToplevel):
         
         self.db_manager = db_manager
         self.email = email
-        self.registration_data = registration_data  # Store registration data for completion
+        self.registration_data = registration_data
         self.on_success = on_success
         self.resend_timer_id = None
         
@@ -289,15 +289,8 @@ class RegisterOTPDialog(ctk.CTkToplevel):
                     except tk.TclError:
                         pass
                     
-                    # Store the callback before destroying
-                    success_callback = self.on_success
-                    
-                    # Destroy the dialog
-                    self.destroy()
-                    
-                    # Call the success callback
-                    if success_callback:
-                        success_callback(self.email)
+                    # Show success message and redirect to login
+                    self.handle_registration_success()
                     
                     return
                 else:
@@ -317,6 +310,32 @@ class RegisterOTPDialog(ctk.CTkToplevel):
                 self.configure(cursor="")
             except tk.TclError:
                 pass
+    
+    def handle_registration_success(self):
+        """Handle successful registration - show success message and redirect to login"""
+        try:
+            # Store the callback before destroying
+            success_callback = self.on_success
+            first_name = self.registration_data.get('first_name', '')
+            
+            # Destroy the dialog
+            self.destroy()
+            
+            # Show success message
+            messagebox.showinfo(
+                "Registration Successful", 
+                f"Congratulations, {first_name}!\n\n" +
+                f"Your account has been successfully registered and verified.\n\n" +
+                f"Welcome to Attendify! You can now log in with your credentials.\n\n" +
+                f"Email: {self.email}"
+            )
+            
+            # Call the success callback to redirect to login
+            if success_callback:
+                success_callback(self.email)
+                
+        except Exception as e:
+            print(f"Error in registration success handler: {e}")
     
     def on_closing(self):
         """Handle dialog closing"""
