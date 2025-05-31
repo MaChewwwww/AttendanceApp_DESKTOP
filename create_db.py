@@ -12,11 +12,13 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
-# Define absolute path for the database file
-DEFAULT_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "attendance_app.db")
+# Use relative path from the current script location
+SCRIPT_DIR = Path(__file__).parent  # Directory where create_db.py is located
+DATA_DIR = SCRIPT_DIR / "data"  # data folder relative to script
+DEFAULT_DB_PATH = DATA_DIR / "attendance_app.db"
 
 # Get database path from environment variable or use default
-DB_PATH = os.getenv("DB_PATH", DEFAULT_DB_PATH)
+DB_PATH = os.getenv("DB_PATH", str(DEFAULT_DB_PATH))
 
 # Delete the database file if it exists
 if os.path.exists(DB_PATH):
@@ -29,7 +31,7 @@ if os.path.exists(DB_PATH):
         exit(1)  # Exit if we can't remove the existing database
 
 # Ensure directory exists
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+DATA_DIR.mkdir(exist_ok=True)  # Create data directory if it doesn't exist
 
 logger.info(f"Creating new database at: {DB_PATH}")
 

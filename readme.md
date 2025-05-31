@@ -9,7 +9,7 @@ A desktop-based attendance system built with Python. This application allows you
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/AttendanceApp_DESKTOP.git
+git clone https://github.com/MaChewwwww/AttendanceApp_DESKTOP.git
 cd AttendanceApp_DESKTOP
 ```
 

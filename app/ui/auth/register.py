@@ -1210,14 +1210,8 @@ class RegisterForm(ctk.CTkFrame):
             self.stop_camera()
             self.show_face_preview()
             
-            # Enable buttons now that face is captured
-            self.register_button.configure(state="normal")
-            self.retake_button.configure(
-                state="normal",
-                fg_color="#dc2626",  # Red color for retake
-                text_color="#ffffff",
-                hover_color="#b91c1c"
-            )
+            # Update button states after successful capture
+            self._update_buttons_after_capture()
             
             messagebox.showinfo("Success", "Face image captured successfully! You can now proceed with registration.", parent=self.verification_dialog)
             
@@ -1225,19 +1219,38 @@ class RegisterForm(ctk.CTkFrame):
             print(f"Capture error: {e}")
             messagebox.showerror("Error", f"Failed to capture image: {str(e)}", parent=self.verification_dialog)
 
+    def _update_buttons_after_capture(self):
+        """Update button states after successful face capture"""
+        # Disable camera button and capture button since face is already captured
+        self.camera_button.configure(
+            state="disabled",
+            text="Photo Captured",
+            fg_color="#e5e5e5",
+            text_color="#707070",
+            hover_color="#e5e5e5"
+        )
+        
+        self.capture_button.configure(state="disabled")
+        
+        # Enable registration button
+        self.register_button.configure(state="normal")
+        
+        # Enable and style retake button
+        self.retake_button.configure(
+            state="normal",
+            fg_color="#dc2626",  # Red color for retake
+            text_color="#ffffff",
+            hover_color="#b91c1c"
+        )
+    
+
     def retake_photo(self):
         """Retake photo - restart camera"""
         self.face_image = None
         self.face_image_data = None
         
-        # Disable buttons since no face is captured
-        self.register_button.configure(state="disabled")
-        self.retake_button.configure(
-            state="disabled",
-            fg_color="#e5e5e5",
-            text_color="#707070",
-            hover_color="#cccccc"
-        )
+        # Reset button states for retaking
+        self._reset_buttons_for_retake()
         
         # Clear preview
         for widget in self.face_preview_frame.winfo_children():
@@ -1252,6 +1265,45 @@ class RegisterForm(ctk.CTkFrame):
         self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
         
         self.start_camera()
+
+    def _reset_buttons_for_retake(self):
+        """Reset button states when retaking photo"""
+        # Re-enable camera button
+        self.camera_button.configure(
+            state="normal",
+            text="Close Camera",  # Will be set to "Open Camera" after camera starts
+            fg_color="#ffffff",
+            text_color="#222",
+            hover_color="#f5f5f5"
+        )
+        
+        # Disable registration button since no face is captured
+        self.register_button.configure(state="disabled")
+        
+        # Disable and reset retake button
+        self.retake_button.configure(
+            state="disabled",
+            fg_color="#e5e5e5",
+            text_color="#707070",
+            hover_color="#cccccc"
+        )
+        
+    def _update_ui_after_camera_close(self):
+        """Update UI after camera window is closed"""
+        # Only update camera button text if face hasn't been captured
+        if not self.face_image:
+            self.camera_button.configure(text="Open Camera")
+            self.capture_button.configure(state="disabled")
+            
+            # Show preview label if no face is captured
+            self.preview_label = ctk.CTkLabel(
+                self.face_preview_frame,
+                text="Camera will appear here\nClick 'Open Camera' to begin",
+                font=ctk.CTkFont("Roboto", 12),
+                text_color="#a0a0a0"
+            )
+            self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
+        # Capture button will be enabled when camera starts
 
     def _on_month_year_change(self, value=None):
         """Called when month or year changes to update available days"""
