@@ -1603,9 +1603,30 @@ By clicking "I Agree," you acknowledge that you have read, understood, and agree
         button_frame.pack(fill="x", padx=20, pady=(0, 20))
         button_frame.pack_propagate(False)
         
-        # Agree button (centered)
+        # Button container for side-by-side layout
+        button_container = ctk.CTkFrame(button_frame, fg_color="transparent")
+        button_container.pack(anchor="center")
+        
+        # I Decline button (left)
+        decline_button = ctk.CTkButton(
+            button_container,
+            text="I Decline",
+            width=120,
+            height=35,
+            corner_radius=8,
+            font=ctk.CTkFont("Roboto", 12, "bold"),
+            fg_color="transparent",
+            text_color="#666666",
+            border_width=1,
+            border_color="#d1d1d1",
+            hover_color="#f5f5f5",
+            command=self.decline_terms
+        )
+        decline_button.pack(side="left", padx=(0, 10))
+        
+        # I Agree button (right)
         agree_button = ctk.CTkButton(
-            button_frame,
+            button_container,
             text="I Agree",
             width=120,
             height=35,
@@ -1615,10 +1636,10 @@ By clicking "I Agree," you acknowledge that you have read, understood, and agree
             hover_color="#152a63",
             command=self.agree_to_terms
         )
-        agree_button.pack(anchor="center")
+        agree_button.pack(side="left")
         
         # Handle modal close
-        self.terms_modal.protocol("WM_DELETE_WINDOW", self.close_terms_modal)
+        self.terms_modal.protocol("WM_DELETE_WINDOW", self.decline_terms)
 
     def _on_checkbox_click(self):
         """Handle checkbox click - always open modal and revert state"""
@@ -1633,6 +1654,12 @@ By clicking "I Agree," you acknowledge that you have read, understood, and agree
         
         # Open the terms modal
         self.open_terms_modal()
+
+    def decline_terms(self):
+        """Handle declining terms - ensure checkbox remains unchecked and close modal"""
+        # Ensure checkbox is unchecked
+        self.terms_checkbox.deselect()
+        self.close_terms_modal()
 
     def agree_to_terms(self):
         """Handle agreeing to terms - check the checkbox and close modal"""
@@ -1650,3 +1677,4 @@ By clicking "I Agree," you acknowledge that you have read, understood, and agree
         """Handle clicking on terms checkbox - always open modal"""
         # Always open terms modal regardless of click position
         self.open_terms_modal()
+
