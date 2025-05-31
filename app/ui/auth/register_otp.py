@@ -13,11 +13,15 @@ class RegisterOTPDialog(ctk.CTkToplevel):
         self.on_success = on_success
         self.resend_timer_id = None
         
-        # Configure dialog
+        # Configure dialog with fixed sizing
         self.title("Registration Verification")
         self.geometry("520x500")
         self.resizable(False, False)
         self.configure(fg_color="#f5f5f5")
+        
+        # Set minimum and maximum size to prevent shrinking
+        self.minsize(520, 500)
+        self.maxsize(520, 500)
         
         # Make dialog modal
         self.grab_set()
@@ -42,9 +46,21 @@ class RegisterOTPDialog(ctk.CTkToplevel):
         """Center the dialog on screen"""
         try:
             self.update_idletasks()
-            x = (self.winfo_screenwidth() - 520) // 2
-            y = (self.winfo_screenheight() - 500) // 2
+            
+            # Force geometry before centering
+            self.geometry("520x500")
+            
+            # Calculate center position
+            screen_width = self.winfo_screenwidth()
+            screen_height = self.winfo_screenheight()
+            x = (screen_width - 520) // 2
+            y = (screen_height - 500) // 2
+            
+            # Set position explicitly
             self.geometry(f"520x500+{x}+{y}")
+            
+            # Force update to ensure size is applied
+            self.update()
         except Exception as e:
             print(f"Error centering dialog: {e}")
             self.geometry("520x500+100+100")

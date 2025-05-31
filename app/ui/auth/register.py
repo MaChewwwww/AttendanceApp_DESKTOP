@@ -648,20 +648,34 @@ class RegisterForm(ctk.CTkFrame):
         """Open the face verification dialog"""
         self.verification_dialog = ctk.CTkToplevel(self)
         self.verification_dialog.title("Face Verification")
-        self.verification_dialog.geometry("454x450")  # Back to original height
+        self.verification_dialog.geometry("454x450")
         self.verification_dialog.resizable(False, False)
         self.verification_dialog.configure(fg_color="#222222")
+        
+        # Set minimum size to prevent shrinking
+        self.verification_dialog.minsize(454, 450)
+        self.verification_dialog.maxsize(454, 450)
 
         # Make dialog modal
         self.verification_dialog.grab_set()
 
-        # Center dialog
+        # Center dialog with explicit positioning
         self.verification_dialog.update_idletasks()
-        width = self.verification_dialog.winfo_width()
-        height = self.verification_dialog.winfo_height()
-        x = (self.verification_dialog.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.verification_dialog.winfo_screenheight() // 2) - (height // 2)
-        self.verification_dialog.geometry(f"{width}x{height}+{x}+{y}")
+        
+        # Force the geometry before centering
+        self.verification_dialog.geometry("454x450")
+        
+        # Calculate center position
+        screen_width = self.verification_dialog.winfo_screenwidth()
+        screen_height = self.verification_dialog.winfo_screenheight()
+        x = (screen_width - 454) // 2
+        y = (screen_height - 450) // 2
+        
+        # Set position explicitly
+        self.verification_dialog.geometry(f"454x450+{x}+{y}")
+        
+        # Force update to ensure size is applied
+        self.verification_dialog.update()
 
         self._create_verification_dialog_content()
         
@@ -670,10 +684,20 @@ class RegisterForm(ctk.CTkFrame):
 
     def _create_verification_dialog_content(self):
         """Create content for the face verification dialog"""
-        # Card Frame
-        card = ctk.CTkFrame(self.verification_dialog, width=454, height=450, corner_radius=12, fg_color="#ffffff", border_width=0)  # Back to original height
+        # Card Frame with explicit sizing
+        card = ctk.CTkFrame(
+            self.verification_dialog, 
+            width=454, 
+            height=450, 
+            corner_radius=12, 
+            fg_color="#ffffff", 
+            border_width=0
+        )
         card.place(x=0, y=0)
         card.pack_propagate(False)
+        
+        # Ensure card maintains its size
+        card.grid_propagate(False)
 
         # Info icon (top right)
         info_btn = ctk.CTkButton(
@@ -690,10 +714,18 @@ class RegisterForm(ctk.CTkFrame):
         )
         info_btn.place(x=420, y=10)
 
-        # Camera Preview Frame - Set to 240px height
-        self.face_preview_frame = ctk.CTkFrame(card, width=410, height=240, fg_color="#fafafa", border_width=1, border_color="#d1d1d1")
+        # Camera Preview Frame with explicit sizing
+        self.face_preview_frame = ctk.CTkFrame(
+            card, 
+            width=410, 
+            height=240, 
+            fg_color="#fafafa", 
+            border_width=1, 
+            border_color="#d1d1d1"
+        )
         self.face_preview_frame.place(x=22, y=38)
         self.face_preview_frame.pack_propagate(False)
+        self.face_preview_frame.grid_propagate(False)
 
         # Default Preview Label (centered)
         self.preview_label = ctk.CTkLabel(
@@ -704,7 +736,7 @@ class RegisterForm(ctk.CTkFrame):
         )
         self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
 
-        # Open Camera Button - adjusted position
+        # Open Camera Button with explicit sizing
         self.camera_button = ctk.CTkButton(
             card,
             text="Open Camera",
@@ -719,9 +751,9 @@ class RegisterForm(ctk.CTkFrame):
             hover_color="#f5f5f5",
             command=self.toggle_camera
         )
-        self.camera_button.place(x=22, y=290)  # Adjusted from y=330 to y=290
+        self.camera_button.place(x=22, y=290)
 
-        # Retake and Capture Buttons - adjusted position
+        # Retake and Capture Buttons with explicit sizing
         self.retake_button = ctk.CTkButton(
             card,
             text="Retake",
@@ -733,10 +765,10 @@ class RegisterForm(ctk.CTkFrame):
             text_color="#707070",
             border_width=0,
             hover_color="#cccccc",
-            state="disabled",  # Start disabled
+            state="disabled",
             command=self.retake_photo
         )
-        self.retake_button.place(x=22, y=335)  # Adjusted from y=375 to y=335
+        self.retake_button.place(x=22, y=335)
 
         self.capture_button = ctk.CTkButton(
             card,
@@ -752,9 +784,9 @@ class RegisterForm(ctk.CTkFrame):
             state="disabled",
             command=self.capture_face
         )
-        self.capture_button.place(x=232, y=335)  # Adjusted from y=375 to y=335
+        self.capture_button.place(x=232, y=335)
 
-        # Register Button - adjusted position
+        # Register Button with explicit sizing
         self.register_button = ctk.CTkButton(
             card,
             text="Next",
@@ -769,7 +801,7 @@ class RegisterForm(ctk.CTkFrame):
             command=self.complete_registration,
             state="disabled"
         )
-        self.register_button.place(x=22, y=385)  # Adjusted from y=420 to y=385
+        self.register_button.place(x=22, y=385)
 
     def toggle_camera(self):
         """Toggle camera on/off"""
@@ -797,7 +829,7 @@ class RegisterForm(ctk.CTkFrame):
             # Hide the placeholder
             self.preview_label.place_forget()
             
-            # Create canvas for camera display - 240px height
+            # Create canvas for camera display with explicit sizing
             self.camera_canvas = tk.Canvas(
                 self.face_preview_frame,
                 width=410,
@@ -805,7 +837,7 @@ class RegisterForm(ctk.CTkFrame):
                 bg="#fafafa",
                 highlightthickness=0
             )
-            self.camera_canvas.place(x=0, y=0)
+            self.camera_canvas.place(x=0, y=0, width=410, height=240)
             
             # Initialize photo reference
             self.current_photo = None
@@ -959,7 +991,7 @@ class RegisterForm(ctk.CTkFrame):
                 widget.destroy()
             
             if self.face_image:
-                # Create canvas for displaying captured image - 240px height
+                # Create canvas for displaying captured image with explicit sizing
                 preview_canvas = tk.Canvas(
                     self.face_preview_frame,
                     width=410,
@@ -967,7 +999,7 @@ class RegisterForm(ctk.CTkFrame):
                     bg="#fafafa",
                     highlightthickness=0
                 )
-                preview_canvas.place(x=0, y=0)
+                preview_canvas.place(x=0, y=0, width=410, height=240)
                 
                 # Convert image to PhotoImage and display
                 preview_img = self.face_image.copy()
