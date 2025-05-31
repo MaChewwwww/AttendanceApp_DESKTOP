@@ -447,98 +447,50 @@ class DatabaseManager:
             print(f"Error verifying login OTP: {e}")
             return False, str(e)
 
-    def _initialize_database(self):
-        """Initialize database tables if they don't exist"""
+    def create_registration_otp(self, email, first_name):
+        """Create and send registration OTP for email verification"""
         try:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-            
-            # Create otp_requests table if it doesn't exist
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS otp_requests (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    otp_code TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    expires_at TEXT NOT NULL,
-                    used INTEGER DEFAULT 0,
-                    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-                )
-            """)
-            
-            # Add missing columns to users table if they don't exist
-            try:
-                cursor.execute("ALTER TABLE users ADD COLUMN last_verified_otp TEXT")
-            except sqlite3.OperationalError:
-                pass  # Column already exists
-            
-            try:
-                cursor.execute("ALTER TABLE users ADD COLUMN last_verified_otp_expiry TEXT")
-            except sqlite3.OperationalError:
-                pass  # Column already exists
-            
-            conn.commit()
-            conn.close()
-            
-        except Exception as e:
-            print(f"Error initializing database: {e}")
-
-    def create_password_reset_otp(self, email):
-        """Create and send password reset OTP for a user"""
-        try:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-            
-            # Check if user exists
-            cursor.execute("SELECT id, first_name FROM users WHERE email = ?", (email,))
-            user = cursor.fetchone()
-            
-            if not user:
-                conn.close()
-                return False, "No account found with this email address"
-            
-            user_id, first_name = user
-            
             # Generate OTP
             otp_code = self.generate_otp()
-            expires_at = datetime.now() + timedelta(minutes=15)  # Password reset OTP expires in 15 minutes
+            expires_at = datetime.now() + timedelta(minutes=15)  # Registration OTP expires in 15 minutes
             
-            # Store OTP in database
+            # Store OTP temporarily (not tied to user_id since user doesn't exist yet)
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Store in a temporary table or use email as identifier
             cursor.execute("""
-                INSERT INTO otp_requests (user_id, otp_code, type, created_at, expires_at)
-                VALUES (?, ?, ?, ?, ?)
-            """, (user_id, otp_code, 'password_reset', datetime.now().isoformat(), expires_at.isoformat()))
+                INSERT INTO otp_requests (user_id, otp_code, type, created_at, expires_at, email)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (0, otp_code, 'registration', datetime.now().isoformat(), expires_at.isoformat(), email))
             
             conn.commit()
             conn.close()
             
-            # Send password reset OTP email
-            success, message = self.email_service.send_password_reset_otp_email(email, first_name, otp_code)
+            # Send registration OTP email
+            success, message = self.email_service.send_registration_otp_email(email, first_name, otp_code)
             
             if success:
-                return True, "Password reset OTP sent successfully to your email"
+                return True, "Registration verification code sent successfully to your email"
             else:
-                return False, f"Failed to send OTP email: {message}"
+                return False, f"Failed to send verification code: {message}"
             
         except Exception as e:
-            print(f"Error creating password reset OTP: {e}")
+            print(f"Error creating registration OTP: {e}")
             return False, str(e)
     
-    def verify_password_reset_otp(self, email, otp_code):
-        """Verify password reset OTP"""
+    def verify_registration_otp_and_register(self, email, otp_code, registration_data):
+        """Verify registration OTP and complete registration if valid"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
             
-            # Find valid OTP
+            # Find valid registration OTP
             cursor.execute("""
-                SELECT o.user_id
-                FROM otp_requests o
-                JOIN users u ON o.user_id = u.id
-                WHERE u.email = ? AND o.otp_code = ? AND o.type = 'password_reset' 
-                AND o.expires_at > ?
-                ORDER BY o.created_at DESC
+                SELECT id FROM otp_requests
+                WHERE email = ? AND otp_code = ? AND type = 'registration' 
+                AND expires_at > ?
+                ORDER BY created_at DESC
                 LIMIT 1
             """, (email, otp_code, datetime.now().isoformat()))
             
@@ -548,85 +500,202 @@ class DatabaseManager:
                 conn.close()
                 return False, "Invalid or expired OTP code"
             
-            user_id = result['user_id']
+            otp_id = result['id']
             
-            # Don't delete the OTP yet - keep it for password reset completion
-            # Just mark when it was verified
-            cursor.execute("""
-                UPDATE users SET last_verified_otp = ? WHERE id = ?
-            """, (datetime.now().isoformat(), user_id))
+            # Begin transaction for registration
+            conn.execute("BEGIN TRANSACTION")
             
-            conn.commit()
-            conn.close()
-            
-            return True, {"user_id": user_id, "message": "OTP verified successfully"}
-            
-        except Exception as e:
-            print(f"Error verifying password reset OTP: {e}")
-            return False, str(e)
-    
-    def reset_password_with_otp(self, email, otp_code, new_password):
-        """Reset password using verified OTP"""
-        try:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-            
-            # Find valid OTP that was recently verified
-            cursor.execute("""
-                SELECT o.user_id, u.last_verified_otp
-                FROM otp_requests o
-                JOIN users u ON o.user_id = u.id
-                WHERE u.email = ? AND o.otp_code = ? AND o.type = 'password_reset' 
-                AND o.expires_at > ?
-                ORDER BY o.created_at DESC
-                LIMIT 1
-            """, (email, otp_code, datetime.now().isoformat()))
-            
-            result = cursor.fetchone()
-            
-            if not result:
-                conn.close()
-                return False, "Invalid or expired OTP code"
-            
-            user_id = result['user_id']
-            last_verified = result['last_verified_otp']
-            
-            # Check if OTP was verified within the last 5 minutes
-            if last_verified:
-                verified_time = datetime.fromisoformat(last_verified)
-                if datetime.now() - verified_time > timedelta(minutes=5):
+            try:
+                # Check if email is already in use
+                cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
+                if cursor.fetchone():
+                    conn.rollback()
                     conn.close()
-                    return False, "OTP verification expired. Please verify OTP again."
-            else:
+                    return False, "Email is already in use"
+                    
+                # Check if student number is already in use
+                cursor.execute("SELECT id FROM students WHERE student_number = ?", (registration_data['student_number'],))
+                if cursor.fetchone():
+                    conn.rollback()
+                    conn.close()
+                    return False, "Student number is already in use"
+                    
+                # Hash the password
+                hashed_pw = bcrypt.hashpw(registration_data['password'].encode('utf-8'), bcrypt.gensalt())
+                
+                # Convert date_of_birth string to date format if provided
+                birthday = None
+                if registration_data.get('date_of_birth'):
+                    try:
+                        # Validate the date format
+                        from datetime import datetime as dt
+                        dt.strptime(registration_data['date_of_birth'], "%Y-%m-%d")
+                        birthday = registration_data['date_of_birth']
+                    except ValueError:
+                        conn.rollback()
+                        conn.close()
+                        return False, "Invalid date format"
+                
+                # Insert user - set as VERIFIED since OTP was successful
+                user_query = """
+                INSERT INTO users (first_name, last_name, email, birthday, password_hash, contact_number, role, face_image, verified, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """
+                current_time = datetime.now().isoformat()
+                cursor.execute(user_query, (
+                    registration_data['first_name'],
+                    registration_data['last_name'],
+                    registration_data['email'],
+                    birthday,
+                    hashed_pw.decode('utf-8'),
+                    registration_data.get('contact_number'),
+                    "Student",
+                    registration_data.get('face_image'),
+                    1,  # verified = 1 (True) - OTP verification means account is verified
+                    current_time,
+                    current_time
+                ))
+                
+                user_id = cursor.lastrowid
+                
+                # Insert student record
+                student_query = """
+                INSERT INTO students (user_id, student_number)
+                VALUES (?, ?)
+                """
+                cursor.execute(student_query, (
+                    user_id, 
+                    registration_data['student_number']
+                ))
+                
+                # Delete used OTP
+                cursor.execute("DELETE FROM otp_requests WHERE id = ?", (otp_id,))
+                
+                # Commit transaction
+                conn.commit()
                 conn.close()
-                return False, "OTP not verified. Please verify OTP first."
-            
-            # Hash new password
-            hashed_pw = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
-            
-            # Update password
-            cursor.execute("""
-                UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?
-            """, (hashed_pw.decode('utf-8'), datetime.now().isoformat(), user_id))
-            
-            # Delete used OTP
-            cursor.execute("""
-                DELETE FROM otp_requests WHERE user_id = ? AND otp_code = ? AND type = 'password_reset'
-            """, (user_id, otp_code))
-            
-            # Clear last verified OTP info
-            cursor.execute("""
-                UPDATE users SET last_verified_otp = NULL, last_verified_otp_expiry = NULL WHERE id = ?
-            """, (user_id,))
-            
-            conn.commit()
-            conn.close()
-            
-            return True, "Password reset successfully"
+                
+                print(f"Successfully registered and verified user: {email} (ID: {user_id})")
+                
+                # Send welcome email instead of confirmation email
+                try:
+                    self.email_service.send_welcome_email(email, registration_data['first_name'])
+                except Exception as e:
+                    print(f"Warning: Could not send welcome email: {e}")
+                
+                return True, {
+                    "user_id": user_id,
+                    "name": f"{registration_data['first_name']} {registration_data['last_name']}",
+                    "email": email,
+                    "role": "Student",
+                    "student_number": registration_data['student_number']
+                }
+                    
+            except Exception as reg_error:
+                conn.rollback()
+                conn.close()
+                return False, f"Registration failed: {str(reg_error)}"
             
         except Exception as e:
-            print(f"Error resetting password: {e}")
+            print(f"Error verifying registration OTP: {e}")
             return False, str(e)
+
+    def register(self, first_name, last_name, email, student_number, password, face_image=None, contact_number=None, date_of_birth=None):
+        """Register a new student with face image and additional details - LEGACY METHOD"""
+        # This method is kept for compatibility but should not be used for new registrations
+        # New registrations should go through OTP verification flow
+        conn = None
+        cursor = None
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Check if email is already in use
+            cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
+            if cursor.fetchone():
+                return False, "Email is already in use"
+                
+            # Check if student number is already in use
+            cursor.execute("SELECT id FROM students WHERE student_number = ?", (student_number,))
+            if cursor.fetchone():
+                return False, "Student number is already in use"
+                
+            # Hash the password
+            hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+            
+            # Convert date_of_birth string to date format if provided
+            birthday = None
+            if date_of_birth:
+                try:
+                    from datetime import datetime as dt
+                    dt.strptime(date_of_birth, "%Y-%m-%d")
+                    birthday = date_of_birth
+                except ValueError:
+                    return False, "Invalid date format"
+            
+            # Begin transaction
+            conn.execute("BEGIN TRANSACTION")
+            
+            # Insert user - set as verified by default for legacy registration
+            user_query = """
+            INSERT INTO users (first_name, last_name, email, birthday, password_hash, contact_number, role, face_image, verified, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
+            current_time = datetime.now().isoformat()
+            cursor.execute(user_query, (
+                first_name,
+                last_name,
+                email,
+                birthday,
+                hashed_pw.decode('utf-8'),
+                contact_number,
+                "Student",
+                face_image,
+                1,  # verified = 1 for legacy registration
+                current_time,
+                current_time
+            ))
+            
+            user_id = cursor.lastrowid
+            
+            # Insert student record
+            student_query = """
+            INSERT INTO students (user_id, student_number)
+            VALUES (?, ?)
+            """
+            cursor.execute(student_query, (
+                user_id, 
+                student_number
+            ))
+            
+            # Commit transaction
+            conn.commit()
+            
+            print(f"Successfully registered user (legacy): {email} (ID: {user_id})")
+            
+            return True, {
+                "user_id": user_id,
+                "name": f"{first_name} {last_name}",
+                "email": email,
+                "role": "Student",
+                "student_number": student_number
+            }
+                
+        except sqlite3.Error as e:
+            if conn:
+                conn.rollback()
+            print(f"Database error during registration: {e}")
+            return False, f"Database error: {str(e)}"
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            print(f"Unexpected error during registration: {e}")
+            return False, f"Registration failed: {str(e)}"
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
     
     def cleanup_expired_otps(self):
         """Clean up expired OTP requests"""
@@ -651,3 +720,47 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error cleaning up expired OTPs: {e}")
             return False, str(e)
+
+    def _initialize_database(self):
+        """Initialize database tables if they don't exist"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Create otp_requests table if it doesn't exist
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS otp_requests (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    otp_code TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL,
+                    used INTEGER DEFAULT 0,
+                    email TEXT,
+                    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                )
+            """)
+            
+            # Add missing columns to users table if they don't exist
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN last_verified_otp TEXT")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+            
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN last_verified_otp_expiry TEXT")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+            
+            # Add email column to otp_requests if it doesn't exist
+            try:
+                cursor.execute("ALTER TABLE otp_requests ADD COLUMN email TEXT")
+            except sqlite3.OperationalError:
+                pass
+            
+            conn.commit()
+            conn.close()
+            
+        except Exception as e:
+            print(f"Error initializing database: {e}")

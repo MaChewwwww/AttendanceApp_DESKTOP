@@ -21,7 +21,7 @@ class LoginForm(ctk.CTkFrame):
         self.credentials_file = os.path.join(ROOT_DIR, "data", "remembered_credentials.json")
         
         # Initialize variables
-        self.email_var = tk.StringVar()  # Changed from student_number to email
+        self.email_var = tk.StringVar()
         self.password = tk.StringVar()
         self.remember_me = tk.BooleanVar()
         

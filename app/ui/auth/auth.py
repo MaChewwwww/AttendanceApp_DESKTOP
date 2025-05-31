@@ -69,12 +69,11 @@ class LoginRegister(ctk.CTkFrame):
         if hasattr(self.login_form, 'email_var'):
             self.login_form.email_var.set(email)
         
-        # Show success message
+        # Show success message - updated for OTP verification flow
         messagebox.showinfo(
             "Registration Successful", 
-            f"Account registered successfully!\n\n" +
-            f"Your account is now pending admin approval. You will be notified via email when your account is activated.\n\n" +
-            f"This process typically takes 1-3 business days.\n\n" +
+            f"Account registered and verified successfully!\n\n" +
+            f"You can now log in with your credentials.\n\n" +
             f"Email: {email}",
             parent=self
         )

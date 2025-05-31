@@ -1049,7 +1049,7 @@ class RegisterForm(ctk.CTkFrame):
             self.verification_dialog.configure(cursor="wait")
             self.verification_dialog.update_idletasks()
             
-            # Get form data (removed middle_name)
+            # Get form data
             first_name = self.first_name_var.get().strip()
             last_name = self.last_name_var.get().strip()
             email = self.email_var.get().strip()
@@ -1069,15 +1069,12 @@ class RegisterForm(ctk.CTkFrame):
             ]
             month = str(month_names.index(month_name) + 1).zfill(2)
             
-            # Validate date of birth (basic validation)
+            # Validate date of birth
             try:
                 if day and month and year:
-                    # Basic date validation
                     day_int = int(day)
                     month_int = int(month)
                     year_int = int(year)
-                    
-                    # Validation is simpler now since dropdowns constrain values
                     date_of_birth = f"{year}-{month}-{day}"
                 else:
                     date_of_birth = None
@@ -1090,22 +1087,6 @@ class RegisterForm(ctk.CTkFrame):
                 self.verification_dialog.configure(cursor="")
                 return
             
-            # Attempt registration with database (removed middle_name parameter)
-            if self.db_manager:
-                success, result = self.db_manager.register(
-                    first_name=first_name,
-                    last_name=last_name,
-                    email=email,
-                    student_number=student_number,
-                    password=password,
-                    face_image=self.face_image_data,
-                    contact_number=contact_number,
-                    date_of_birth=date_of_birth
-                )
-            else:
-                success = False
-                result = "Database manager not initialized"
-            
             # Reset cursor
             self.verification_dialog.configure(cursor="")
             
@@ -1113,18 +1094,23 @@ class RegisterForm(ctk.CTkFrame):
             if self.is_camera_active:
                 self.stop_camera()
             
-            if success:
-                # Close dialog
-                self.verification_dialog.destroy()
-                
-                # Call success handler with email for login pre-fill
-                self.on_registration_success(email)
-            else:
-                messagebox.showerror(
-                    "Registration Failed", 
-                    f"Failed to create account:\n{result}",
-                    parent=self.verification_dialog
-                )
+            # Prepare registration data for OTP verification
+            registration_data = {
+                'first_name': first_name,
+                'last_name': last_name,
+                'email': email,
+                'student_number': student_number,
+                'password': password,
+                'face_image': self.face_image_data,
+                'contact_number': contact_number,
+                'date_of_birth': date_of_birth
+            }
+            
+            # Close verification dialog
+            self.verification_dialog.destroy()
+            
+            # Open registration OTP dialog
+            self.open_registration_otp_dialog(email, registration_data)
                 
         except Exception as e:
             self.verification_dialog.configure(cursor="")
@@ -1135,6 +1121,24 @@ class RegisterForm(ctk.CTkFrame):
             )
             import traceback
             traceback.print_exc()
+
+    def open_registration_otp_dialog(self, email, registration_data):
+        """Open the registration OTP verification dialog"""
+        try:
+            # Import the registration OTP dialog
+            from .register_otp import RegisterOTPDialog
+            
+            root_window = self.winfo_toplevel()
+            dialog = RegisterOTPDialog(
+                root_window,
+                db_manager=self.db_manager,
+                email=email,
+                registration_data=registration_data,
+                on_success=self.on_registration_success
+            )
+            dialog.focus()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open OTP verification: {str(e)}")
 
     def on_verification_dialog_closing(self):
         """Handle verification dialog closing"""
