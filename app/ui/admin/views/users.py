@@ -2,6 +2,9 @@ import customtkinter as ctk
 import tkinter as tk
 import traceback
 from tkinter import messagebox
+from PIL import Image, ImageTk
+import io
+import base64
 from app.ui.admin.components.sidebar import DateTimePill  # adjust path if needed
 from app.db_manager import DatabaseManager
 
@@ -903,9 +906,9 @@ class UsersView(ctk.CTkFrame):
         table_frame = ctk.CTkFrame(parent, fg_color="#fff", corner_radius=8, border_width=1, border_color="#E5E7EB")
         table_frame.pack(fill="both", expand=True, padx=0, pady=(10, 5))
 
-        # Columns (add status column)
-        columns = ["", "Student Name", "Year", "Section", "Program", "Status", "Actions"]
-        col_widths = [1, 8, 1, 1, 1, 2, 1]
+        # Columns (removed Photo column)
+        columns = ["Student Name", "Year", "Section", "Program", "Status", "Actions"]
+        col_widths = [6, 1, 1, 1, 2, 1]  # Removed photo column weight
         for i, weight in enumerate(col_widths):
             table_frame.grid_columnconfigure(i, weight=weight)
 
@@ -985,7 +988,7 @@ class UsersView(ctk.CTkFrame):
                 font=ctk.CTkFont(size=14),
                 text_color="#6B7280"
             )
-            no_data_label.grid(row=1, column=0, columnspan=7, pady=20)
+            no_data_label.grid(row=1, column=0, columnspan=6, pady=20)  # Updated columnspan
         else:
             for idx, (name, year, section, program) in enumerate(data_to_display, start=1):
                 bg = "#fff"
@@ -993,25 +996,21 @@ class UsersView(ctk.CTkFrame):
                 student = self.get_students_for_page(self.current_students_page)[idx-1]
                 status = student.get('status_name', 'No Status')
                 
-                # Image placeholder (circle) - smaller size
-                image_canvas = tk.Canvas(table_frame, width=28, height=28, bg=bg, highlightthickness=0)
-                image_canvas.grid(row=idx, column=0, sticky="nsew", padx=(32, 0), pady=3)
-                image_canvas.create_oval(3, 3, 25, 25, fill="#E5E7EB", outline="#D1D5DB")
-                # Name
+                # Name (column 0)
                 ctk.CTkLabel(table_frame, text=name, font=ctk.CTkFont(size=12), text_color="#222",
-                            fg_color=bg, anchor="w").grid(row=idx, column=1, sticky="nsew", padx=(0, 10), pady=3)
-                # Year
+                            fg_color=bg, anchor="w").grid(row=idx, column=0, sticky="nsew", padx=10, pady=3)
+                # Year (column 1)
                 ctk.CTkLabel(table_frame, text=year, font=ctk.CTkFont(size=12), text_color="#222",
-                            fg_color=bg, anchor="w").grid(row=idx, column=2, sticky="nsew", padx=10, pady=3)
-                # Section
+                            fg_color=bg, anchor="w").grid(row=idx, column=1, sticky="nsew", padx=10, pady=3)
+                # Section (column 2)
                 ctk.CTkLabel(table_frame, text=section, font=ctk.CTkFont(size=12), text_color="#222",
-                            fg_color=bg, anchor="w").grid(row=idx, column=3, sticky="nsew", padx=10, pady=3)
-                # Programs
+                            fg_color=bg, anchor="w").grid(row=idx, column=2, sticky="nsew", padx=10, pady=3)
+                # Programs (column 3)
                 ctk.CTkLabel(table_frame, text=program, font=ctk.CTkFont(size=12), text_color="#222",
-                            fg_color=bg, anchor="w").grid(row=idx, column=4, sticky="nsew", padx=10, pady=3)
-                # Status - now with colored badge
-                self.create_status_badge(table_frame, status, idx, 5)
-                # Actions dropdown styled as button - smaller size
+                            fg_color=bg, anchor="w").grid(row=idx, column=3, sticky="nsew", padx=10, pady=3)
+                # Status (column 4)
+                self.create_status_badge(table_frame, status, idx, 4)
+                # Actions (column 5)
                 action_var = tk.StringVar(value="Edit")
                 actions = ["Edit", "View", "Delete"]
                 action_menu = ctk.CTkOptionMenu(
@@ -1030,98 +1029,7 @@ class UsersView(ctk.CTkFrame):
                     dropdown_text_color="#222",
                     command=lambda choice, data=(name, year, section, program): self.handle_action(choice, data)
                 )
-                action_menu.grid(row=idx, column=6, sticky="w", padx=10, pady=3)
-
-        # Pagination controls for students
-        pagination_frame = ctk.CTkFrame(parent, fg_color="#fff", height=40, border_width=1, border_color="#E5E7EB", corner_radius=0)
-        pagination_frame.pack(fill="x", padx=0, pady=0)
-        pagination_frame.pack_propagate(False)
-
-        # Pagination content
-        pagination_content = ctk.CTkFrame(pagination_frame, fg_color="transparent")
-        pagination_content.pack(expand=True, fill="both", padx=20, pady=8)
-
-        # Left side - showing X of Y entries
-        if self.students_data:
-            total_students = len(self.students_data)
-            total_pages = self.get_total_students_pages()
-            start_entry = (self.current_students_page - 1) * self.students_per_page + 1
-            end_entry = min(self.current_students_page * self.students_per_page, total_students)
-            entries_text = f"Showing {start_entry} to {end_entry} of {total_students} entries"
-        else:
-            entries_text = "No entries to display"
-            total_pages = 0
-
-        ctk.CTkLabel(
-            pagination_content,
-            text=entries_text,
-            font=ctk.CTkFont(size=13),
-            text_color="#6B7280"
-        ).pack(side="left")
-
-        # Right side - navigation buttons (only show if more than 1 page)
-        if self.students_data and total_pages > 1:
-            nav_frame = ctk.CTkFrame(pagination_content, fg_color="transparent")
-            nav_frame.pack(side="right")
-
-            # Previous button
-            prev_btn = ctk.CTkButton(
-                nav_frame,
-                text="← Previous",
-                width=80,
-                height=30,
-                font=ctk.CTkFont(size=12),
-                fg_color="#F9FAFB",
-                text_color="#374151",
-                hover_color="#E5E7EB",
-                border_width=1,
-                border_color="#D1D5DB",
-                corner_radius=6,
-                command=lambda: self.change_students_page("prev")
-            )
-            prev_btn.pack(side="left", padx=(0, 4))
-
-            # Page info
-            page_text = f"{self.current_students_page} of {total_pages}"
-            ctk.CTkLabel(
-                nav_frame,
-                text=page_text,
-                font=ctk.CTkFont(size=12),
-                text_color="#374151",
-                width=60
-            ).pack(side="left", padx=4)
-
-            # Next button
-            next_btn = ctk.CTkButton(
-                nav_frame,
-                text="Next →",
-                width=80,
-                height=30,
-                font=ctk.CTkFont(size=12),
-                fg_color="#F9FAFB",
-                text_color="#374151",
-                hover_color="#E5E7EB",
-                border_width=1,
-                border_color="#D1D5DB",
-                corner_radius=6,
-                command=lambda: self.change_students_page("next")
-            )
-            next_btn.pack(side="left", padx=(4, 0))
-
-            # Disable buttons when at limits
-            if self.current_students_page <= 1:
-                prev_btn.configure(state="disabled", fg_color="#F3F4F6", text_color="#9CA3AF")
-            if self.current_students_page >= total_pages:
-                next_btn.configure(state="disabled", fg_color="#F3F4F6", text_color="#9CA3AF")
-        elif self.students_data and total_pages == 1:
-            # Show "Page 1 of 1" for single page
-            single_page_label = ctk.CTkLabel(
-                pagination_content,
-                text="Page 1 of 1",
-                font=ctk.CTkFont(size=12),
-                text_color="#6B7280"
-            )
-            single_page_label.pack(side="right")
+                action_menu.grid(row=idx, column=5, sticky="w", padx=10, pady=3)
 
     def setup_faculty_tab(self, parent):
         # Search and filter bar for faculty
@@ -1208,11 +1116,11 @@ class UsersView(ctk.CTkFrame):
 
         # Faculty table
         table_frame = ctk.CTkFrame(parent, fg_color="#fff", corner_radius=8, border_width=1, border_color="#E5E7EB")
-        table_frame.pack(fill="both", expand=True, padx=0, pady=(10, 5))  # Reduced padding
+        table_frame.pack(fill="both", expand=True, padx=0, pady=(10, 5))
 
-        # Columns for faculty (add status column)
-        columns = ["", "Faculty Name", "Employee Number", "Email", "Role", "Status", "Actions"]
-        col_widths = [1, 5, 2, 5, 2, 2, 2]  # adjusted weights
+        # Columns for faculty (removed Photo column)
+        columns = ["Faculty Name", "Employee Number", "Email", "Role", "Status", "Actions"]
+        col_widths = [4, 2, 4, 2, 2, 2]  # Removed photo column weight
         for i, weight in enumerate(col_widths):
             table_frame.grid_columnconfigure(i, weight=weight)
 
@@ -1224,7 +1132,7 @@ class UsersView(ctk.CTkFrame):
                 font=ctk.CTkFont(size=14, weight="bold"),
                 text_color="#6B7280",
                 anchor="w"
-            ).grid(row=0, column=i, padx=10, pady=6, sticky="w")  # Reduced pady from 8 to 6
+            ).grid(row=0, column=i, padx=10, pady=6, sticky="w")
 
         # Use only database data - no sample data fallback
         data_to_display = []
@@ -1250,7 +1158,7 @@ class UsersView(ctk.CTkFrame):
                 font=ctk.CTkFont(size=14),
                 text_color="#6B7280"
             )
-            no_data_label.grid(row=1, column=0, columnspan=7, pady=20)  # Updated columnspan
+            no_data_label.grid(row=1, column=0, columnspan=6, pady=20)  # Updated columnspan
         else:
             for idx, (name, emp_num, email, role) in enumerate(data_to_display, start=1):
                 bg = "#fff"
@@ -1258,25 +1166,21 @@ class UsersView(ctk.CTkFrame):
                 faculty = self.get_faculty_for_page(self.current_faculty_page)[idx-1]
                 status = faculty.get('status_name', 'No Status')
                 
-                # Image placeholder (circle) - smaller size
-                image_canvas = tk.Canvas(table_frame, width=28, height=28, bg=bg, highlightthickness=0)
-                image_canvas.grid(row=idx, column=0, sticky="nsew", padx=(32, 0), pady=3)
-                image_canvas.create_oval(3, 3, 25, 25, fill="#E5E7EB", outline="#D1D5DB")
-                # Name
+                # Name (column 0)
                 ctk.CTkLabel(table_frame, text=name, font=ctk.CTkFont(size=12), text_color="#222",
-                            fg_color=bg, anchor="w").grid(row=idx, column=1, sticky="nsew", padx=(0, 10), pady=3)
-                # Employee Number
+                            fg_color=bg, anchor="w").grid(row=idx, column=0, sticky="nsew", padx=10, pady=3)
+                # Employee Number (column 1)
                 ctk.CTkLabel(table_frame, text=emp_num, font=ctk.CTkFont(size=12), text_color="#222",
-                            fg_color=bg, anchor="w").grid(row=idx, column=2, sticky="nsew", padx=10, pady=3)
-                # Email
+                            fg_color=bg, anchor="w").grid(row=idx, column=1, sticky="nsew", padx=10, pady=3)
+                # Email (column 2)
                 ctk.CTkLabel(table_frame, text=email, font=ctk.CTkFont(size=12), text_color="#222",
-                            fg_color=bg, anchor="w").grid(row=idx, column=3, sticky="nsew", padx=10, pady=3)
-                # Role
+                            fg_color=bg, anchor="w").grid(row=idx, column=2, sticky="nsew", padx=10, pady=3)
+                # Role (column 3)
                 ctk.CTkLabel(table_frame, text=role, font=ctk.CTkFont(size=12), text_color="#222",
-                            fg_color=bg, anchor="w").grid(row=idx, column=4, sticky="nsew", padx=10, pady=3)
-                # Status - now with colored badge
-                self.create_status_badge(table_frame, status, idx, 5)
-                # Actions dropdown - smaller size
+                            fg_color=bg, anchor="w").grid(row=idx, column=3, sticky="nsew", padx=10, pady=3)
+                # Status - now with colored badge (column 4)
+                self.create_status_badge(table_frame, status, idx, 4)
+                # Actions (column 5)
                 action_var = tk.StringVar(value="Edit")
                 actions = ["Edit", "View", "Delete"]
                 action_menu = ctk.CTkOptionMenu(
@@ -1295,98 +1199,7 @@ class UsersView(ctk.CTkFrame):
                     dropdown_text_color="#222",
                     command=lambda choice, data=(name, emp_num, email, role): self.handle_faculty_action(choice, data)
                 )
-                action_menu.grid(row=idx, column=6, sticky="w", padx=10, pady=3)
-
-        # Pagination controls for faculty
-        pagination_frame = ctk.CTkFrame(parent, fg_color="#fff", height=40, border_width=1, border_color="#E5E7EB", corner_radius=0)  # Reduced from 50 to 40
-        pagination_frame.pack(fill="x", padx=0, pady=0)
-        pagination_frame.pack_propagate(False)
-
-        # Pagination content
-        pagination_content = ctk.CTkFrame(pagination_frame, fg_color="transparent")
-        pagination_content.pack(expand=True, fill="both", padx=20, pady=8)  # Reduced pady from 10 to 8
-
-        # Left side - showing X of Y entries
-        if self.faculty_data:
-            total_faculty = len(self.faculty_data)
-            total_pages = self.get_total_faculty_pages()
-            start_entry = (self.current_faculty_page - 1) * self.faculty_per_page + 1
-            end_entry = min(self.current_faculty_page * self.faculty_per_page, total_faculty)
-            entries_text = f"Showing {start_entry} to {end_entry} of {total_faculty} entries"
-        else:
-            entries_text = "No entries to display"
-            total_pages = 0
-
-        ctk.CTkLabel(
-            pagination_content,
-            text=entries_text,
-            font=ctk.CTkFont(size=13),
-            text_color="#6B7280"
-        ).pack(side="left")
-
-        # Right side - navigation buttons (only show if more than 1 page)
-        if self.faculty_data and total_pages > 1:
-            nav_frame = ctk.CTkFrame(pagination_content, fg_color="transparent")
-            nav_frame.pack(side="right")
-
-            # Previous button
-            prev_btn = ctk.CTkButton(
-                nav_frame,
-                text="← Previous",
-                width=80,
-                height=30,
-                font=ctk.CTkFont(size=12),
-                fg_color="#F9FAFB",
-                text_color="#374151",
-                hover_color="#E5E7EB",
-                border_width=1,
-                border_color="#D1D5DB",
-                corner_radius=6,
-                command=lambda: self.change_faculty_page("prev")
-            )
-            prev_btn.pack(side="left", padx=(0, 4))
-
-            # Page info
-            page_text = f"{self.current_faculty_page} of {total_pages}"
-            ctk.CTkLabel(
-                nav_frame,
-                text=page_text,
-                font=ctk.CTkFont(size=12),
-                text_color="#374151",
-                width=60
-            ).pack(side="left", padx=4)
-
-            # Next button
-            next_btn = ctk.CTkButton(
-                nav_frame,
-                text="Next →",
-                width=80,
-                height=30,
-                font=ctk.CTkFont(size=12),
-                fg_color="#F9FAFB",
-                text_color="#374151",
-                hover_color="#E5E7EB",
-                border_width=1,
-                border_color="#D1D5DB",
-                corner_radius=6,
-                command=lambda: self.change_faculty_page("next")
-            )
-            next_btn.pack(side="left", padx=(4, 0))
-
-            # Disable buttons when at limits
-            if self.current_faculty_page <= 1:
-                prev_btn.configure(state="disabled", fg_color="#F3F4F6", text_color="#9CA3AF")
-            if self.current_faculty_page >= total_pages:
-                next_btn.configure(state="disabled", fg_color="#F3F4F6", text_color="#9CA3AF")
-        elif self.faculty_data and total_pages == 1:
-            # Show "Page 1 of 1" for single page
-            single_page_label = ctk.CTkLabel(
-                pagination_content,
-                text="Page 1 of 1",
-                font=ctk.CTkFont(size=12),
-                text_color="#6B7280"
-            )
-            single_page_label.pack(side="right")
+                action_menu.grid(row=idx, column=5, sticky="w", padx=10, pady=3)
 
     def show_filter_popup(self):
         # Determine which tab is active and show appropriate filter
