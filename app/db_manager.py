@@ -108,13 +108,24 @@ class DatabaseManager:
                 except ValueError:
                     return False, "Invalid date format"
             
+            # Get default status for new students (Enrolled)
+            cursor.execute("SELECT id FROM statuses WHERE name = 'Enrolled' AND user_type = 'student'")
+            status_result = cursor.fetchone()
+            default_status_id = status_result[0] if status_result else None
+            
+            if not default_status_id:
+                # Fallback: get any student status if "Enrolled" doesn't exist
+                cursor.execute("SELECT id FROM statuses WHERE user_type = 'student' LIMIT 1")
+                fallback_result = cursor.fetchone()
+                default_status_id = fallback_result[0] if fallback_result else None
+            
             # Begin transaction
             conn.execute("BEGIN TRANSACTION")
             
-            # Insert user - set as pending for admin verification
+            # Insert user - set as pending for admin verification with default status
             user_query = """
-            INSERT INTO users (first_name, last_name, email, birthday, password_hash, contact_number, role, face_image, verified, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users (first_name, last_name, email, birthday, password_hash, contact_number, role, status_id, face_image, verified, isDeleted, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
             current_time = datetime.now().isoformat()
             cursor.execute(user_query, (
@@ -125,8 +136,10 @@ class DatabaseManager:
                 hashed_pw.decode('utf-8'),
                 contact_number,
                 "Student",
+                default_status_id,  # Assign default status
                 face_image,
                 0,  # verified = 0 (False) - admin needs to verify
+                0,  # isDeleted = 0 (False)
                 current_time,
                 current_time
             ))
@@ -146,7 +159,7 @@ class DatabaseManager:
             # Commit transaction
             conn.commit()
             
-            print(f"Successfully registered user: {email} (ID: {user_id}) - Pending admin approval")
+            print(f"Successfully registered user: {email} (ID: {user_id}) - Pending admin approval with status ID: {default_status_id}")
             
             # Send registration confirmation email (not welcome email)
             try:
@@ -536,10 +549,21 @@ class DatabaseManager:
                         conn.close()
                         return False, "Invalid date format"
                 
-                # Insert user - set as VERIFIED since OTP was successful
+                # Get default status for new students (Enrolled)
+                cursor.execute("SELECT id FROM statuses WHERE name = 'Enrolled' AND user_type = 'student'")
+                status_result = cursor.fetchone()
+                default_status_id = status_result[0] if status_result else None
+                
+                if not default_status_id:
+                    # Fallback: get any student status if "Enrolled" doesn't exist
+                    cursor.execute("SELECT id FROM statuses WHERE user_type = 'student' LIMIT 1")
+                    fallback_result = cursor.fetchone()
+                    default_status_id = fallback_result[0] if fallback_result else None
+                
+                # Insert user - set as VERIFIED since OTP was successful with default status
                 user_query = """
-                INSERT INTO users (first_name, last_name, email, birthday, password_hash, contact_number, role, face_image, verified, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO users (first_name, last_name, email, birthday, password_hash, contact_number, role, status_id, face_image, verified, isDeleted, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
                 current_time = datetime.now().isoformat()
                 cursor.execute(user_query, (
@@ -550,8 +574,10 @@ class DatabaseManager:
                     hashed_pw.decode('utf-8'),
                     registration_data.get('contact_number'),
                     "Student",
+                    default_status_id,  # Assign default status
                     registration_data.get('face_image'),
                     1,  # verified = 1 (True) - OTP verification means account is verified
+                    0,  # isDeleted = 0 (False)
                     current_time,
                     current_time
                 ))
@@ -575,7 +601,7 @@ class DatabaseManager:
                 conn.commit()
                 conn.close()
                 
-                print(f"Successfully registered and verified user: {email} (ID: {user_id})")
+                print(f"Successfully registered and verified user: {email} (ID: {user_id}) with status ID: {default_status_id}")
                 
                 # Send welcome email
                 try:
@@ -760,6 +786,29 @@ class DatabaseManager:
             conn = self.get_connection()
             cursor = conn.cursor()
             
+            # Check if database is empty (no tables exist)
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = cursor.fetchall()
+            
+            if not tables:
+                # Database is empty, run full initialization
+                conn.close()
+                print("Empty database detected. Running full initialization...")
+                self._run_database_seeder()
+                return
+            
+            # Create statuses table if it doesn't exist
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS statuses (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE,
+                    description TEXT,
+                    user_type TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+            
             # Create otp_requests table if it doesn't exist
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS otp_requests (
@@ -786,11 +835,19 @@ class DatabaseManager:
             except sqlite3.OperationalError:
                 pass  # Column already exists
             
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN status_id INTEGER REFERENCES statuses(id)")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+            
             # Add email column to otp_requests if it doesn't exist
             try:
                 cursor.execute("ALTER TABLE otp_requests ADD COLUMN email TEXT")
             except sqlite3.OperationalError:
                 pass
+            
+            # Insert default statuses if they don't exist
+            self._seed_default_statuses(cursor)
             
             conn.commit()
             conn.close()
@@ -798,61 +855,111 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error initializing database: {e}")
 
+    def _run_database_seeder(self):
+        """Run the database seeder for full initialization"""
+        try:
+            import os
+            import subprocess
+            import sys
+            
+            # Get the path to the database seeder
+            current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            seeder_path = os.path.join(current_dir, "app", "db_seeder.py")
+            
+            # Run the seeder script
+            result = subprocess.run([sys.executable, seeder_path], check=True)
+            
+            if result.returncode == 0:
+                print("Database seeder ran successfully")
+            else:
+                print(f"Database seeder exited with code {result.returncode}")
+                
+        except Exception as e:
+            print(f"Error running database seeder: {e}")
+    
     def get_all_users(self):
-        """Get all users with their role-specific information"""
+        """Get all users with their status information"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
             
-            # Query to get all users with student and faculty information
+            # Query to get users with their status and role-specific information
             query = """
             SELECT 
                 u.id,
                 u.first_name,
                 u.last_name,
+                u.first_name || ' ' || u.last_name as full_name,
                 u.email,
                 u.role,
                 u.contact_number,
                 u.birthday,
                 u.verified,
                 u.created_at,
-                s.student_number,
-                s.section,
+                s.name as status_name,
+                s.description as status_description,
+                st.student_number,
+                st.section,
                 f.employee_number
             FROM users u
-            LEFT JOIN students s ON u.id = s.user_id
+            LEFT JOIN statuses s ON u.status_id = s.id
+            LEFT JOIN students st ON u.id = st.user_id
             LEFT JOIN faculties f ON u.id = f.user_id
             WHERE u.isDeleted = 0
-            ORDER BY u.created_at DESC
+            ORDER BY u.role, u.last_name, u.first_name
             """
             
             cursor.execute(query)
-            users = cursor.fetchall()
+            results = cursor.fetchall()
+            
+            users = []
+            for row in results:
+                user_dict = dict(row)
+                users.append(user_dict)
             
             conn.close()
             
-            # Convert to list of dictionaries for easier handling
-            users_list = []
-            for user in users:
-                user_dict = {
-                    "id": user['id'],
-                    "first_name": user['first_name'],
-                    "last_name": user['last_name'],
-                    "full_name": f"{user['first_name']} {user['last_name']}",
-                    "email": user['email'],
-                    "role": user['role'],
-                    "contact_number": user['contact_number'],
-                    "birthday": user['birthday'],
-                    "verified": user['verified'],
-                    "created_at": user['created_at'],
-                    "student_number": user['student_number'],
-                    "section": user['section'],
-                    "employee_number": user['employee_number']
-                }
-                users_list.append(user_dict)
-            
-            return True, users_list
+            return True, users
             
         except Exception as e:
             print(f"Error getting all users: {e}")
             return False, str(e)
+
+    def _seed_default_statuses(self, cursor):
+        """Seed default statuses if they don't exist"""
+        try:
+            current_time = datetime.now().isoformat()
+            
+            # Student statuses
+            student_statuses = [
+                ('Enrolled', 'Currently enrolled student', 'student'),
+                ('Graduated', 'Successfully graduated student', 'student'),
+                ('Dropout', 'Student who dropped out', 'student'),
+                ('On Leave', 'Student on temporary leave', 'student'),
+                ('Suspended', 'Temporarily suspended student', 'student')
+            ]
+            
+            # Faculty statuses
+            faculty_statuses = [
+                ('Active', 'Currently active faculty member', 'faculty'),
+                ('Inactive', 'Inactive faculty member', 'faculty'),
+                ('Retired', 'Retired faculty member', 'faculty'),
+                ('On Leave', 'Faculty member on leave', 'faculty'),
+                ('Probationary', 'Faculty member on probation', 'faculty'),
+                ('Tenure Track', 'Faculty member on tenure track', 'faculty'),
+                ('Tenured', 'Tenured faculty member', 'faculty')
+            ]
+            
+            all_statuses = student_statuses + faculty_statuses
+            
+            for name, description, user_type in all_statuses:
+                # Use INSERT OR IGNORE to handle duplicates
+                cursor.execute("""
+                    INSERT OR IGNORE INTO statuses (name, description, user_type, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (name, description, user_type, current_time, current_time))
+            
+            print("✓ Default statuses seeded")
+            
+        except Exception as e:
+            print(f"Error seeding default statuses: {e}")

@@ -602,8 +602,56 @@ class UsersView(ctk.CTkFrame):
         self.all_users = []
         self.students_data = []
         self.faculty_data = []
+        
+        # Pagination settings
+        self.students_per_page = 10  # Changed back to 10
+        self.faculty_per_page = 10   # Changed back to 10
+        self.current_students_page = 1
+        self.current_faculty_page = 1
+        
+        # Setup UI first, then load data
         self.setup_ui()
         self.load_users_data()
+
+    def get_total_students_pages(self):
+        """Calculate total pages for students"""
+        total_students = len(self.students_data)
+        return max(1, (total_students + self.students_per_page - 1) // self.students_per_page)
+
+    def get_total_faculty_pages(self):
+        """Calculate total pages for faculty"""
+        total_faculty = len(self.faculty_data)
+        return max(1, (total_faculty + self.faculty_per_page - 1) // self.faculty_per_page)
+
+    def get_students_for_page(self, page):
+        """Get students data for specific page"""
+        start_idx = (page - 1) * self.students_per_page
+        end_idx = start_idx + self.students_per_page
+        return self.students_data[start_idx:end_idx]
+
+    def get_faculty_for_page(self, page):
+        """Get faculty data for specific page"""
+        start_idx = (page - 1) * self.faculty_per_page
+        end_idx = start_idx + self.faculty_per_page
+        return self.faculty_data[start_idx:end_idx]
+
+    def change_students_page(self, direction):
+        """Change students page"""
+        total_pages = self.get_total_students_pages()
+        if direction == "prev" and self.current_students_page > 1:
+            self.current_students_page -= 1
+        elif direction == "next" and self.current_students_page < total_pages:
+            self.current_students_page += 1
+        self.refresh_students_table()
+
+    def change_faculty_page(self, direction):
+        """Change faculty page"""
+        total_pages = self.get_total_faculty_pages()
+        if direction == "prev" and self.current_faculty_page > 1:
+            self.current_faculty_page -= 1
+        elif direction == "next" and self.current_faculty_page < total_pages:
+            self.current_faculty_page += 1
+        self.refresh_faculty_table()
 
     def load_users_data(self):
         """Load users data from database and filter by role"""
@@ -617,16 +665,17 @@ class UsersView(ctk.CTkFrame):
                 self.students_data = [user for user in users if user['role'].lower() == 'student']
                 self.faculty_data = [user for user in users if user['role'].lower() in ['faculty', 'admin']]
                 
-                # Refresh the tables if they exist
-                if hasattr(self, 'students_content') and hasattr(self, 'faculty_content'):
-                    self.refresh_students_table()
-                    self.refresh_faculty_table()
+                # Always refresh the tables since UI is now set up
+                self.refresh_students_table()
+                self.refresh_faculty_table()
                 
             else:
                 print(f"Error loading users: {users}")
                 
         except Exception as e:
             print(f"Error in load_users_data: {e}")
+            import traceback
+            traceback.print_exc()
 
     def refresh_students_table(self):
         """Refresh the students table with current data"""
@@ -779,6 +828,45 @@ class UsersView(ctk.CTkFrame):
         self.students_content.pack_forget()
         self.faculty_content.pack(fill="both", expand=True)
 
+    def get_status_color(self, status):
+        """Get text color for status"""
+        status_colors = {
+            # Student statuses
+            'Enrolled': '#22C55E',      # Green
+            'Graduated': '#F59E0B',     # Yellow/Amber
+            'Dropout': '#EF4444',       # Red
+            'On Leave': '#6B7280',      # Gray
+            'Suspended': '#DC2626',     # Dark Red
+            
+            # Faculty statuses
+            'Active': '#10B981',        # Emerald
+            'Inactive': '#9CA3AF',      # Light Gray
+            'Retired': '#8B5CF6',       # Purple
+            'Probationary': '#F97316',  # Orange
+            'Tenure Track': '#3B82F6',  # Blue
+            'Tenured': '#059669',       # Dark Green
+            
+            # Default
+            'No Status': '#6B7280',     # Light Gray
+        }
+        
+        return status_colors.get(status, status_colors['No Status'])
+
+    def create_status_badge(self, parent, status, row, column):
+        """Create a colored status text"""
+        color = self.get_status_color(status)
+        
+        # Create simple label with colored text
+        status_label = ctk.CTkLabel(
+            parent,
+            text=status,
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color=color,
+            fg_color="transparent",
+            anchor="w"
+        )
+        status_label.grid(row=row, column=column, sticky="w", padx=10, pady=3)
+
     def setup_students_tab(self, parent):
         # Search and filter bar (side by side, both with border, no corner radius, flush)
         search_bar_container = ctk.CTkFrame(parent, fg_color="#fff")
@@ -813,15 +901,15 @@ class UsersView(ctk.CTkFrame):
 
         # Table
         table_frame = ctk.CTkFrame(parent, fg_color="#fff", corner_radius=8, border_width=1, border_color="#E5E7EB")
-        table_frame.pack(fill="both", expand=True, padx=0, pady=20)
+        table_frame.pack(fill="both", expand=True, padx=0, pady=(10, 5))  # Reduced padding
 
-        # Columns (add image column at index 0)
-        columns = ["", "Student Name", "Year", "Section", "Program", "Actions"]
-        col_widths = [1, 10, 1, 1, 1, 1]  # all integers
+        # Columns (add status column)
+        columns = ["", "Student Name", "Year", "Section", "Program", "Status", "Actions"]
+        col_widths = [1, 8, 1, 1, 1, 2, 1]  # increased status column weight
         for i, weight in enumerate(col_widths):
             table_frame.grid_columnconfigure(i, weight=weight)
 
-        # Header row (leave image column header blank)
+        # Header row (leave image column header blank) with reduced padding
         for i, col in enumerate(columns):
             ctk.CTkLabel(
                 table_frame,
@@ -829,66 +917,211 @@ class UsersView(ctk.CTkFrame):
                 font=ctk.CTkFont(size=14, weight="bold"),
                 text_color="#6B7280",
                 anchor="w"
-            ).grid(row=0, column=i, padx=10, pady=8, sticky="w")
+            ).grid(row=0, column=i, padx=10, pady=6, sticky="w")  # Reduced pady from 8 to 6
 
-        # Use database data if available, otherwise fall back to sample data
+        # Use only database data - no sample data fallback
+        data_to_display = []
+        
         if self.students_data:
-            data_to_display = []
-            for student in self.students_data:
+            # Get data for current page
+            paginated_students = self.get_students_for_page(self.current_students_page)
+            
+            # Get additional data from database for each student
+            for student in paginated_students:
+                # Get section and program info
+                section_name = "N/A"
+                program_name = "N/A"
+                year_level = "N/A"
+                
+                try:
+                    conn = self.db_manager.get_connection()
+                    cursor = conn.cursor()
+                    
+                    # Get section and program info if section ID exists
+                    if student.get('section'):
+                        cursor.execute("""
+                            SELECT s.name as section_name, p.name as program_name
+                            FROM sections s
+                            JOIN programs p ON s.course_id = p.id
+                            WHERE s.id = ?
+                        """, (student['section'],))
+                        
+                        result = cursor.fetchone()
+                        if result:
+                            section_name = result['section_name']
+                            program_name = result['program_name']
+                            
+                            # Extract year from section name (e.g., "1-1" -> "1st Year")
+                            section_year = section_name.split('-')[0]
+                            year_mapping = {'1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year'}
+                            year_level = year_mapping.get(section_year, f"Year {section_year}")
+                            
+                            # Shorten program name for display
+                            if "Information Technology" in program_name:
+                                program_name = "BSIT"
+                            elif "Computer Science" in program_name:
+                                program_name = "BSCS"
+                            elif "Information Systems" in program_name:
+                                program_name = "BSIS"
+                    
+                    conn.close()
+                    
+                except Exception as e:
+                    print(f"Error getting student details: {e}")
+                
                 # Convert database format to display format
                 data_to_display.append((
                     student['full_name'],
-                    "1st Year",  # Default since year is not in database
-                    str(student.get('section', 'N/A')),  # Convert to string
-                    "BSIT"  # Default since program is not in database
+                    year_level,
+                    section_name,
+                    program_name
                 ))
-        else:
-            # Sample data (original)
-            data_to_display = [
-                ("Shadrack Castro", "1st Year", "1-1", "BSIT"),
-                ("Jerlee Alipio", "2nd Year", "2-3", "BSCS"),
-                ("Steven Masangcay", "3rd Year", "3-2", "BSIT"),
-                ("John Mathew Parocha", "4th Year", "4-1", "BSIS"),
-            ]
 
-        for idx, (name, year, section, program) in enumerate(data_to_display, start=1):
-            bg = "#fff"
-            # Image placeholder (circle)
-            image_canvas = tk.Canvas(table_frame, width=32, height=32, bg=bg, highlightthickness=0)
-            image_canvas.grid(row=idx, column=0, sticky="nsew", padx=(32, 0), pady=6)
-            image_canvas.create_oval(4, 4, 28, 28, fill="#E5E7EB", outline="#D1D5DB")
-            # Name
-            ctk.CTkLabel(table_frame, text=name, font=ctk.CTkFont(size=13), text_color="#222",
-                         fg_color=bg, anchor="w").grid(row=idx, column=1, sticky="nsew", padx=(0, 10), pady=6)
-            # Year
-            ctk.CTkLabel(table_frame, text=year, font=ctk.CTkFont(size=13), text_color="#222",
-                         fg_color=bg, anchor="w").grid(row=idx, column=2, sticky="nsew", padx=10, pady=6)
-            # Section
-            ctk.CTkLabel(table_frame, text=section, font=ctk.CTkFont(size=13), text_color="#222",
-                         fg_color=bg, anchor="w").grid(row=idx, column=3, sticky="nsew", padx=10, pady=6)
-            # Programs
-            ctk.CTkLabel(table_frame, text=program, font=ctk.CTkFont(size=13), text_color="#222",
-                         fg_color=bg, anchor="w").grid(row=idx, column=4, sticky="nsew", padx=10, pady=6)
-            # Actions dropdown styled as button
-            action_var = tk.StringVar(value="Edit")
-            actions = ["Edit", "View", "Delete"]
-            action_menu = ctk.CTkOptionMenu(
+        # Display message if no data
+        if not data_to_display:
+            no_data_label = ctk.CTkLabel(
                 table_frame,
-                values=actions,
-                variable=action_var,
-                width=100,
-                height=28,
-                font=ctk.CTkFont(size=12),
-                fg_color="#F3F4F6",
-                text_color="#222",
-                button_color="#E5E7EB",
-                button_hover_color="#D1D5DB",
-                dropdown_fg_color="#fff",
-                dropdown_hover_color="#E5E7EB",
-                dropdown_text_color="#222",
-                command=lambda choice, data=(name, year, section, program): self.handle_action(choice, data)
+                text="No students found. Run the seeder script to add sample data.",
+                font=ctk.CTkFont(size=14),
+                text_color="#6B7280"
             )
-            action_menu.grid(row=idx, column=5, sticky="w", padx=10, pady=6)
+            no_data_label.grid(row=1, column=0, columnspan=7, pady=20)  # Updated columnspan
+        else:
+            for idx, (name, year, section, program) in enumerate(data_to_display, start=1):
+                bg = "#fff"
+                # Get status from students_data
+                student = self.get_students_for_page(self.current_students_page)[idx-1]
+                status = student.get('status_name', 'No Status')
+                
+                # Image placeholder (circle) - smaller size
+                image_canvas = tk.Canvas(table_frame, width=28, height=28, bg=bg, highlightthickness=0)
+                image_canvas.grid(row=idx, column=0, sticky="nsew", padx=(32, 0), pady=3)
+                image_canvas.create_oval(3, 3, 25, 25, fill="#E5E7EB", outline="#D1D5DB")
+                # Name
+                ctk.CTkLabel(table_frame, text=name, font=ctk.CTkFont(size=12), text_color="#222",
+                            fg_color=bg, anchor="w").grid(row=idx, column=1, sticky="nsew", padx=(0, 10), pady=3)
+                # Year
+                ctk.CTkLabel(table_frame, text=year, font=ctk.CTkFont(size=12), text_color="#222",
+                            fg_color=bg, anchor="w").grid(row=idx, column=2, sticky="nsew", padx=10, pady=3)
+                # Section
+                ctk.CTkLabel(table_frame, text=section, font=ctk.CTkFont(size=12), text_color="#222",
+                            fg_color=bg, anchor="w").grid(row=idx, column=3, sticky="nsew", padx=10, pady=3)
+                # Programs
+                ctk.CTkLabel(table_frame, text=program, font=ctk.CTkFont(size=12), text_color="#222",
+                            fg_color=bg, anchor="w").grid(row=idx, column=4, sticky="nsew", padx=10, pady=3)
+                # Status - now with colored badge
+                self.create_status_badge(table_frame, status, idx, 5)
+                # Actions dropdown styled as button - smaller size
+                action_var = tk.StringVar(value="Edit")
+                actions = ["Edit", "View", "Delete"]
+                action_menu = ctk.CTkOptionMenu(
+                    table_frame,
+                    values=actions,
+                    variable=action_var,
+                    width=90,
+                    height=24,
+                    font=ctk.CTkFont(size=11),
+                    fg_color="#F3F4F6",
+                    text_color="#222",
+                    button_color="#E5E7EB",
+                    button_hover_color="#D1D5DB",
+                    dropdown_fg_color="#fff",
+                    dropdown_hover_color="#E5E7EB",
+                    dropdown_text_color="#222",
+                    command=lambda choice, data=(name, year, section, program): self.handle_action(choice, data)
+                )
+                action_menu.grid(row=idx, column=6, sticky="w", padx=10, pady=3)
+
+        # Pagination controls for students - reduced height
+        pagination_frame = ctk.CTkFrame(parent, fg_color="#fff", height=40, border_width=1, border_color="#E5E7EB", corner_radius=0)
+        pagination_frame.pack(fill="x", padx=0, pady=0)
+        pagination_frame.pack_propagate(False)
+
+        # Pagination content
+        pagination_content = ctk.CTkFrame(pagination_frame, fg_color="transparent")
+        pagination_content.pack(expand=True, fill="both", padx=20, pady=8)
+
+        # Left side - showing X of Y entries
+        if self.students_data:
+            total_students = len(self.students_data)
+            total_pages = self.get_total_students_pages()
+            start_entry = (self.current_students_page - 1) * self.students_per_page + 1
+            end_entry = min(self.current_students_page * self.students_per_page, total_students)
+            entries_text = f"Showing {start_entry} to {end_entry} of {total_students} entries"
+        else:
+            entries_text = "No entries to display"
+            total_pages = 0
+
+        ctk.CTkLabel(
+            pagination_content,
+            text=entries_text,
+            font=ctk.CTkFont(size=13),
+            text_color="#6B7280"
+        ).pack(side="left")
+
+        # Right side - navigation buttons (only show if more than 1 page)
+        if self.students_data and total_pages > 1:
+            nav_frame = ctk.CTkFrame(pagination_content, fg_color="transparent")
+            nav_frame.pack(side="right")
+
+            # Previous button
+            prev_btn = ctk.CTkButton(
+                nav_frame,
+                text="← Previous",
+                width=80,
+                height=30,
+                font=ctk.CTkFont(size=12),
+                fg_color="#F9FAFB",
+                text_color="#374151",
+                hover_color="#E5E7EB",
+                border_width=1,
+                border_color="#D1D5DB",
+                corner_radius=6,
+                command=lambda: self.change_students_page("prev")
+            )
+            prev_btn.pack(side="left", padx=(0, 4))
+
+            # Page info
+            page_text = f"{self.current_students_page} of {total_pages}"
+            ctk.CTkLabel(
+                nav_frame,
+                text=page_text,
+                font=ctk.CTkFont(size=12),
+                text_color="#374151",
+                width=60
+            ).pack(side="left", padx=4)
+
+            # Next button
+            next_btn = ctk.CTkButton(
+                nav_frame,
+                text="Next →",
+                width=80,
+                height=30,
+                font=ctk.CTkFont(size=12),
+                fg_color="#F9FAFB",
+                text_color="#374151",
+                hover_color="#E5E7EB",
+                border_width=1,
+                border_color="#D1D5DB",
+                corner_radius=6,
+                command=lambda: self.change_students_page("next")
+            )
+            next_btn.pack(side="left", padx=(4, 0))
+
+            # Disable buttons when at limits
+            if self.current_students_page <= 1:
+                prev_btn.configure(state="disabled", fg_color="#F3F4F6", text_color="#9CA3AF")
+            if self.current_students_page >= total_pages:
+                next_btn.configure(state="disabled", fg_color="#F3F4F6", text_color="#9CA3AF")
+        elif self.students_data and total_pages == 1:
+            # Show "Page 1 of 1" for single page
+            single_page_label = ctk.CTkLabel(
+                pagination_content,
+                text="Page 1 of 1",
+                font=ctk.CTkFont(size=12),
+                text_color="#6B7280"
+            )
+            single_page_label.pack(side="right")
 
     def setup_faculty_tab(self, parent):
         # Search and filter bar for faculty
@@ -904,8 +1137,6 @@ class UsersView(ctk.CTkFrame):
         search_entry = ctk.CTkEntry(search_entry_frame, placeholder_text="Search faculty...", width=160, fg_color="#fff",
                                     border_color="#fff", border_width=0, text_color="#222", font=ctk.CTkFont(size=15), height=28)
         search_entry.pack(side="left", padx=(2, 8), pady=4)
-
-        # Filter button
         filter_btn = ctk.CTkButton(
             search_bar_container,
             text="Filters",
@@ -924,15 +1155,15 @@ class UsersView(ctk.CTkFrame):
 
         # Faculty table
         table_frame = ctk.CTkFrame(parent, fg_color="#fff", corner_radius=8, border_width=1, border_color="#E5E7EB")
-        table_frame.pack(fill="both", expand=True, padx=0, pady=20)
+        table_frame.pack(fill="both", expand=True, padx=0, pady=(10, 5))  # Reduced padding
 
-        # Columns for faculty
-        columns = ["", "Faculty Name", "Employee Number", "Email", "Role", "Actions"]
-        col_widths = [1, 6, 3, 6, 2, 2]
+        # Columns for faculty (add status column)
+        columns = ["", "Faculty Name", "Employee Number", "Email", "Role", "Status", "Actions"]
+        col_widths = [1, 5, 2, 5, 2, 2, 2]  # adjusted weights
         for i, weight in enumerate(col_widths):
             table_frame.grid_columnconfigure(i, weight=weight)
 
-        # Header row
+        # Header row with reduced padding
         for i, col in enumerate(columns):
             ctk.CTkLabel(
                 table_frame,
@@ -940,12 +1171,16 @@ class UsersView(ctk.CTkFrame):
                 font=ctk.CTkFont(size=14, weight="bold"),
                 text_color="#6B7280",
                 anchor="w"
-            ).grid(row=0, column=i, padx=10, pady=8, sticky="w")
+            ).grid(row=0, column=i, padx=10, pady=6, sticky="w")  # Reduced pady from 8 to 6
 
-        # Use database data if available, otherwise fall back to sample data
+        # Use only database data - no sample data fallback
+        data_to_display = []
+        
         if self.faculty_data:
-            data_to_display = []
-            for faculty in self.faculty_data:
+            # Get data for current page
+            paginated_faculty = self.get_faculty_for_page(self.current_faculty_page)
+            
+            for faculty in paginated_faculty:
                 # Convert database format to display format
                 data_to_display.append((
                     faculty['full_name'],
@@ -953,53 +1188,152 @@ class UsersView(ctk.CTkFrame):
                     faculty['email'],
                     faculty['role']
                 ))
-        else:
-            # Sample faculty data (original)
-            data_to_display = [
-                ("Dr. Maria Santos", "EMP-2019-001", "maria.santos@school.edu", "Faculty"),
-                ("Prof. John Doe", "EMP-2020-015", "john.doe@school.edu", "Faculty"),
-                ("Admin User", "EMP-2021-030", "admin@school.edu", "Admin"),
-                ("Jane Smith", "EMP-2018-005", "jane.smith@school.edu", "Faculty"),
-            ]
 
-        for idx, (name, emp_num, email, role) in enumerate(data_to_display, start=1):
-            bg = "#fff"
-            # Image placeholder (circle)
-            image_canvas = tk.Canvas(table_frame, width=32, height=32, bg=bg, highlightthickness=0)
-            image_canvas.grid(row=idx, column=0, sticky="nsew", padx=(32, 0), pady=6)
-            image_canvas.create_oval(4, 4, 28, 28, fill="#E5E7EB", outline="#D1D5DB")
-            # Name
-            ctk.CTkLabel(table_frame, text=name, font=ctk.CTkFont(size=13), text_color="#222",
-                         fg_color=bg, anchor="w").grid(row=idx, column=1, sticky="nsew", padx=(0, 10), pady=6)
-            # Employee Number
-            ctk.CTkLabel(table_frame, text=emp_num, font=ctk.CTkFont(size=13), text_color="#222",
-                         fg_color=bg, anchor="w").grid(row=idx, column=2, sticky="nsew", padx=10, pady=6)
-            # Email
-            ctk.CTkLabel(table_frame, text=email, font=ctk.CTkFont(size=13), text_color="#222",
-                         fg_color=bg, anchor="w").grid(row=idx, column=3, sticky="nsew", padx=10, pady=6)
-            # Role
-            ctk.CTkLabel(table_frame, text=role, font=ctk.CTkFont(size=13), text_color="#222",
-                         fg_color=bg, anchor="w").grid(row=idx, column=4, sticky="nsew", padx=10, pady=6)
-            # Actions dropdown
-            action_var = tk.StringVar(value="Edit")
-            actions = ["Edit", "View", "Delete"]
-            action_menu = ctk.CTkOptionMenu(
+        # Display message if no data
+        if not data_to_display:
+            no_data_label = ctk.CTkLabel(
                 table_frame,
-                values=actions,
-                variable=action_var,
-                width=100,
-                height=28,
-                font=ctk.CTkFont(size=12),
-                fg_color="#F3F4F6",
-                text_color="#222",
-                button_color="#E5E7EB",
-                button_hover_color="#D1D5DB",
-                dropdown_fg_color="#fff",
-                dropdown_hover_color="#E5E7EB",
-                dropdown_text_color="#222",
-                command=lambda choice, data=(name, emp_num, email, role): self.handle_faculty_action(choice, data)
+                text="No faculty found. Run the seeder script to add sample data.",
+                font=ctk.CTkFont(size=14),
+                text_color="#6B7280"
             )
-            action_menu.grid(row=idx, column=5, sticky="w", padx=10, pady=6)
+            no_data_label.grid(row=1, column=0, columnspan=7, pady=20)  # Updated columnspan
+        else:
+            for idx, (name, emp_num, email, role) in enumerate(data_to_display, start=1):
+                bg = "#fff"
+                # Get status from faculty_data
+                faculty = self.get_faculty_for_page(self.current_faculty_page)[idx-1]
+                status = faculty.get('status_name', 'No Status')
+                
+                # Image placeholder (circle) - smaller size
+                image_canvas = tk.Canvas(table_frame, width=28, height=28, bg=bg, highlightthickness=0)
+                image_canvas.grid(row=idx, column=0, sticky="nsew", padx=(32, 0), pady=3)
+                image_canvas.create_oval(3, 3, 25, 25, fill="#E5E7EB", outline="#D1D5DB")
+                # Name
+                ctk.CTkLabel(table_frame, text=name, font=ctk.CTkFont(size=12), text_color="#222",
+                            fg_color=bg, anchor="w").grid(row=idx, column=1, sticky="nsew", padx=(0, 10), pady=3)
+                # Employee Number
+                ctk.CTkLabel(table_frame, text=emp_num, font=ctk.CTkFont(size=12), text_color="#222",
+                            fg_color=bg, anchor="w").grid(row=idx, column=2, sticky="nsew", padx=10, pady=3)
+                # Email
+                ctk.CTkLabel(table_frame, text=email, font=ctk.CTkFont(size=12), text_color="#222",
+                            fg_color=bg, anchor="w").grid(row=idx, column=3, sticky="nsew", padx=10, pady=3)
+                # Role
+                ctk.CTkLabel(table_frame, text=role, font=ctk.CTkFont(size=12), text_color="#222",
+                            fg_color=bg, anchor="w").grid(row=idx, column=4, sticky="nsew", padx=10, pady=3)
+                # Status - now with colored badge
+                self.create_status_badge(table_frame, status, idx, 5)
+                # Actions dropdown - smaller size
+                action_var = tk.StringVar(value="Edit")
+                actions = ["Edit", "View", "Delete"]
+                action_menu = ctk.CTkOptionMenu(
+                    table_frame,
+                    values=actions,
+                    variable=action_var,
+                    width=90,
+                    height=24,
+                    font=ctk.CTkFont(size=11),
+                    fg_color="#F3F4F6",
+                    text_color="#222",
+                    button_color="#E5E7EB",
+                    button_hover_color="#D1D5DB",
+                    dropdown_fg_color="#fff",
+                    dropdown_hover_color="#E5E7EB",
+                    dropdown_text_color="#222",
+                    command=lambda choice, data=(name, emp_num, email, role): self.handle_faculty_action(choice, data)
+                )
+                action_menu.grid(row=idx, column=6, sticky="w", padx=10, pady=3)
+
+        # Pagination controls for faculty - reduced height
+        pagination_frame = ctk.CTkFrame(parent, fg_color="#fff", height=40, border_width=1, border_color="#E5E7EB", corner_radius=0)  # Reduced from 50 to 40
+        pagination_frame.pack(fill="x", padx=0, pady=0)
+        pagination_frame.pack_propagate(False)
+
+        # Pagination content
+        pagination_content = ctk.CTkFrame(pagination_frame, fg_color="transparent")
+        pagination_content.pack(expand=True, fill="both", padx=20, pady=8)  # Reduced pady from 10 to 8
+
+        # Left side - showing X of Y entries
+        if self.faculty_data:
+            total_faculty = len(self.faculty_data)
+            total_pages = self.get_total_faculty_pages()
+            start_entry = (self.current_faculty_page - 1) * self.faculty_per_page + 1
+            end_entry = min(self.current_faculty_page * self.faculty_per_page, total_faculty)
+            entries_text = f"Showing {start_entry} to {end_entry} of {total_faculty} entries"
+        else:
+            entries_text = "No entries to display"
+            total_pages = 0
+
+        ctk.CTkLabel(
+            pagination_content,
+            text=entries_text,
+            font=ctk.CTkFont(size=13),
+            text_color="#6B7280"
+        ).pack(side="left")
+
+        # Right side - navigation buttons (only show if more than 1 page)
+        if self.faculty_data and total_pages > 1:
+            nav_frame = ctk.CTkFrame(pagination_content, fg_color="transparent")
+            nav_frame.pack(side="right")
+
+            # Previous button
+            prev_btn = ctk.CTkButton(
+                nav_frame,
+                text="← Previous",
+                width=80,
+                height=30,
+                font=ctk.CTkFont(size=12),
+                fg_color="#F9FAFB",
+                text_color="#374151",
+                hover_color="#E5E7EB",
+                border_width=1,
+                border_color="#D1D5DB",
+                corner_radius=6,
+                command=lambda: self.change_faculty_page("prev")
+            )
+            prev_btn.pack(side="left", padx=(0, 4))
+
+            # Page info
+            page_text = f"{self.current_faculty_page} of {total_pages}"
+            ctk.CTkLabel(
+                nav_frame,
+                text=page_text,
+                font=ctk.CTkFont(size=12),
+                text_color="#374151",
+                width=60
+            ).pack(side="left", padx=4)
+
+            # Next button
+            next_btn = ctk.CTkButton(
+                nav_frame,
+                text="Next →",
+                width=80,
+                height=30,
+                font=ctk.CTkFont(size=12),
+                fg_color="#F9FAFB",
+                text_color="#374151",
+                hover_color="#E5E7EB",
+                border_width=1,
+                border_color="#D1D5DB",
+                corner_radius=6,
+                command=lambda: self.change_faculty_page("next")
+            )
+            next_btn.pack(side="left", padx=(4, 0))
+
+            # Disable buttons when at limits
+            if self.current_faculty_page <= 1:
+                prev_btn.configure(state="disabled", fg_color="#F3F4F6", text_color="#9CA3AF")
+            if self.current_faculty_page >= total_pages:
+                next_btn.configure(state="disabled", fg_color="#F3F4F6", text_color="#9CA3AF")
+        elif self.faculty_data and total_pages == 1:
+            # Show "Page 1 of 1" for single page
+            single_page_label = ctk.CTkLabel(
+                pagination_content,
+                text="Page 1 of 1",
+                font=ctk.CTkFont(size=12),
+                text_color="#6B7280"
+            )
+            single_page_label.pack(side="right")
 
     def show_filter_popup(self):
         FilterPopup(self)
