@@ -17,6 +17,7 @@ class User(Base):
     role = Column(String(50), nullable=False, default="Student")
     face_image = Column(LargeBinary, nullable=True)  # LargeBinary (LBLOB)
     verified = Column(Integer, nullable=False, default=0)  # 0 for False, 1 for True
+    isDeleted = Column(Integer, nullable=False, default=0)  # 0 for False, 1 for True
     last_verified_otp = Column(DateTime, nullable=True)  # Last OTP verification time
     last_verified_otp_expiry = Column(DateTime, nullable=True)  # Last OTP expiry time
     created_at = Column(DateTime, nullable=False, server_default=func.now())

@@ -92,3 +92,6 @@ except subprocess.CalledProcessError as e:
 except Exception as e:
     print(f"Error running seeder: {e}")
     print("You can manually run 'python seed_db.py' to seed the database.")
+
+print("\nTo add sample users to the database, run:")
+print("python create_seed_users.py")

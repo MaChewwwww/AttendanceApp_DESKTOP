@@ -797,3 +797,62 @@ class DatabaseManager:
             
         except Exception as e:
             print(f"Error initializing database: {e}")
+
+    def get_all_users(self):
+        """Get all users with their role-specific information"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Query to get all users with student and faculty information
+            query = """
+            SELECT 
+                u.id,
+                u.first_name,
+                u.last_name,
+                u.email,
+                u.role,
+                u.contact_number,
+                u.birthday,
+                u.verified,
+                u.created_at,
+                s.student_number,
+                s.section,
+                f.employee_number
+            FROM users u
+            LEFT JOIN students s ON u.id = s.user_id
+            LEFT JOIN faculties f ON u.id = f.user_id
+            WHERE u.isDeleted = 0
+            ORDER BY u.created_at DESC
+            """
+            
+            cursor.execute(query)
+            users = cursor.fetchall()
+            
+            conn.close()
+            
+            # Convert to list of dictionaries for easier handling
+            users_list = []
+            for user in users:
+                user_dict = {
+                    "id": user['id'],
+                    "first_name": user['first_name'],
+                    "last_name": user['last_name'],
+                    "full_name": f"{user['first_name']} {user['last_name']}",
+                    "email": user['email'],
+                    "role": user['role'],
+                    "contact_number": user['contact_number'],
+                    "birthday": user['birthday'],
+                    "verified": user['verified'],
+                    "created_at": user['created_at'],
+                    "student_number": user['student_number'],
+                    "section": user['section'],
+                    "employee_number": user['employee_number']
+                }
+                users_list.append(user_dict)
+            
+            return True, users_list
+            
+        except Exception as e:
+            print(f"Error getting all users: {e}")
+            return False, str(e)
