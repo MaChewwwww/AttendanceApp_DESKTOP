@@ -1,11 +1,15 @@
 import customtkinter as ctk
 import tkinter as tk
+import traceback
+from tkinter import messagebox
 from app.ui.admin.components.sidebar import DateTimePill  # adjust path if needed
 from app.db_manager import DatabaseManager
 
 class FilterPopup(ctk.CTkToplevel):
-    def __init__(self, parent):
+    def __init__(self, parent, user_type="student"):
         super().__init__(parent)
+        self.parent_view = parent
+        self.user_type = user_type  # "student" or "faculty"
         self.title("Filter Users")
         self.geometry("400x500")
         self.resizable(False, False)
@@ -19,15 +23,14 @@ class FilterPopup(ctk.CTkToplevel):
         
         # Center the window
         self.update_idletasks()
-        self._center_window(400, 500)
+        width = self.winfo_width()
+        height = self.winfo_height()
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry(f'{width}x{height}+{x}+{y}')
         
         self.setup_ui()
     
-    def _center_window(self, width, height):
-        x = (self.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.winfo_screenheight() // 2) - (height // 2)
-        self.geometry(f"{width}x{height}+{x}+{y}")
-
     def setup_ui(self):
         # Header
         ctk.CTkLabel(
@@ -41,59 +44,127 @@ class FilterPopup(ctk.CTkToplevel):
         filter_frame = ctk.CTkFrame(self, fg_color="transparent")
         filter_frame.pack(fill="both", expand=True, padx=20, pady=10)
         
-        # Year filter
-        ctk.CTkLabel(filter_frame, text="Year", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
-        year_var = tk.StringVar(value="All")
-        year_options = ["All", "1st Year", "2nd Year", "3rd Year", "4th Year"]
-        year_menu = ctk.CTkOptionMenu(
-            filter_frame,
-            values=year_options,
-            variable=year_var,
-            fg_color="#F3F4F6",
-            text_color="#222",
-            button_color="#E5E7EB",
-            button_hover_color="#D1D5DB",
-            dropdown_fg_color="#fff",
-            dropdown_hover_color="#E5E7EB",
-            dropdown_text_color="#222"
-        )
-        year_menu.pack(fill="x", pady=(0, 15))
+        # Initialize filter variables
+        self.filters = {}
         
-        # Section filter
-        ctk.CTkLabel(filter_frame, text="Section", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
-        section_var = tk.StringVar(value="All")
-        section_options = ["All", "1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"]
-        section_menu = ctk.CTkOptionMenu(
-            filter_frame,
-            values=section_options,
-            variable=section_var,
-            fg_color="#F3F4F6",
-            text_color="#222",
-            button_color="#E5E7EB",
-            button_hover_color="#D1D5DB",
-            dropdown_fg_color="#fff",
-            dropdown_hover_color="#E5E7EB",
-            dropdown_text_color="#222"
-        )
-        section_menu.pack(fill="x", pady=(0, 15))
+        # Get current filter values from parent
+        current_filters = self.parent_view.current_filters.get(self.user_type, {})
         
-        # Programs filter
-        ctk.CTkLabel(filter_frame, text="Programs", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
-        programs_var = tk.StringVar(value="All")
-        programs_options = ["All", "BSIT", "BSCS", "BSIS"]
-        programs_menu = ctk.CTkOptionMenu(
-            filter_frame,
-            values=programs_options,
-            variable=programs_var,
-            fg_color="#F3F4F6",
-            text_color="#222",
-            button_color="#E5E7EB",
-            button_hover_color="#D1D5DB",
-            dropdown_fg_color="#fff",
-            dropdown_hover_color="#E5E7EB",
-            dropdown_text_color="#222"
-        )
-        programs_menu.pack(fill="x", pady=(0, 15))
+        if self.user_type == "student":
+            # Year filter
+            ctk.CTkLabel(filter_frame, text="Year", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
+            year_var = tk.StringVar(value=current_filters.get('year', 'All'))
+            self.filters['year'] = year_var
+            year_options = ["All", "1st Year", "2nd Year", "3rd Year", "4th Year"]
+            year_menu = ctk.CTkOptionMenu(
+                filter_frame,
+                values=year_options,
+                variable=year_var,
+                fg_color="#F3F4F6",
+                text_color="#222",
+                button_color="#E5E7EB",
+                button_hover_color="#D1D5DB",
+                dropdown_fg_color="#fff",
+                dropdown_hover_color="#E5E7EB",
+                dropdown_text_color="#222"
+            )
+            year_menu.pack(fill="x", pady=(0, 15))
+            
+            # Section filter
+            ctk.CTkLabel(filter_frame, text="Section", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
+            section_var = tk.StringVar(value=current_filters.get('section', 'All'))
+            self.filters['section'] = section_var
+            section_options = ["All", "1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"]
+            section_menu = ctk.CTkOptionMenu(
+                filter_frame,
+                values=section_options,
+                variable=section_var,
+                fg_color="#F3F4F6",
+                text_color="#222",
+                button_color="#E5E7EB",
+                button_hover_color="#D1D5DB",
+                dropdown_fg_color="#fff",
+                dropdown_hover_color="#E5E7EB",
+                dropdown_text_color="#222"
+            )
+            section_menu.pack(fill="x", pady=(0, 15))
+            
+            # Programs filter
+            ctk.CTkLabel(filter_frame, text="Programs", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
+            programs_var = tk.StringVar(value=current_filters.get('program', 'All'))
+            self.filters['program'] = programs_var
+            programs_options = ["All", "BSIT", "BSCS", "BSIS"]
+            programs_menu = ctk.CTkOptionMenu(
+                filter_frame,
+                values=programs_options,
+                variable=programs_var,
+                fg_color="#F3F4F6",
+                text_color="#222",
+                button_color="#E5E7EB",
+                button_hover_color="#D1D5DB",
+                dropdown_fg_color="#fff",
+                dropdown_hover_color="#E5E7EB",
+                dropdown_text_color="#222"
+            )
+            programs_menu.pack(fill="x", pady=(0, 15))
+            
+            # Status filter
+            ctk.CTkLabel(filter_frame, text="Status", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
+            status_var = tk.StringVar(value=current_filters.get('status', 'All'))
+            self.filters['status'] = status_var
+            status_options = ["All", "Enrolled", "Graduated", "Dropout", "On Leave", "Suspended"]
+            status_menu = ctk.CTkOptionMenu(
+                filter_frame,
+                values=status_options,
+                variable=status_var,
+                fg_color="#F3F4F6",
+                text_color="#222",
+                button_color="#E5E7EB",
+                button_hover_color="#D1D5DB",
+                dropdown_fg_color="#fff",
+                dropdown_hover_color="#E5E7EB",
+                dropdown_text_color="#222"
+            )
+            status_menu.pack(fill="x", pady=(0, 15))
+        
+        else:
+            # Role filter
+            ctk.CTkLabel(filter_frame, text="Role", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
+            role_var = tk.StringVar(value=current_filters.get('role', 'All'))
+            self.filters['role'] = role_var
+            role_options = ["All", "Faculty", "Admin"]
+            role_menu = ctk.CTkOptionMenu(
+                filter_frame,
+                values=role_options,
+                variable=role_var,
+                fg_color="#F3F4F6",
+                text_color="#222",
+                button_color="#E5E7EB",
+                button_hover_color="#D1D5DB",
+                dropdown_fg_color="#fff",
+                dropdown_hover_color="#E5E7EB",
+                dropdown_text_color="#222"
+            )
+            role_menu.pack(fill="x", pady=(0, 15))
+            
+            # Status filter
+            ctk.CTkLabel(filter_frame, text="Status", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
+            status_var = tk.StringVar(value=current_filters.get('status', 'All'))
+            self.filters['status'] = status_var
+            status_options = ["All", "Active", "Inactive", "Retired", "Probationary", "Tenure Track", "Tenured"]
+            status_menu = ctk.CTkOptionMenu(
+                filter_frame,
+                values=status_options,
+                variable=status_var,
+                fg_color="#F3F4F6",
+                text_color="#222",
+                button_color="#E5E7EB",
+                button_hover_color="#D1D5DB",
+                dropdown_fg_color="#fff",
+                dropdown_hover_color="#E5E7EB",
+                dropdown_text_color="#222"
+            )
+            status_menu.pack(fill="x", pady=(0, 15))
         
         # Buttons
         button_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -118,11 +189,24 @@ class FilterPopup(ctk.CTkToplevel):
         ).pack(side="right")
     
     def apply_filters(self):
-        # TODO: Implement filter logic
+        """Apply filters and update the parent view"""
+        filter_values = {}
+        for key, var in self.filters.items():
+            value = var.get()
+            if value != "All":
+                filter_values[key] = value
+        
+        # Apply filters to parent view
+        self.parent_view.apply_filters(filter_values, self.user_type)
         self.destroy()
     
     def reset_filters(self):
-        # TODO: Implement reset logic
+        """Reset all filters to default values"""
+        for var in self.filters.values():
+            var.set("All")
+        
+        # Apply reset filters
+        self.parent_view.reset_filters(self.user_type)
         self.destroy()
 
 class ActionPopup(ctk.CTkToplevel):
@@ -151,191 +235,56 @@ class ActionPopup(ctk.CTkToplevel):
         # Unpack user data
         name, year, section, program = self.user_data
         if action == "View":
-            self.geometry("640x720")
-            self.update_idletasks()
-            self._center_window(640, 720)
-            self.configure(fg_color="#F5F5F5")
-            # Top frame for image, user info, and export button
-            top_frame = ctk.CTkFrame(self, fg_color="#F5F5F5")
-            top_frame.pack(fill="x", padx=20, pady=(20, 10))
-            # Image placeholder
-            image_canvas = tk.Canvas(top_frame, width=70, height=70, bg="#fff", highlightthickness=1, highlightbackground="#BDBDBD")
-            image_canvas.create_rectangle(2, 2, 68, 68, fill="#E5E7EB", outline="#BDBDBD", width=2)
-            image_canvas.pack(side="left", padx=(0, 16))
-            # User info
-            user_info_frame = ctk.CTkFrame(top_frame, fg_color="#F5F5F5")
-            user_info_frame.pack(side="left", fill="y")
-            ctk.CTkLabel(user_info_frame, text=name, font=ctk.CTkFont(size=18, weight="bold"), text_color="#000").pack(anchor="w")
-            ctk.CTkLabel(user_info_frame, text=f"{program} {section}", font=ctk.CTkFont(size=14), text_color="#000").pack(anchor="w")
-            # Export button
-            export_btn = ctk.CTkButton(top_frame, text="Export", fg_color="#1E3A8A", hover_color="#1E3A8A", text_color="#fff", width=70, height=32, corner_radius=8)
-            export_btn.pack(side="right", padx=(0, 0), pady=(0, 0))
-
-            # --- Search and filter bar (copied from Users tab) ---
-            search_bar_container = ctk.CTkFrame(self, fg_color="#F5F5F5")
-            search_bar_container.pack(pady=(0, 10), padx=20, anchor="w")
-            search_entry_frame = ctk.CTkFrame(search_bar_container, fg_color="#fff", border_color="#BDBDBD", border_width=1, corner_radius=0, height=36)
-            search_entry_frame.pack(side="left", pady=0, padx=0)
-            search_entry_frame.pack_propagate(False)
-            search_icon = ctk.CTkLabel(search_entry_frame, text="\U0001F50D", font=ctk.CTkFont(size=16), text_color="#757575", fg_color="#fff", width=28, height=28)
-            search_icon.pack(side="left", padx=(8, 0), pady=4)
-            search_entry = ctk.CTkEntry(search_entry_frame, placeholder_text="", width=160, fg_color="#fff",
-                                        border_color="#fff", border_width=0, text_color="#000", font=ctk.CTkFont(size=15), height=28)
-            search_entry.pack(side="left", padx=(2, 8), pady=4)
-            filter_btn = ctk.CTkButton(
-                search_bar_container,
-                text="Filters",
-                width=80,
-                height=36,
-                fg_color="#1E3A8A",
-                text_color="#fff",
-                hover_color="#1E3A8A",
-                border_width=1,
-                border_color="#BDBDBD",
-                corner_radius=0,
-                font=ctk.CTkFont(size=13),
-                command=lambda: FilterPopup(self)
-            )
-            filter_btn.pack(side="left", padx=0, pady=0)
-
-            # Table
-            table_frame = ctk.CTkFrame(self, fg_color="#fff", border_color="#E5E7EB", border_width=1, corner_radius=8)
-            table_frame.pack(fill="both", expand=True, padx=20, pady=10)
-            # Table columns
+            self.geometry("800x500")
+            self._center_window(800, 500)
+            
+            # Header
+            ctk.CTkLabel(self, text=f"View User - {name}", font=ctk.CTkFont(size=18, weight="bold")).pack(pady=20)
+            
+            # Table frame
+            table_frame = ctk.CTkFrame(self, fg_color="#fff", corner_radius=8, border_width=1, border_color="#E5E7EB")
+            table_frame.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+            
+            # Configure grid
+            table_frame.grid_columnconfigure(0, weight=1)
+            table_frame.grid_columnconfigure(1, weight=1)
+            table_frame.grid_columnconfigure(2, weight=1)
+            table_frame.grid_columnconfigure(3, weight=1)
+            
+            # Headers
             columns = ["Course Subject", "Attendance", "Absent", "Rating"]
             for i, col in enumerate(columns):
-                table_frame.grid_columnconfigure(i, weight=1)
-                ctk.CTkLabel(
-                    table_frame,
-                    text=col,
-                    font=ctk.CTkFont(size=13, weight="bold"),
-                    text_color="#000",
-                    anchor="w"
-                ).grid(row=0, column=i, padx=10, pady=8, sticky="w")
+                ctk.CTkLabel(table_frame, text=col, font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=i, padx=10, pady=10, sticky="w")
+            
             # Sample table data
             table_data = [
                 ("Ethics 101", "1", "1", "100%") for _ in range(6)
             ]
             for idx, (subject, attendance, absent, rating) in enumerate(table_data, start=1):
-                for col_idx, value in enumerate([subject, attendance, absent, rating]):
-                    ctk.CTkLabel(
-                        table_frame,
-                        text=value,
-                        font=ctk.CTkFont(size=13),
-                        text_color="#000",
-                        fg_color="#fff",
-                        anchor="w"
-                    ).grid(row=idx, column=col_idx, sticky="nsew", padx=10, pady=6)
+                ctk.CTkLabel(table_frame, text=subject).grid(row=idx, column=0, padx=10, pady=5, sticky="w")
+                ctk.CTkLabel(table_frame, text=attendance).grid(row=idx, column=1, padx=10, pady=5, sticky="w")
+                ctk.CTkLabel(table_frame, text=absent).grid(row=idx, column=2, padx=10, pady=5, sticky="w")
+                ctk.CTkLabel(table_frame, text=rating).grid(row=idx, column=3, padx=10, pady=5, sticky="w")
         else:
             if action == "Edit":
-                self.geometry("640x720")
-                self.update_idletasks()
-                self._center_window(640, 720)
-                # Title
-                ctk.CTkLabel(self, text="Edit Student Profile", font=ctk.CTkFont(size=18, weight="bold"), text_color="#000").pack(anchor="w", padx=30, pady=(20, 10))
-                # Main form frame
-                form_frame = ctk.CTkFrame(self, fg_color="#fff")
-                form_frame.pack(fill="both", expand=True, padx=30, pady=(0, 10))
-                # Two columns for entries
-                left_col = ctk.CTkFrame(form_frame, fg_color="#fff")
-                left_col.grid(row=0, column=0, sticky="nsew", padx=(0, 10), pady=0)
-                right_col = ctk.CTkFrame(form_frame, fg_color="#fff")
-                right_col.grid(row=0, column=1, sticky="nsew", padx=(10, 0), pady=0)
-                form_frame.grid_columnconfigure(0, weight=1)
-                form_frame.grid_columnconfigure(1, weight=1)
-                # Left column entries
-                ctk.CTkLabel(left_col, text="First Name", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
-                ctk.CTkEntry(left_col, width=220, fg_color="#fff", text_color="#000").pack(fill="x", pady=(0, 10))
-                ctk.CTkLabel(left_col, text="Last Name", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
-                ctk.CTkEntry(left_col, width=220, fg_color="#fff", text_color="#000").pack(fill="x", pady=(0, 10))
-                ctk.CTkLabel(left_col, text="Email", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
-                ctk.CTkEntry(left_col, width=220, fg_color="#fff", text_color="#000").pack(fill="x", pady=(0, 10))
-                ctk.CTkLabel(left_col, text="Password", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
-                ctk.CTkEntry(left_col, width=220, show="*", fg_color="#fff", text_color="#000").pack(fill="x", pady=(0, 10))
-                # Right column entries
-                ctk.CTkLabel(right_col, text="Middle Name", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
-                ctk.CTkEntry(right_col, width=220, fg_color="#fff", text_color="#000").pack(fill="x", pady=(0, 10))
-                ctk.CTkLabel(right_col, text="Suffix Name", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
-                ctk.CTkEntry(right_col, width=220, fg_color="#fff", text_color="#000").pack(fill="x", pady=(0, 10))
-                ctk.CTkLabel(right_col, text="Section", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
-                ctk.CTkEntry(right_col, width=220, fg_color="#fff", text_color="#000").pack(fill="x", pady=(0, 10))
-                # Facial recognition button (no camera emoji)
-                fr_btn = ctk.CTkButton(right_col, text="Take Facial Recognition", fg_color="#1E3A8A", hover_color="#1E3A8A", text_color="#fff", width=220, height=32, corner_radius=8, command=lambda: FacialRecognitionPopup(self))
-                fr_btn.pack(fill="x", pady=(10, 8))
-                # Image/file preview box
-                img_frame = ctk.CTkFrame(right_col, fg_color="#222", width=40, height=40, corner_radius=6)
-                img_frame.pack(side="left", pady=(0, 0), padx=(0, 8))
-                img_frame.pack_propagate(False)
-                ctk.CTkLabel(img_frame, text="", fg_color="#222").pack(expand=True, fill="both")
-                file_info = ctk.CTkFrame(right_col, fg_color="#fff")
-                file_info.pack(fill="x", pady=(0, 10))
-                ctk.CTkLabel(file_info, text="img.name", font=ctk.CTkFont(size=13, weight="bold"), text_color="#000").pack(anchor="w")
-                ctk.CTkLabel(file_info, text=".jpeg", font=ctk.CTkFont(size=11), text_color="#757575").pack(anchor="w")
-                # Bottom buttons
-                btns_frame = ctk.CTkFrame(self, fg_color="#fff")
-                btns_frame.pack(fill="x", padx=30, pady=(10, 20))
-                ctk.CTkButton(btns_frame, text="Cancel", fg_color="#E5E7EB", text_color="#000", hover_color="#D1D5DB", width=600, height=36, corner_radius=8, command=self.destroy).pack(fill="x", pady=(0, 8))
-                ctk.CTkButton(btns_frame, text="Save Changes", fg_color="#1E3A8A", hover_color="#1E3A8A", text_color="#fff", width=600, height=36, corner_radius=8, command=self.show_caution_modal).pack(fill="x")
+                ctk.CTkLabel(self, text=f"Edit User - {name}", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=20)
+                ctk.CTkLabel(self, text="Edit functionality coming soon...").pack(pady=10)
+                
+                ctk.CTkButton(self, text="Save Changes", command=self.show_caution_modal).pack(pady=10)
+                
             elif action == "Delete":
-                # Responsive Modern Delete Modal
-                self.geometry("340x210")
-                self.update_idletasks()
-                self._center_window(340, 210)
-                self.configure(fg_color="#FAFAFA")
-                # Card frame for rounded corners, responsive
-                card = ctk.CTkFrame(self, fg_color="#fff", corner_radius=16)
-                card.pack(expand=True, fill="both", padx=16, pady=16)
-                card.pack_propagate(True)
-                # Circle + Trash icon (centered)
-                import os
-                from PIL import Image, ImageTk, ImageOps
-                icon_dir = os.path.join(os.path.dirname(__file__), '../../../assets/icons')
-                circle_path = os.path.join(icon_dir, 'circle.png')
-                trash_path = os.path.join(icon_dir, 'trash-2.png')
-                try:
-                    circle_img = Image.open(circle_path).convert('RGBA').resize((56, 56))
-                    r, g, b = (248, 113, 113)
-                    tint = Image.new('RGBA', circle_img.size, (r, g, b, 255))
-                    circle_img = Image.blend(circle_img, tint, 0.5)
-                    trash_img = Image.open(trash_path).convert('RGBA').resize((32, 32))
-                    combined = circle_img.copy()
-                    combined.paste(trash_img, ((56-32)//2, (56-32)//2), trash_img)
-                    icon = ImageTk.PhotoImage(combined)
-                    icon_label = tk.Label(card, image=icon, bg="#fff")
-                    icon_label.image = icon
-                    icon_label.pack(pady=(8, 0))
-                except Exception:
-                    icon_label = ctk.CTkLabel(card, text="\U0001F5D1", font=ctk.CTkFont(size=40), text_color="#F87171", fg_color="#fff")
-                    icon_label.pack(pady=(8, 0))
-                # Title
-                ctk.CTkLabel(card, text="Delete", font=ctk.CTkFont(size=16, weight="bold"), text_color="#222", fg_color="#fff").pack(pady=(4, 0))
-                # Subtitle
-                ctk.CTkLabel(card, text="Are you sure you want to delete?", font=ctk.CTkFont(size=13), text_color="#888", fg_color="#fff").pack(pady=(0, 8))
-                # Buttons
-                btns_frame = ctk.CTkFrame(card, fg_color="#fff")
-                btns_frame.pack(side="bottom", fill="x", pady=(0, 16), padx=0)
-                ctk.CTkButton(
-                    btns_frame,
-                    text="Cancel",
-                    fg_color="#D1D5DB",
-                    text_color="#444",
-                    hover_color="#BDBDBD",
-                    height=38,
-                    corner_radius=8,
-                    command=self.destroy
-                ).pack(side="left", expand=True, fill="x", padx=(0, 8))
-                ctk.CTkButton(
-                    btns_frame,
-                    text="Delete",
-                    fg_color="#F87171",
-                    text_color="#fff",
-                    hover_color="#ef4444",
-                    height=38,
-                    corner_radius=8,
-                    command=self.show_success_modal
-                ).pack(side="left", expand=True, fill="x", padx=(8, 0))
+                ctk.CTkLabel(self, text=f"Delete User - {name}", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=20)
+                ctk.CTkLabel(self, text="Are you sure you want to delete this user?", text_color="red").pack(pady=10)
+                
+                button_frame = ctk.CTkFrame(self, fg_color="transparent")
+                button_frame.pack(pady=20)
+                
+                ctk.CTkButton(button_frame, text="Cancel", command=self.destroy).pack(side="left", padx=5)
+                ctk.CTkButton(button_frame, text="Delete", fg_color="red", command=self.show_success_modal).pack(side="left", padx=5)
+                
             else:
-                ctk.CTkButton(self, text="Close", fg_color="#2563EB", hover_color="#1D4ED8", text_color="#fff", command=self.destroy).pack(pady=20)
+                ctk.CTkLabel(self, text=f"Action: {action}").pack(pady=20)
+                ctk.CTkLabel(self, text=f"User: {name}").pack(pady=10)
 
     def show_caution_modal(self):
         def on_continue():
@@ -603,9 +552,19 @@ class UsersView(ctk.CTkFrame):
         self.students_data = []
         self.faculty_data = []
         
+        # Filter state
+        self.current_filters = {
+            'student': {},
+            'faculty': {}
+        }
+        self.current_search = {
+            'student': "",
+            'faculty': ""
+        }
+        
         # Pagination settings
-        self.students_per_page = 10  # Changed back to 10
-        self.faculty_per_page = 10   # Changed back to 10
+        self.students_per_page = 10
+        self.faculty_per_page = 10
         self.current_students_page = 1
         self.current_faculty_page = 1
         
@@ -654,28 +613,9 @@ class UsersView(ctk.CTkFrame):
         self.refresh_faculty_table()
 
     def load_users_data(self):
-        """Load users data from database and filter by role"""
-        try:
-            success, users = self.db_manager.get_all_users()
-            
-            if success:
-                self.all_users = users
-                
-                # Filter users by role
-                self.students_data = [user for user in users if user['role'].lower() == 'student']
-                self.faculty_data = [user for user in users if user['role'].lower() in ['faculty', 'admin']]
-                
-                # Always refresh the tables since UI is now set up
-                self.refresh_students_table()
-                self.refresh_faculty_table()
-                
-            else:
-                print(f"Error loading users: {users}")
-                
-        except Exception as e:
-            print(f"Error in load_users_data: {e}")
-            import traceback
-            traceback.print_exc()
+        """Load initial users data from database"""
+        # Load all data initially (no filters)
+        self.load_filtered_data()
 
     def refresh_students_table(self):
         """Refresh the students table with current data"""
@@ -784,49 +724,58 @@ class UsersView(ctk.CTkFrame):
         self.active_tab = tab_name
         
         if tab_name == "students":
-            # Animate students tab activation
+            # Smooth students tab activation with staggered animation
             self.animate_button_activation(self.students_tab_btn, True)
             self.animate_button_activation(self.faculty_tab_btn, False)
-            self.after(80, self.show_students_tab)
+            # Delay content switch for smoother transition
+            self.after(150, self.show_students_tab)
         else:
-            # Animate faculty tab activation
+            # Smooth faculty tab activation with staggered animation
             self.animate_button_activation(self.faculty_tab_btn, True)
             self.animate_button_activation(self.students_tab_btn, False)
-            self.after(80, self.show_faculty_tab)
+            # Delay content switch for smoother transition
+            self.after(150, self.show_faculty_tab)
 
     def animate_button_activation(self, button, is_active):
-        """Smooth animation for tab button state changes"""
+        """Smooth animation for tab button state changes with multiple steps"""
         if is_active:
-            # Activation animation
+            # Multi-step activation animation
             button.configure(fg_color="#3B82F6")
-            self.after(20, lambda: button.configure(
-                fg_color="#2563EB",
+            self.after(30, lambda: button.configure(fg_color="#2563EB"))
+            self.after(60, lambda: button.configure(
                 text_color="#FFFFFF",
                 font=ctk.CTkFont(family="Inter", size=13, weight="bold"),
-                border_width=0,
-                hover_color="#3B82F6"
+                border_width=0
             ))
+            self.after(90, lambda: button.configure(hover_color="#3B82F6"))
         else:
-            # Deactivation animation
-            button.configure(fg_color="#F8FAFC")
-            self.after(40, lambda: button.configure(
-                fg_color="#FFFFFF",
+            # Multi-step deactivation animation
+            button.configure(fg_color="#F1F5F9")
+            self.after(20, lambda: button.configure(fg_color="#F8FAFC"))
+            self.after(40, lambda: button.configure(fg_color="#FFFFFF"))
+            self.after(60, lambda: button.configure(
                 text_color="#64748B",
                 font=ctk.CTkFont(family="Inter", size=13, weight="normal"),
                 border_width=1,
-                border_color="#E2E8F0",
-                hover_color="#F8FAFC"
+                border_color="#E2E8F0"
             ))
+            self.after(80, lambda: button.configure(hover_color="#F8FAFC"))
 
     def show_students_tab(self):
-        """Show students tab content"""
+        """Show students tab content with fade-in effect"""
+        # Hide faculty content first
         self.faculty_content.pack_forget()
-        self.students_content.pack(fill="both", expand=True)
+        
+        # Add a slight delay and fade-in effect for students content
+        self.after(50, lambda: self.students_content.pack(fill="both", expand=True))
 
     def show_faculty_tab(self):
-        """Show faculty tab content"""
+        """Show faculty tab content with fade-in effect"""
+        # Hide students content first
         self.students_content.pack_forget()
-        self.faculty_content.pack(fill="both", expand=True)
+        
+        # Add a slight delay and fade-in effect for faculty content
+        self.after(50, lambda: self.faculty_content.pack(fill="both", expand=True))
 
     def get_status_color(self, status):
         """Get text color for status"""
@@ -868,48 +817,99 @@ class UsersView(ctk.CTkFrame):
         status_label.grid(row=row, column=column, sticky="w", padx=10, pady=3)
 
     def setup_students_tab(self, parent):
-        # Search and filter bar (side by side, both with border, no corner radius, flush)
+        # Search and filter bar
         search_bar_container = ctk.CTkFrame(parent, fg_color="#fff")
         search_bar_container.pack(pady=(0, 10), padx=0, anchor="w")
 
-        # Search entry with icon inside (frame height 36, icon and entry height 28, centered vertically, consistent color)
+        # Search entry with icon and clear button
         search_entry_frame = ctk.CTkFrame(search_bar_container, fg_color="#fff", border_color="#BDBDBD", border_width=1, corner_radius=0, height=36)
         search_entry_frame.pack(side="left", pady=0, padx=0)
         search_entry_frame.pack_propagate(False)
         search_icon = ctk.CTkLabel(search_entry_frame, text="\U0001F50D", font=ctk.CTkFont(size=16), text_color="#757575", fg_color="#fff", width=28, height=28)
         search_icon.pack(side="left", padx=(8, 0), pady=4)
-        search_entry = ctk.CTkEntry(search_entry_frame, placeholder_text="Search students...", width=160, fg_color="#fff",
+        
+        self.student_search_entry = ctk.CTkEntry(search_entry_frame, placeholder_text="Search students...", width=160, fg_color="#fff",
                                     border_color="#fff", border_width=0, text_color="#222", font=ctk.CTkFont(size=15), height=28)
-        search_entry.pack(side="left", padx=(2, 8), pady=4)
+        self.student_search_entry.pack(side="left", padx=(2, 0), pady=4)
+        
+        # Clear search button (x icon) - initially hidden
+        self.student_clear_search_btn = ctk.CTkButton(
+            search_entry_frame,
+            text="✕",
+            width=20,
+            height=20,
+            font=ctk.CTkFont(size=12),
+            fg_color="transparent",
+            text_color="#757575",
+            hover_color="#F3F4F6",
+            border_width=0,
+            command=lambda: self.clear_search('student')
+        )
+        
+        # Set current search value if it exists and show/hide clear button
+        current_search = self.current_search.get('student', "")
+        if current_search:
+            self.student_search_entry.insert(0, current_search)
+            self.student_clear_search_btn.pack(side="left", padx=(2, 8), pady=4)
+        
+        # Bind search functionality to Enter key and text changes
+        self.student_search_entry.bind('<Return>', lambda e: self.on_search_change('student', self.student_search_entry.get()))
+        self.student_search_entry.bind('<KeyRelease>', lambda e: self.update_search_clear_button('student'))
 
+        # Filter button container for active state detection
+        filter_container = ctk.CTkFrame(search_bar_container, fg_color="transparent")
+        filter_container.pack(side="left", padx=0, pady=0)
+        
+        # Check if filters are active OR if there's a search term
+        has_active_filters = any(v != "All" and v != "" for v in self.current_filters.get('student', {}).values())
+        has_search = bool(self.current_search.get('student', "").strip())
+        is_active = has_active_filters or has_search
+        
         # Filter button (flush, no corner radius, border on all sides, same height)
         filter_btn = ctk.CTkButton(
-            search_bar_container,
+            filter_container,
             text="Filters",
             width=80,
             height=36,
-            fg_color="#fff",
-            text_color="#757575",
-            hover_color="#F3F4F6",
+            fg_color="#1E3A8A" if is_active else "#fff",
+            text_color="#fff" if is_active else "#757575",
+            hover_color="#1D4ED8" if is_active else "#F3F4F6",
             border_width=1,
-            border_color="#BDBDBD",
+            border_color="#1E3A8A" if is_active else "#BDBDBD",
             corner_radius=0,
             font=ctk.CTkFont(size=13),
-            command=self.show_filter_popup
+            command=lambda: FilterPopup(self, "student")
         )
-        filter_btn.pack(side="left", padx=0, pady=0)
+        filter_btn.pack(side="left")
+        
+        # Clear filters button (x icon) - show if filters are active OR search is active
+        if is_active:
+            clear_filter_btn = ctk.CTkButton(
+                filter_container,
+                text="✕",
+                width=24,
+                height=36,
+                font=ctk.CTkFont(size=12),
+                fg_color="#EF4444",
+                text_color="#fff",
+                hover_color="#DC2626",
+                border_width=0,
+                corner_radius=0,
+                command=lambda: self.clear_filters('student')
+            )
+            clear_filter_btn.pack(side="left")
 
         # Table
         table_frame = ctk.CTkFrame(parent, fg_color="#fff", corner_radius=8, border_width=1, border_color="#E5E7EB")
-        table_frame.pack(fill="both", expand=True, padx=0, pady=(10, 5))  # Reduced padding
+        table_frame.pack(fill="both", expand=True, padx=0, pady=(10, 5))
 
         # Columns (add status column)
         columns = ["", "Student Name", "Year", "Section", "Program", "Status", "Actions"]
-        col_widths = [1, 8, 1, 1, 1, 2, 1]  # increased status column weight
+        col_widths = [1, 8, 1, 1, 1, 2, 1]
         for i, weight in enumerate(col_widths):
             table_frame.grid_columnconfigure(i, weight=weight)
 
-        # Header row (leave image column header blank) with reduced padding
+        # Header row
         for i, col in enumerate(columns):
             ctk.CTkLabel(
                 table_frame,
@@ -917,7 +917,7 @@ class UsersView(ctk.CTkFrame):
                 font=ctk.CTkFont(size=14, weight="bold"),
                 text_color="#6B7280",
                 anchor="w"
-            ).grid(row=0, column=i, padx=10, pady=6, sticky="w")  # Reduced pady from 8 to 6
+            ).grid(row=0, column=i, padx=10, pady=6, sticky="w")
 
         # Use only database data - no sample data fallback
         data_to_display = []
@@ -981,11 +981,11 @@ class UsersView(ctk.CTkFrame):
         if not data_to_display:
             no_data_label = ctk.CTkLabel(
                 table_frame,
-                text="No students found. Run the seeder script to add sample data.",
+                text="No students found.",
                 font=ctk.CTkFont(size=14),
                 text_color="#6B7280"
             )
-            no_data_label.grid(row=1, column=0, columnspan=7, pady=20)  # Updated columnspan
+            no_data_label.grid(row=1, column=0, columnspan=7, pady=20)
         else:
             for idx, (name, year, section, program) in enumerate(data_to_display, start=1):
                 bg = "#fff"
@@ -1032,7 +1032,7 @@ class UsersView(ctk.CTkFrame):
                 )
                 action_menu.grid(row=idx, column=6, sticky="w", padx=10, pady=3)
 
-        # Pagination controls for students - reduced height
+        # Pagination controls for students
         pagination_frame = ctk.CTkFrame(parent, fg_color="#fff", height=40, border_width=1, border_color="#E5E7EB", corner_radius=0)
         pagination_frame.pack(fill="x", padx=0, pady=0)
         pagination_frame.pack_propagate(False)
@@ -1128,30 +1128,83 @@ class UsersView(ctk.CTkFrame):
         search_bar_container = ctk.CTkFrame(parent, fg_color="#fff")
         search_bar_container.pack(pady=(0, 10), padx=0, anchor="w")
 
-        # Search entry with icon
+        # Search entry with icon and clear button
         search_entry_frame = ctk.CTkFrame(search_bar_container, fg_color="#fff", border_color="#BDBDBD", border_width=1, corner_radius=0, height=36)
         search_entry_frame.pack(side="left", pady=0, padx=0)
         search_entry_frame.pack_propagate(False)
         search_icon = ctk.CTkLabel(search_entry_frame, text="\U0001F50D", font=ctk.CTkFont(size=16), text_color="#757575", fg_color="#fff", width=28, height=28)
         search_icon.pack(side="left", padx=(8, 0), pady=4)
-        search_entry = ctk.CTkEntry(search_entry_frame, placeholder_text="Search faculty...", width=160, fg_color="#fff",
+        
+        self.faculty_search_entry = ctk.CTkEntry(search_entry_frame, placeholder_text="Search faculty...", width=160, fg_color="#fff",
                                     border_color="#fff", border_width=0, text_color="#222", font=ctk.CTkFont(size=15), height=28)
-        search_entry.pack(side="left", padx=(2, 8), pady=4)
+        self.faculty_search_entry.pack(side="left", padx=(2, 0), pady=4)
+        
+        # Clear search button (x icon) - initially hidden
+        self.faculty_clear_search_btn = ctk.CTkButton(
+            search_entry_frame,
+            text="✕",
+            width=20,
+            height=20,
+            font=ctk.CTkFont(size=12),
+            fg_color="transparent",
+            text_color="#757575",
+            hover_color="#F3F4F6",
+            border_width=0,
+            command=lambda: self.clear_search('faculty')
+        )
+        
+        # Set current search value if it exists and show/hide clear button
+        current_search = self.current_search.get('faculty', "")
+        if current_search:
+            self.faculty_search_entry.insert(0, current_search)
+            self.faculty_clear_search_btn.pack(side="left", padx=(2, 8), pady=4)
+        
+        # Bind search functionality to Enter key and text changes
+        self.faculty_search_entry.bind('<Return>', lambda e: self.on_search_change('faculty', self.faculty_search_entry.get()))
+        self.faculty_search_entry.bind('<KeyRelease>', lambda e: self.update_search_clear_button('faculty'))
+        
+        # Filter button container for active state detection
+        filter_container = ctk.CTkFrame(search_bar_container, fg_color="transparent")
+        filter_container.pack(side="left", padx=0, pady=0)
+        
+        # Check if filters are active OR if there's a search term
+        has_active_filters = any(v != "All" and v != "" for v in self.current_filters.get('faculty', {}).values())
+        has_search = bool(self.current_search.get('faculty', "").strip())
+        is_active = has_active_filters or has_search
+        
+        # Filter button (flush, no corner radius, border on all sides, same height)
         filter_btn = ctk.CTkButton(
-            search_bar_container,
+            filter_container,
             text="Filters",
             width=80,
             height=36,
-            fg_color="#fff",
-            text_color="#757575",
-            hover_color="#F3F4F6",
+            fg_color="#1E3A8A" if is_active else "#fff",
+            text_color="#fff" if is_active else "#757575",
+            hover_color="#1D4ED8" if is_active else "#F3F4F6",
             border_width=1,
-            border_color="#BDBDBD",
+            border_color="#1E3A8A" if is_active else "#BDBDBD",
             corner_radius=0,
             font=ctk.CTkFont(size=13),
-            command=self.show_filter_popup
+            command=lambda: FilterPopup(self, "faculty")
         )
-        filter_btn.pack(side="left", padx=0, pady=0)
+        filter_btn.pack(side="left")
+        
+        # Clear filters button (x icon) - show if filters are active OR search is active
+        if is_active:
+            clear_filter_btn = ctk.CTkButton(
+                filter_container,
+                text="✕",
+                width=24,
+                height=36,
+                font=ctk.CTkFont(size=12),
+                fg_color="#EF4444",
+                text_color="#fff",
+                hover_color="#DC2626",
+                border_width=0,
+                corner_radius=0,
+                command=lambda: self.clear_filters('faculty')
+            )
+            clear_filter_btn.pack(side="left")
 
         # Faculty table
         table_frame = ctk.CTkFrame(parent, fg_color="#fff", corner_radius=8, border_width=1, border_color="#E5E7EB")
@@ -1193,7 +1246,7 @@ class UsersView(ctk.CTkFrame):
         if not data_to_display:
             no_data_label = ctk.CTkLabel(
                 table_frame,
-                text="No faculty found. Run the seeder script to add sample data.",
+                text="No faculty found.",
                 font=ctk.CTkFont(size=14),
                 text_color="#6B7280"
             )
@@ -1244,7 +1297,7 @@ class UsersView(ctk.CTkFrame):
                 )
                 action_menu.grid(row=idx, column=6, sticky="w", padx=10, pady=3)
 
-        # Pagination controls for faculty - reduced height
+        # Pagination controls for faculty
         pagination_frame = ctk.CTkFrame(parent, fg_color="#fff", height=40, border_width=1, border_color="#E5E7EB", corner_radius=0)  # Reduced from 50 to 40
         pagination_frame.pack(fill="x", padx=0, pady=0)
         pagination_frame.pack_propagate(False)
@@ -1336,16 +1389,11 @@ class UsersView(ctk.CTkFrame):
             single_page_label.pack(side="right")
 
     def show_filter_popup(self):
-        FilterPopup(self)
-
-    def show_action_menu(self, widget, data):
-        menu = tk.Menu(self, tearoff=0)
-        menu.add_command(label="View", command=lambda: print(f"Viewing {data[0]}"))
-        menu.add_command(label="Edit", command=lambda: print(f"Editing {data[0]}"))
-        menu.add_command(label="Delete", command=lambda: print(f"Deleting {data[0]}"))
-        x = widget.winfo_rootx()
-        y = widget.winfo_rooty() + widget.winfo_height()
-        self.after(1, lambda: menu.tk_popup(x, y))
+        # Determine which tab is active and show appropriate filter
+        if self.active_tab == "students":
+            FilterPopup(self, "student")
+        else:
+            FilterPopup(self, "faculty")
 
     def handle_action(self, action, data):
         ActionPopup(self, action, data)
@@ -1353,3 +1401,138 @@ class UsersView(ctk.CTkFrame):
     def handle_faculty_action(self, action, data):
         # Reuse existing ActionPopup for faculty
         ActionPopup(self, action, data)
+
+    def apply_filters(self, filter_values, user_type):
+        """Apply filters to the specified user type"""
+        self.current_filters[user_type] = filter_values
+        
+        # Reset to first page when applying filters
+        if user_type == 'student':
+            self.current_students_page = 1
+        else:
+            self.current_faculty_page = 1
+        
+        # Reload data with filters
+        self.load_filtered_data()
+
+    def reset_filters(self, user_type):
+        """Reset filters for the specified user type"""
+        self.current_filters[user_type] = {}
+        self.current_search[user_type] = ""
+        
+        # Reset to first page
+        if user_type == 'student':
+            self.current_students_page = 1
+        else:
+            self.current_faculty_page = 1
+        
+        # Clear search entries
+        if hasattr(self, 'student_search_entry') and user_type == 'student':
+            self.student_search_entry.delete(0, tk.END)
+        elif hasattr(self, 'faculty_search_entry') and user_type == 'faculty':
+            self.faculty_search_entry.delete(0, tk.END)
+        
+        # Reload data without filters
+        self.load_filtered_data()
+
+    def on_search_change(self, user_type, search_term):
+        """Handle search term changes"""
+        self.current_search[user_type] = search_term
+        
+        # Reset to first page when searching
+        if user_type == 'student':
+            self.current_students_page = 1
+        else:
+            self.current_faculty_page = 1
+        
+        # Reload data with search
+        self.load_filtered_data()
+
+    def load_filtered_data(self):
+        """Load data with current filters and search terms applied"""
+        try:
+            # Load filtered students
+            student_filters = self.current_filters.get('student', {})
+            success, students = self.db_manager.get_students_with_filters(
+                search_term=self.current_search.get('student', ""),
+                year_filter=student_filters.get('year', ""),
+                section_filter=student_filters.get('section', ""),
+                program_filter=student_filters.get('program', ""),
+                status_filter=student_filters.get('status', "")
+            )
+            
+            if success:
+                self.students_data = students
+            else:
+                print(f"Error loading filtered students: {students}")
+                self.students_data = []
+            
+            # Load filtered faculty
+            faculty_filters = self.current_filters.get('faculty', {})
+            success, faculty = self.db_manager.get_faculty_with_filters(
+                search_term=self.current_search.get('faculty', ""),
+                status_filter=faculty_filters.get('status', ""),
+                role_filter=faculty_filters.get('role', "")
+            )
+            
+            if success:
+                self.faculty_data = faculty
+            else:
+                print(f"Error loading filtered faculty: {faculty}")
+                self.faculty_data = []
+            
+            # Refresh tables
+            self.refresh_students_table()
+            self.refresh_faculty_table()
+            
+        except Exception as e:
+            print(f"Error in load_filtered_data: {e}")
+            traceback.print_exc()
+
+    def update_search_clear_button(self, user_type):
+        """Update visibility of clear search button"""
+        if user_type == 'student':
+            search_entry = getattr(self, 'student_search_entry', None)
+            clear_btn = getattr(self, 'student_clear_search_btn', None)
+        else:
+            search_entry = getattr(self, 'faculty_search_entry', None)
+            clear_btn = getattr(self, 'faculty_clear_search_btn', None)
+        
+        if search_entry and clear_btn:
+            current_text = search_entry.get().strip()
+            if current_text:
+                # Show clear button if there's any text
+                try:
+                    clear_btn.pack(side="left", padx=(2, 8), pady=4)
+                except:
+                    pass
+            else:
+                # Hide clear button if no text
+                try:
+                    clear_btn.pack_forget()
+                except:
+                    pass
+
+    def clear_search(self, user_type):
+        """Clear search for specified user type"""
+        if user_type == 'student':
+            if hasattr(self, 'student_search_entry'):
+                self.student_search_entry.delete(0, tk.END)
+                try:
+                    self.student_clear_search_btn.pack_forget()
+                except:
+                    pass
+        else:
+            if hasattr(self, 'faculty_search_entry'):
+                self.faculty_search_entry.delete(0, tk.END)
+                try:
+                    self.faculty_clear_search_btn.pack_forget()
+                except:
+                    pass
+        
+        # Trigger search change
+        self.on_search_change(user_type, "")
+
+    def clear_filters(self, user_type):
+        """Clear all filters for user type"""
+        self.reset_filters(user_type)

@@ -963,3 +963,209 @@ class DatabaseManager:
             
         except Exception as e:
             print(f"Error seeding default statuses: {e}")
+
+    def get_filter_options(self):
+        """Get all available filter options from database"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Get all programs
+            cursor.execute("SELECT DISTINCT name FROM programs ORDER BY name")
+            programs = [row[0] for row in cursor.fetchall()]
+            
+            # Get all sections
+            cursor.execute("SELECT DISTINCT name FROM sections ORDER BY name")
+            sections = [row[0] for row in cursor.fetchall()]
+            
+            # Get student statuses
+            cursor.execute("SELECT DISTINCT name FROM statuses WHERE user_type = 'student' ORDER BY name")
+            student_statuses = [row[0] for row in cursor.fetchall()]
+            
+            # Get faculty statuses
+            cursor.execute("SELECT DISTINCT name FROM statuses WHERE user_type = 'faculty' ORDER BY name")
+            faculty_statuses = [row[0] for row in cursor.fetchall()]
+            
+            # Get all roles
+            cursor.execute("SELECT DISTINCT role FROM users WHERE isDeleted = 0 ORDER BY role")
+            roles = [row[0] for row in cursor.fetchall()]
+            
+            # Extract year levels from sections (1-1, 2-1, etc.)
+            years = set()
+            for section in sections:
+                if '-' in section:
+                    year_num = section.split('-')[0]
+                    if year_num.isdigit():
+                        year_mapping = {'1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year'}
+                        if year_num in year_mapping:
+                            years.add(year_mapping[year_num])
+            
+            years = sorted(list(years))
+            
+            conn.close()
+            
+            return {
+                'programs': programs,
+                'sections': sections,
+                'years': years,
+                'student_statuses': student_statuses,
+                'faculty_statuses': faculty_statuses,
+                'roles': roles
+            }
+            
+        except Exception as e:
+            print(f"Error getting filter options: {e}")
+            return {
+                'programs': [],
+                'sections': [],
+                'years': [],
+                'student_statuses': [],
+                'faculty_statuses': [],
+                'roles': []
+            }
+
+    def search_and_filter_users(self, search_term="", role_filter="", year_filter="", section_filter="", program_filter="", status_filter=""):
+        """Search and filter users based on multiple criteria"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Base query
+            base_query = """
+            SELECT 
+                u.id,
+                u.first_name,
+                u.last_name,
+                u.first_name || ' ' || u.last_name as full_name,
+                u.email,
+                u.role,
+                u.contact_number,
+                u.birthday,
+                u.verified,
+                u.created_at,
+                s.name as status_name,
+                s.description as status_description,
+                st.student_number,
+                st.section,
+                f.employee_number,
+                sec.name as section_name,
+                p.name as program_name
+            FROM users u
+            LEFT JOIN statuses s ON u.status_id = s.id
+            LEFT JOIN students st ON u.id = st.user_id
+            LEFT JOIN faculties f ON u.id = f.user_id
+            LEFT JOIN sections sec ON st.section = sec.id
+            LEFT JOIN programs p ON sec.course_id = p.id
+            WHERE u.isDeleted = 0
+            """
+            
+            # Build WHERE conditions
+            conditions = []
+            params = []
+            
+            # Search term (searches in name, email, student number, employee number)
+            if search_term:
+                search_conditions = [
+                    "u.first_name LIKE ?",
+                    "u.last_name LIKE ?", 
+                    "u.email LIKE ?",
+                    "st.student_number LIKE ?",
+                    "f.employee_number LIKE ?"
+                ]
+                search_term_param = f"%{search_term}%"
+                conditions.append(f"({' OR '.join(search_conditions)})")
+                params.extend([search_term_param] * 5)
+            
+            # Role filter
+            if role_filter and role_filter != "All":
+                conditions.append("u.role = ?")
+                params.append(role_filter)
+            
+            # Status filter
+            if status_filter and status_filter != "All":
+                conditions.append("s.name = ?")
+                params.append(status_filter)
+            
+            # Year filter (extract from section name)
+            if year_filter and year_filter != "All":
+                year_mapping = {'1st Year': '1', '2nd Year': '2', '3rd Year': '3', '4th Year': '4'}
+                year_num = year_mapping.get(year_filter)
+                if year_num:
+                    conditions.append("sec.name LIKE ?")
+                    params.append(f"{year_num}-%")
+            
+            # Section filter
+            if section_filter and section_filter != "All":
+                conditions.append("sec.name = ?")
+                params.append(section_filter)
+            
+            # Program filter
+            if program_filter and program_filter != "All":
+                # Handle both full names and abbreviations
+                program_mapping = {
+                    'BSIT': 'Bachelor of Science in Information Technology',
+                    'BSCS': 'Bachelor of Science in Computer Science', 
+                    'BSIS': 'Bachelor of Science in Information Systems'
+                }
+                full_program_name = program_mapping.get(program_filter, program_filter)
+                conditions.append("p.name = ?")
+                params.append(full_program_name)
+            
+            # Combine all conditions
+            if conditions:
+                base_query += " AND " + " AND ".join(conditions)
+            
+            # Add ordering
+            base_query += " ORDER BY u.role, u.last_name, u.first_name"
+            
+            cursor.execute(base_query, params)
+            results = cursor.fetchall()
+            
+            users = []
+            for row in results:
+                user_dict = dict(row)
+                users.append(user_dict)
+            
+            conn.close()
+            
+            return True, users
+            
+        except Exception as e:
+            print(f"Error searching and filtering users: {e}")
+            import traceback
+            traceback.print_exc()
+            return False, str(e)
+
+    def get_students_with_filters(self, search_term="", year_filter="", section_filter="", program_filter="", status_filter=""):
+        """Get filtered students specifically"""
+        success, all_users = self.search_and_filter_users(
+            search_term=search_term,
+            role_filter="Student", 
+            year_filter=year_filter,
+            section_filter=section_filter,
+            program_filter=program_filter,
+            status_filter=status_filter
+        )
+        
+        if success:
+            # Filter only students
+            students = [user for user in all_users if user['role'].lower() == 'student']
+            return True, students
+        else:
+            return False, all_users
+
+    def get_faculty_with_filters(self, search_term="", status_filter="", role_filter=""):
+        """Get filtered faculty specifically"""
+        # For faculty, we don't need year/section/program filters
+        success, all_users = self.search_and_filter_users(
+            search_term=search_term,
+            role_filter=role_filter if role_filter and role_filter != "All" else "",
+            status_filter=status_filter
+        )
+        
+        if success:
+            # Filter only faculty and admin
+            faculty = [user for user in all_users if user['role'].lower() in ['faculty', 'admin']]
+            return True, faculty
+        else:
+            return False, all_users
