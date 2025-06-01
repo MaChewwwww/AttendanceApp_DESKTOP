@@ -2,6 +2,8 @@ import customtkinter as ctk
 from PIL import Image, ImageTk
 import os
 from tkinter import font
+from datetime import datetime
+import tkinter as tk
 
 class Sidebar(ctk.CTkFrame):
     def __init__(self, master, switch_view_callback, **kwargs):
@@ -297,3 +299,59 @@ class Sidebar(ctk.CTkFrame):
         except:
             pass
         super().destroy()
+
+class DateTimePill(ctk.CTkFrame):
+    def __init__(self, parent, *args, **kwargs):
+        super().__init__(parent, fg_color="transparent", *args, **kwargs)
+        self.configure(bg_color="transparent")
+        self.build_ui()
+        self.update_time()
+
+    def build_ui(self):
+        # Date/time pill
+        self.pill = ctk.CTkFrame(
+            self, fg_color="#fff", corner_radius=20,
+            border_width=1, border_color="#D1D5DB"
+        )
+        self.pill.pack(side="left", padx=(0, 10), pady=5)
+
+        self.date_label = ctk.CTkLabel(
+            self.pill,
+            text="",
+            font=ctk.CTkFont(family="Inter", size=14, weight="bold"),
+            text_color="#222"
+        )
+        self.date_label.pack(padx=16, pady=4)
+
+        # Bell icon button (emoji)
+        self.bell_btn = ctk.CTkButton(
+            self,
+            width=36, height=36,
+            fg_color="#fff",
+            corner_radius=18,
+            text="🔔",
+            font=ctk.CTkFont(size=18),
+            hover_color="#E5E7EB",
+            border_width=1,
+            border_color="#D1D5DB"
+        )
+        self.bell_btn.pack(side="left", padx=(0, 10))
+
+        # User icon button (emoji)
+        self.user_btn = ctk.CTkButton(
+            self,
+            width=36, height=36,
+            fg_color="#1E3A8A",
+            corner_radius=18,
+            text="👤",
+            font=ctk.CTkFont(size=18),
+            text_color="#fff",
+            hover_color="#1E40AF"
+        )
+        self.user_btn.pack(side="left")
+
+    def update_time(self):
+        now = datetime.now()
+        formatted = now.strftime("%B %#d, %Y  %#I:%M %p")
+        self.date_label.configure(text=formatted)
+        self.after(1000, self.update_time)

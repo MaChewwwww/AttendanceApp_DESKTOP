@@ -4,6 +4,7 @@ from views.dashboard import DashboardView
 from views.users import UsersView
 from views.sections import SectionsView
 from views.programs import ProgramsView
+from views.courses import CoursesView
 
 class AdminDashboard(ctk.CTk):
     def __init__(self, on_logout=None):
@@ -57,25 +58,31 @@ class AdminDashboard(ctk.CTk):
             self.load_sections_view()
         elif view_name == "programs":
             self.load_programs_view()
+        elif view_name == "courses":
+            self.load_courses_view()
         elif view_name == "logout":
             self.logout()
     
     def load_dashboard_view(self):
         view = DashboardView(self.content_frame)
-        view.pack(fill="both", expand=True, padx=20, pady=20)
+        view.pack(fill="both", expand=True, padx=20)
         
     def load_users_view(self):
         view = UsersView(self.content_frame)
-        view.pack(fill="both", expand=True, padx=20, pady=20)
+        view.pack(fill="both", expand=True, padx=20)
         
     def load_sections_view(self):
         view = SectionsView(self.content_frame)
-        view.pack(fill="both", expand=True, padx=20, pady=20)
+        view.pack(fill="both", expand=True, padx=20)
         
     def load_programs_view(self):
         view = ProgramsView(self.content_frame)
-        view.pack(fill="both", expand=True, padx=20, pady=20)
-        
+        view.pack(fill="both", expand=True, padx=20)
+    
+    def load_courses_view(self):
+        view = CoursesView(self.content_frame)
+        view.pack(fill="both", expand=True, padx=20)
+    
     def logout(self):
         """Handle logout functionality"""
         if self.on_logout:

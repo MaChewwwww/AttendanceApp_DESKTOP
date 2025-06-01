@@ -1,7 +1,7 @@
 import customtkinter as ctk
 from app.ui.admin.components.sidebar import DateTimePill
 
-class SectionsView(ctk.CTkFrame):
+class CoursesView(ctk.CTkFrame):
     def __init__(self, parent):
         super().__init__(parent, fg_color="transparent")
         self.setup_ui()
@@ -16,7 +16,7 @@ class SectionsView(ctk.CTkFrame):
 
         label = ctk.CTkLabel(
             self,
-            text="Sections",
+            text="Courses",
             font=ctk.CTkFont(family="Inter", size=20, weight="bold"),
             text_color="black"
         )
