@@ -1479,7 +1479,7 @@ class RegisterForm(ctk.CTkFrame):
         self.terms_modal = ctk.CTkToplevel(self)
         self.terms_modal.title("Terms of Use & Privacy Statement")
         self.terms_modal.geometry("700x600")  # Increased size for better readability
-        self.terms_modal.resizable(True, True)
+        self.terms_modal.resizable(False, False)  # Disable resizing to prevent fullscreen
         self.terms_modal.configure(fg_color="#ffffff")
         
         # Make modal and center it

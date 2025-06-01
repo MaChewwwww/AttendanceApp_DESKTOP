@@ -596,11 +596,13 @@ Best regards,
             body_text = f"""
 Hello {first_name},
 
+Thank you for registering with {APP_NAME}!
+
 Your registration verification code is: {otp_code}
 
 This code will expire in 15 minutes.
 
-If you didn't request this registration, please ignore this email.
+If you didn't create an account, please ignore this email.
 
 Best regards,
 {APP_NAME} Team
@@ -615,14 +617,14 @@ Best regards,
     <style>
         body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
         .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-        .header {{ background-color: #F59E0B; color: white; padding: 20px; text-align: center; }}
+        .header {{ background-color: #10B981; color: white; padding: 20px; text-align: center; }}
         .content {{ padding: 20px; background-color: #f9f9f9; }}
         .otp-code {{ 
             display: inline-block; 
             padding: 15px 25px; 
-            background-color: #fef3c7; 
-            border: 2px solid #F59E0B;
-            color: #F59E0B; 
+            background-color: #f0fdf4; 
+            border: 2px solid #10B981;
+            color: #10B981; 
             font-size: 24px;
             font-weight: bold;
             letter-spacing: 3px;
@@ -636,17 +638,17 @@ Best regards,
     <div class="container">
         <div class="header">
             <h1>{APP_NAME}</h1>
-            <h2>Registration Verification</h2>
         </div>
         <div class="content">
-            <h2>Almost Done!</h2>
+            <h2>Registration Verification</h2>
             <p>Hello {first_name},</p>
-            <p>To complete your registration, please enter this verification code:</p>
+            <p>Thank you for registering with {APP_NAME}!</p>
+            <p>Your registration verification code is:</p>
             <div style="text-align: center;">
                 <span class="otp-code">{otp_code}</span>
             </div>
             <p><strong>This code will expire in 15 minutes.</strong></p>
-            <p>If you didn't request this registration, please ignore this email.</p>
+            <p>If you didn't create an account, please ignore this email.</p>
         </div>
         <div class="footer">
             <p>© 2024 {APP_NAME}. All rights reserved.</p>

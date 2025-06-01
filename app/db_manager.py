@@ -624,6 +624,136 @@ class DatabaseManager:
             print(f"Error cleaning up expired OTPs: {e}")
             return False, str(e)
 
+    def create_password_reset_otp(self, email):
+        """Create and send password reset OTP for a user"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Check if user exists
+            cursor.execute("SELECT id, first_name FROM users WHERE email = ?", (email,))
+            user = cursor.fetchone()
+            
+            if not user:
+                conn.close()
+                return False, "No account found with this email address"
+            
+            user_id, first_name = user
+            
+            # Generate OTP
+            otp_code = self.generate_otp()
+            expires_at = datetime.now() + timedelta(minutes=15)  # Password reset OTP expires in 15 minutes
+            
+            # Store OTP in database
+            cursor.execute("""
+                INSERT INTO otp_requests (user_id, otp_code, type, created_at, expires_at, email)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (user_id, otp_code, 'password_reset', datetime.now().isoformat(), expires_at.isoformat(), email))
+            
+            conn.commit()
+            conn.close()
+            
+            # Send password reset OTP email
+            success, message = self.email_service.send_password_reset_otp_email(email, first_name, otp_code)
+            
+            if success:
+                return True, "Password reset verification code sent successfully to your email"
+            else:
+                return False, f"Failed to send verification code: {message}"
+            
+        except Exception as e:
+            print(f"Error creating password reset OTP: {e}")
+            return False, str(e)
+
+    def verify_password_reset_otp(self, email, otp_code):
+        """Verify password reset OTP"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Find valid password reset OTP
+            cursor.execute("""
+                SELECT o.user_id, u.first_name
+                FROM otp_requests o
+                JOIN users u ON o.user_id = u.id
+                WHERE u.email = ? AND o.otp_code = ? AND o.type = 'password_reset' 
+                AND o.expires_at > ? 
+                ORDER BY o.created_at DESC
+                LIMIT 1
+            """, (email, otp_code, datetime.now().isoformat()))
+            
+            result = cursor.fetchone()
+            
+            if not result:
+                conn.close()
+                return False, "Invalid or expired OTP code"
+            
+            # OTP is valid but don't delete it yet - wait for password reset completion
+            conn.close()
+            return True, "OTP verified successfully"
+            
+        except Exception as e:
+            print(f"Error verifying password reset OTP: {e}")
+            return False, str(e)
+
+    def reset_password_with_otp(self, email, otp_code, new_password):
+        """Reset password using OTP verification"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Find valid password reset OTP
+            cursor.execute("""
+                SELECT o.user_id, o.id
+                FROM otp_requests o
+                JOIN users u ON o.user_id = u.id
+                WHERE u.email = ? AND o.otp_code = ? AND o.type = 'password_reset' 
+                AND o.expires_at > ? 
+                ORDER BY o.created_at DESC
+                LIMIT 1
+            """, (email, otp_code, datetime.now().isoformat()))
+            
+            result = cursor.fetchone()
+            
+            if not result:
+                conn.close()
+                return False, "Invalid or expired OTP code"
+            
+            user_id, otp_id = result
+            
+            # Hash the new password
+            hashed_pw = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+            
+            # Begin transaction
+            conn.execute("BEGIN TRANSACTION")
+            
+            try:
+                # Update user password
+                cursor.execute("""
+                    UPDATE users 
+                    SET password_hash = ?, updated_at = ?
+                    WHERE id = ?
+                """, (hashed_pw.decode('utf-8'), datetime.now().isoformat(), user_id))
+                
+                # Delete used OTP
+                cursor.execute("DELETE FROM otp_requests WHERE id = ?", (otp_id,))
+                
+                # Commit transaction
+                conn.commit()
+                conn.close()
+                
+                print(f"Password reset successfully for user ID: {user_id}")
+                return True, "Password reset successfully"
+                
+            except Exception as e:
+                conn.rollback()
+                conn.close()
+                return False, f"Failed to reset password: {str(e)}"
+            
+        except Exception as e:
+            print(f"Error resetting password with OTP: {e}")
+            return False, str(e)
+
     def _initialize_database(self):
         """Initialize database tables if they don't exist"""
         try:
