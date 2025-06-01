@@ -16,6 +16,14 @@ class AdminDashboard(ctk.CTk):
         self.title("Admin Dashboard")
         self.geometry("1280x720")
         
+        # Center the window on the screen
+        self.update_idletasks()
+        width = 1280
+        height = 720
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry(f"{width}x{height}+{x}+{y}")
+
         # Configure grid and set window background to match content
         self.configure(fg_color="#f5f5f5")
         self.grid_columnconfigure(1, weight=1)

@@ -18,14 +18,15 @@ class FilterPopup(ctk.CTkToplevel):
         
         # Center the window
         self.update_idletasks()
-        width = self.winfo_width()
-        height = self.winfo_height()
-        x = (self.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.winfo_screenheight() // 2) - (height // 2)
-        self.geometry(f'{width}x{height}+{x}+{y}')
+        self._center_window(400, 500)
         
         self.setup_ui()
     
+    def _center_window(self, width, height):
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry(f"{width}x{height}+{x}+{y}")
+
     def setup_ui(self):
         # Header
         ctk.CTkLabel(
@@ -134,7 +135,15 @@ class ActionPopup(ctk.CTkToplevel):
         self.grab_set()
         self.action = action
         self.user_data = user_data
+        self.update_idletasks()
+        # Center for default, will re-center for other actions in setup_ui
+        self._center_window(350, 220)
         self.setup_ui()
+
+    def _center_window(self, width, height):
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry(f"{width}x{height}+{x}+{y}")
 
     def setup_ui(self):
         action = self.action
@@ -142,6 +151,8 @@ class ActionPopup(ctk.CTkToplevel):
         name, year, section, program = self.user_data
         if action == "View":
             self.geometry("640x720")
+            self.update_idletasks()
+            self._center_window(640, 720)
             self.configure(fg_color="#F5F5F5")
             # Top frame for image, user info, and export button
             top_frame = ctk.CTkFrame(self, fg_color="#F5F5F5")
@@ -217,6 +228,8 @@ class ActionPopup(ctk.CTkToplevel):
         else:
             if action == "Edit":
                 self.geometry("640x720")
+                self.update_idletasks()
+                self._center_window(640, 720)
                 # Title
                 ctk.CTkLabel(self, text="Edit Student Profile", font=ctk.CTkFont(size=18, weight="bold"), text_color="#000").pack(anchor="w", padx=30, pady=(20, 10))
                 # Main form frame
@@ -265,6 +278,8 @@ class ActionPopup(ctk.CTkToplevel):
             elif action == "Delete":
                 # Responsive Modern Delete Modal
                 self.geometry("340x210")
+                self.update_idletasks()
+                self._center_window(340, 210)
                 self.configure(fg_color="#FAFAFA")
                 # Card frame for rounded corners, responsive
                 card = ctk.CTkFrame(self, fg_color="#fff", corner_radius=16)
@@ -341,15 +356,15 @@ class FacialRecognitionPopup(ctk.CTkToplevel):
         self.maxsize(454, 450)
         self.transient(parent)
         self.grab_set()
-        # Center the window
         self.update_idletasks()
-        screen_width = self.winfo_screenwidth()
-        screen_height = self.winfo_screenheight()
-        x = (screen_width - 454) // 2
-        y = (screen_height - 450) // 2
-        self.geometry(f"454x450+{x}+{y}")
+        self._center_window(454, 450)
         self.update()
         self._create_verification_dialog_content()
+
+    def _center_window(self, width, height):
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry(f"{width}x{height}+{x}+{y}")
 
     def _create_verification_dialog_content(self):
         """Create content for the face verification dialog (as main popup content)"""
@@ -480,6 +495,8 @@ class CautionModal(ctk.CTkToplevel):
         self.configure(fg_color="#FAFAFA")
         self.transient(parent)
         self.grab_set()
+        self.update_idletasks()
+        self._center_window(340, 210)
         # Card frame for rounded corners, responsive
         card = ctk.CTkFrame(self, fg_color="#fff", corner_radius=16)
         card.pack(expand=True, fill="both", padx=16, pady=16)
@@ -517,6 +534,11 @@ class CautionModal(ctk.CTkToplevel):
             command=self.show_success_modal
         ).pack(side="left", expand=True, fill="x", padx=(8, 0))
 
+    def _center_window(self, width, height):
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry(f"{width}x{height}+{x}+{y}")
+
     def show_success_modal(self):
         SuccessModal(self)
 
@@ -529,6 +551,8 @@ class SuccessModal(ctk.CTkToplevel):
         self.configure(fg_color="#FAFAFA")
         self.transient(parent)
         self.grab_set()
+        self.update_idletasks()
+        self._center_window(340, 210)
         self._parent_modal = parent
         # Card frame for rounded corners, responsive and matching other modals
         card = ctk.CTkFrame(self, fg_color="#fff", corner_radius=16)
@@ -556,8 +580,12 @@ class SuccessModal(ctk.CTkToplevel):
             hover_color="#16a34a",
             font=ctk.CTkFont(size=15, weight="bold"),
             corner_radius=8,
-            command=self._close_all
-        ).pack(expand=True, fill="both", padx=0)
+            command=self._close_all        ).pack(expand=True, fill="both", padx=0)
+
+    def _center_window(self, width, height):
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry(f"{width}x{height}+{x}+{y}")
 
     def _close_all(self):
         self.destroy()
