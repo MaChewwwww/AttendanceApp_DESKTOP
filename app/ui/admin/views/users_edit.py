@@ -328,8 +328,8 @@ class UsersEditModal(ctk.CTkToplevel):
     def load_dropdown_options(self):
         """Load dropdown options from backend"""
         try:
-            # Get dropdown options for this user type and store for validation
-            success, dropdown_data = self.db_manager.get_user_update_dropdown_data(self.user_type)
+            # Get dropdown options for this user type using existing method
+            success, dropdown_data = self.db_manager.get_dropdown_options_for_user_type(self.user_type)
             
             if success:
                 self.dropdown_data = dropdown_data
