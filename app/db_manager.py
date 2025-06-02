@@ -1385,19 +1385,17 @@ class DatabaseManager:
     def get_user_details(self, user_id):
         """Get detailed user information from database for a specific user"""
         try:
-            if not user_id:
-                return {}
-            
             conn = self.get_connection()
             cursor = conn.cursor()
             
-            # Get specific user details with joins
+            # Get comprehensive user data with joins - only existing columns
             query = """
             SELECT 
-                u.*,
+                u.id, u.first_name, u.last_name, u.email, u.birthday, 
+                u.contact_number, u.role, u.face_image, u.status_id, 
+                u.verified, u.isDeleted, u.created_at, u.updated_at,
                 s.name as status_name,
-                st.student_number,
-                st.section as section_id,
+                st.student_number, st.section as section_id,
                 f.employee_number,
                 sec.name as section_name,
                 p.name as program_name
@@ -1412,18 +1410,36 @@ class DatabaseManager:
             
             cursor.execute(query, (user_id,))
             result = cursor.fetchone()
-            conn.close()
             
             if not result:
-                print(f"User with ID {user_id} not found")
-                return {}
+                conn.close()
+                return (False, "User not found")
             
-            user_details = dict(result)
-            # Add full_name for convenience
-            user_details['full_name'] = f"{user_details['first_name']} {user_details['last_name']}"
+            # Convert row to dictionary - only include existing columns
+            user_data = {
+                'id': result['id'],
+                'first_name': result['first_name'],
+                'last_name': result['last_name'],
+                'email': result['email'],
+                'birthday': result['birthday'],
+                'contact_number': result['contact_number'] or '',
+                'role': result['role'],
+                'face_image': result['face_image'],
+                'status_id': result['status_id'],
+                'status_name': result['status_name'] or 'No Status',
+                'verified': result['verified'],
+                'created_at': result['created_at'],
+                'updated_at': result['updated_at'],
+                'student_number': result['student_number'] if result['student_number'] else '',
+                'section_id': result['section_id'],
+                'section_name': result['section_name'] or '',
+                'employee_number': result['employee_number'] if result['employee_number'] else '',
+                'program_name': result['program_name'] or ''
+            }
             
-            return user_details
-                
+            conn.close()
+            return (True, user_data)
+            
         except Exception as e:
             print(f"Error getting user details: {e}")
-            return {}
+            return (False, f"Database error: {str(e)}")

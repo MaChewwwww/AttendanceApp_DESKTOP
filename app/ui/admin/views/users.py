@@ -905,7 +905,7 @@ class UsersView(ctk.CTkFrame):
         if action == "View":
             UsersViewModal(self, data, "student")
         elif action == "Edit":
-            UsersEditModal(self, data, "student")
+            UsersEditModal(self, data['id'], "student")  # Pass user ID
         elif action == "Delete":
             UsersDeleteModal(self, data, "student")
 
@@ -914,7 +914,7 @@ class UsersView(ctk.CTkFrame):
         if action == "View":
             UsersViewModal(self, data, "faculty")
         elif action == "Edit":
-            UsersEditModal(self, data, "faculty")
+            UsersEditModal(self, data['id'], "faculty")  # Pass user ID
         elif action == "Delete":
             UsersDeleteModal(self, data, "faculty")
 

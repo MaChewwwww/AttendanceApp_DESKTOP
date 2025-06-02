@@ -40,18 +40,25 @@ class UsersViewModal(ctk.CTkToplevel):
             if not user_id:
                 return {}
             
-            # Use the reusable method from db_manager
-            user_details = self.db_manager.get_user_details(user_id)
+            # Use the reusable method from db_manager - handle tuple return
+            success, user_details = self.db_manager.get_user_details(user_id)
             
-            if not user_details:
+            if not success:
+                print(f"Failed to get user details: {user_details}")
                 return {}
+            
+            # Add full_name for compatibility
+            if user_details:
+                first_name = user_details.get('first_name', '')
+                last_name = user_details.get('last_name', '')
+                user_details['full_name'] = f"{first_name} {last_name}".strip()
             
             # Verify user type matches and is not deleted
-            if self.user_type == "student" and user_details['role'] != 'Student':
-                print(f"User type mismatch: expected student, got {user_details['role']}")
+            if self.user_type == "student" and user_details.get('role') != 'Student':
+                print(f"User type mismatch: expected student, got {user_details.get('role')}")
                 return {}
-            elif self.user_type == "faculty" and user_details['role'] not in ['Faculty', 'Admin']:
-                print(f"User type mismatch: expected faculty/admin, got {user_details['role']}")
+            elif self.user_type == "faculty" and user_details.get('role') not in ['Faculty', 'Admin']:
+                print(f"User type mismatch: expected faculty/admin, got {user_details.get('role')}")
                 return {}
             
             return user_details
