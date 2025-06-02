@@ -100,25 +100,19 @@ class UsersEditModal(ctk.CTkToplevel):
         )
         fr_btn.pack(fill="x", pady=(10, 8))
         
-        # Image/file preview box
-        self.preview_frame = ctk.CTkFrame(right_col, fg_color="#fff")
-        self.preview_frame.pack(fill="x", pady=(0, 10))
+        # Face data status (text only - no image preview)
+        self.face_status_frame = ctk.CTkFrame(right_col, fg_color="#fff", height=50)
+        self.face_status_frame.pack(fill="x", pady=(0, 10))
+        self.face_status_frame.pack_propagate(False)
         
-        self.img_frame = ctk.CTkFrame(self.preview_frame, fg_color="#222", width=40, height=40, corner_radius=6)
-        self.img_frame.pack(side="left", pady=(0, 0), padx=(0, 8))
-        self.img_frame.pack_propagate(False)
-        
-        self.img_label = ctk.CTkLabel(self.img_frame, text="", fg_color="#222")
-        self.img_label.pack(expand=True, fill="both")
-        
-        file_info = ctk.CTkFrame(self.preview_frame, fg_color="#fff")
-        file_info.pack(fill="x", pady=(0, 0))
-        
-        self.file_name_label = ctk.CTkLabel(file_info, text="No image", font=ctk.CTkFont(size=13, weight="bold"), text_color="#000")
-        self.file_name_label.pack(anchor="w")
-        
-        self.file_type_label = ctk.CTkLabel(file_info, text="", font=ctk.CTkFont(size=11), text_color="#757575")
-        self.file_type_label.pack(anchor="w")
+        self.face_status_label = ctk.CTkLabel(
+            self.face_status_frame, 
+            text="No Face Data", 
+            font=ctk.CTkFont(size=13, weight="bold"), 
+            text_color="#757575",
+            anchor="w"
+        )
+        self.face_status_label.pack(anchor="w", padx=10, pady=15)
         
         # Bottom buttons
         btns_frame = ctk.CTkFrame(self, fg_color="#fff")
@@ -199,42 +193,44 @@ class UsersEditModal(ctk.CTkToplevel):
                 self.face_image = Image.open(io.BytesIO(face_data))
                 self.face_image_data = face_data
                 
-                # Update preview
-                self.update_image_preview()
+                # Update status
+                self.update_face_status()
+            else:
+                # No face data
+                self.face_image_data = None
+                self.update_face_status()
                 
         except Exception as e:
             print(f"Error loading existing face image: {e}")
+            self.update_face_status(error=True)
 
-    def update_image_preview(self):
-        """Update the image preview area"""
+    def update_face_status(self, error=False):
+        """Update the face data status with text only"""
         try:
-            if self.face_image:
-                # Create thumbnail for preview
-                thumbnail = self.face_image.copy()
-                thumbnail.thumbnail((40, 40), Image.LANCZOS)
-                
-                # Convert to PhotoImage
-                photo = ImageTk.PhotoImage(thumbnail)
-                
-                # Update image label
-                self.img_label.configure(image=photo, text="")
-                self.img_label.image = photo  # Keep reference
-                
-                # Update file info
-                self.file_name_label.configure(text="face_image.jpg")
-                self.file_type_label.configure(text=".jpg")
-                
-                # Update frame color to indicate image present
-                self.img_frame.configure(fg_color="#4CAF50")
+            if error:
+                # Error state
+                self.face_status_label.configure(
+                    text="✗ Error loading face data",
+                    text_color="#dc2626"
+                )
+                self.face_status_frame.configure(fg_color="#fef2f2")
+            elif self.face_image_data or (hasattr(self, 'face_image') and self.face_image):
+                # Valid face data
+                self.face_status_label.configure(
+                    text="✓ Face data available",
+                    text_color="#10b981"
+                )
+                self.face_status_frame.configure(fg_color="#f0fdf4")
             else:
-                # No image
-                self.img_label.configure(image="", text="")
-                self.file_name_label.configure(text="No image")
-                self.file_type_label.configure(text="")
-                self.img_frame.configure(fg_color="#222")
+                # No face data
+                self.face_status_label.configure(
+                    text="No Face Data",
+                    text_color="#757575"
+                )
+                self.face_status_frame.configure(fg_color="#fff")
                 
         except Exception as e:
-            print(f"Error updating image preview: {e}")
+            print(f"Error updating face status: {e}")
 
     def open_facial_recognition(self):
         """Open facial recognition popup"""
