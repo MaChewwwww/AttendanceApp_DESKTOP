@@ -593,57 +593,32 @@ class UsersView(ctk.CTkFrame):
                 anchor="w"
             ).grid(row=0, column=i, padx=10, pady=6, sticky="w")
 
-        # Use only database data - no sample data fallback
+        # Use simplified data processing
         data_to_display = []
         
         if self.students_data:
             # Get data for current page
             paginated_students = self.get_students_for_page(self.current_students_page)
             
-            # Get additional data from database for each student
             for student in paginated_students:
-                # Get section and program info
-                section_name = "N/A"
-                program_name = "N/A"
+                # Extract year from section name
+                section_name = student.get('section_name', 'N/A')
                 year_level = "N/A"
                 
-                try:
-                    conn = self.db_manager.get_connection()
-                    cursor = conn.cursor()
-                    
-                    # Get section and program info if section ID exists
-                    if student.get('section'):
-                        cursor.execute("""
-                            SELECT s.name as section_name, p.name as program_name
-                            FROM sections s
-                            JOIN programs p ON s.course_id = p.id
-                            WHERE s.id = ?
-                        """, (student['section'],))
-                        
-                        result = cursor.fetchone()
-                        if result:
-                            section_name = result['section_name']
-                            program_name = result['program_name']
-                            
-                            # Extract year from section name (e.g., "1-1" -> "1st Year")
-                            section_year = section_name.split('-')[0]
-                            year_mapping = {'1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year'}
-                            year_level = year_mapping.get(section_year, f"Year {section_year}")
-                            
-                            # Shorten program name for display
-                            if "Information Technology" in program_name:
-                                program_name = "BSIT"
-                            elif "Computer Science" in program_name:
-                                program_name = "BSCS"
-                            elif "Information Systems" in program_name:
-                                program_name = "BSIS"
-                    
-                    conn.close()
-                    
-                except Exception as e:
-                    print(f"Error getting student details: {e}")
+                if section_name and '-' in section_name:
+                    section_year = section_name.split('-')[0]
+                    year_mapping = {'1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year'}
+                    year_level = year_mapping.get(section_year, f"Year {section_year}")
                 
-                # Convert database format to display format
+                # Shorten program name for display
+                program_name = student.get('program_name', 'N/A')
+                if "Information Technology" in program_name:
+                    program_name = "BSIT"
+                elif "Computer Science" in program_name:
+                    program_name = "BSCS"
+                elif "Information Systems" in program_name:
+                    program_name = "BSIS"
+                
                 data_to_display.append((
                     student['full_name'],
                     year_level,
@@ -659,7 +634,7 @@ class UsersView(ctk.CTkFrame):
                 font=ctk.CTkFont(size=14),
                 text_color="#6B7280"
             )
-            no_data_label.grid(row=1, column=0, columnspan=6, pady=20)  # Updated columnspan
+            no_data_label.grid(row=1, column=0, columnspan=6, pady=20)
         else:
             for idx, (name, year, section, program) in enumerate(data_to_display, start=1):
                 bg = "#fff"
@@ -795,7 +770,7 @@ class UsersView(ctk.CTkFrame):
 
         # Columns for faculty (removed Photo column)
         columns = ["Faculty Name", "Employee Number", "Email", "Role", "Status", "Actions"]
-        col_widths = [4, 2, 4, 2, 2, 2]  # Removed photo column weight
+        col_widths = [4, 2, 4, 2, 2, 2]
         for i, weight in enumerate(col_widths):
             table_frame.grid_columnconfigure(i, weight=weight)
 
@@ -809,7 +784,7 @@ class UsersView(ctk.CTkFrame):
                 anchor="w"
             ).grid(row=0, column=i, padx=10, pady=6, sticky="w")
 
-        # Use only database data - no sample data fallback
+        # Use simplified data processing
         data_to_display = []
         
         if self.faculty_data:
@@ -817,7 +792,6 @@ class UsersView(ctk.CTkFrame):
             paginated_faculty = self.get_faculty_for_page(self.current_faculty_page)
             
             for faculty in paginated_faculty:
-                # Convert database format to display format
                 data_to_display.append((
                     faculty['full_name'],
                     faculty.get('employee_number', 'N/A'),
@@ -833,7 +807,7 @@ class UsersView(ctk.CTkFrame):
                 font=ctk.CTkFont(size=14),
                 text_color="#6B7280"
             )
-            no_data_label.grid(row=1, column=0, columnspan=6, pady=20)  # Updated columnspan
+            no_data_label.grid(row=1, column=0, columnspan=6, pady=20)
         else:
             for idx, (name, emp_num, email, role) in enumerate(data_to_display, start=1):
                 bg = "#fff"
@@ -954,7 +928,7 @@ class UsersView(ctk.CTkFrame):
     def load_filtered_data(self):
         """Load data with current filters and search terms applied"""
         try:
-            # Load filtered students
+            # Load filtered students using db_manager method
             student_filters = self.current_filters.get('student', {})
             success, students = self.db_manager.get_students_with_filters(
                 search_term=self.current_search.get('student', ""),
@@ -966,11 +940,12 @@ class UsersView(ctk.CTkFrame):
             
             if success:
                 self.students_data = students
+                print(f"Loaded {len(students)} students")
             else:
                 print(f"Error loading filtered students: {students}")
                 self.students_data = []
             
-            # Load filtered faculty
+            # Load filtered faculty using db_manager method
             faculty_filters = self.current_filters.get('faculty', {})
             success, faculty = self.db_manager.get_faculty_with_filters(
                 search_term=self.current_search.get('faculty', ""),
@@ -980,6 +955,7 @@ class UsersView(ctk.CTkFrame):
             
             if success:
                 self.faculty_data = faculty
+                print(f"Loaded {len(faculty)} faculty")
             else:
                 print(f"Error loading filtered faculty: {faculty}")
                 self.faculty_data = []

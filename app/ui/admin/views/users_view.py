@@ -32,51 +32,29 @@ class UsersViewModal(ctk.CTkToplevel):
         self.geometry(f"{width}x{height}+{x}+{y}")
 
     def get_user_details(self):
-        """Get detailed user information from database"""
+        """Get detailed user information from database using db_manager method"""
         try:
-            conn = self.db_manager.get_connection()
-            cursor = conn.cursor()
-            
             # Use user ID from user_data 
             user_id = self.user_data.get('id')
             
             if not user_id:
-                conn.close()
                 return {}
             
-            if self.user_type == "student":
-                query = """
-                SELECT u.*, s.student_number, st.name as status_name,
-                       sec.name as section_name, p.name as program_name
-                FROM users u
-                LEFT JOIN students s ON u.id = s.user_id
-                LEFT JOIN statuses st ON u.status_id = st.id
-                LEFT JOIN sections sec ON s.section = sec.id
-                LEFT JOIN programs p ON sec.course_id = p.id
-                WHERE u.id = ? AND u.role = 'Student' AND u.isDeleted = 0
-                LIMIT 1
-                """
-            else:
-                query = """
-                SELECT u.*, f.employee_number, st.name as status_name
-                FROM users u
-                LEFT JOIN faculties f ON u.id = f.user_id
-                LEFT JOIN statuses st ON u.status_id = st.id
-                WHERE u.id = ? AND u.role IN ('Faculty', 'Admin') AND u.isDeleted = 0
-                LIMIT 1
-                """
+            # Use the reusable method from db_manager
+            user_details = self.db_manager.get_user_details(user_id)
             
-            cursor.execute(query, (user_id,))
-            result = cursor.fetchone()
-            conn.close()
-            
-            if result:
-                user_dict = dict(result)
-                # Add full_name for consistency
-                user_dict['full_name'] = f"{user_dict['first_name']} {user_dict['last_name']}"
-                return user_dict
-            else:
+            if not user_details:
                 return {}
+            
+            # Verify user type matches and is not deleted
+            if self.user_type == "student" and user_details['role'] != 'Student':
+                print(f"User type mismatch: expected student, got {user_details['role']}")
+                return {}
+            elif self.user_type == "faculty" and user_details['role'] not in ['Faculty', 'Admin']:
+                print(f"User type mismatch: expected faculty/admin, got {user_details['role']}")
+                return {}
+            
+            return user_details
                 
         except Exception as e:
             print(f"Error getting user details: {e}")
@@ -219,9 +197,10 @@ class UsersViewModal(ctk.CTkToplevel):
         self.refresh_table()
 
     def on_search_change(self, event=None):
-        """Handle search input changes"""
+        """Handle search input changes - simplified"""
         if hasattr(self, 'search_entry'):
             self.current_search = self.search_entry.get()
+            # Apply the search filter
             self.apply_filter()
 
     def refresh_table(self):
@@ -297,60 +276,42 @@ class UsersViewModal(ctk.CTkToplevel):
             fg_color="transparent"
         ).pack(pady=8)
 
-        # Search bar with export button aligned
+        # Search bar with export button aligned - COPIED FROM users.py
         search_bar_container = ctk.CTkFrame(self, fg_color="#F5F5F5")
         search_bar_container.pack(pady=(0, 10), padx=20, fill="x")
-        
-        # Search entry frame
-        search_entry_frame = ctk.CTkFrame(
-            search_bar_container, 
-            fg_color="#fff", 
-            border_color="#BDBDBD", 
-            border_width=1, 
-            corner_radius=0, 
-            height=36
-        )
+
+        # Search entry with icon - NO CLEAR BUTTON
+        search_entry_frame = ctk.CTkFrame(search_bar_container, fg_color="#fff", border_color="#BDBDBD", border_width=1, corner_radius=0, height=36)
         search_entry_frame.pack(side="left", pady=0, padx=0)
         search_entry_frame.pack_propagate(False)
-        
-        search_icon = ctk.CTkLabel(
-            search_entry_frame, 
-            text="🔍", 
-            font=ctk.CTkFont(size=16), 
-            text_color="#757575", 
-            fg_color="#fff", 
-            width=28, 
-            height=28
-        )
+        search_icon = ctk.CTkLabel(search_entry_frame, text="\U0001F50D", font=ctk.CTkFont(size=16), text_color="#757575", fg_color="#fff", width=28, height=28)
         search_icon.pack(side="left", padx=(8, 0), pady=4)
         
-        self.search_entry = ctk.CTkEntry(
-            search_entry_frame, 
-            placeholder_text="Search courses...", 
-            width=200, 
-            fg_color="#fff",
-            border_color="#fff", 
-            border_width=0, 
-            text_color="#000", 
-            font=ctk.CTkFont(size=15), 
-            height=28
-        )
+        self.search_entry = ctk.CTkEntry(search_entry_frame, placeholder_text="Search courses...", width=160, fg_color="#fff",
+                            border_color="#fff", border_width=0, text_color="#222", font=ctk.CTkFont(size=15), height=28)
         self.search_entry.pack(side="left", padx=(2, 8), pady=4)
-        self.search_entry.bind('<Return>', self.on_search_change)
+        
+        # Set current search value if it exists
+        if self.current_search:
+            self.search_entry.insert(0, self.current_search)
+        
+        # Bind search functionality - simplified
+        self.search_entry.bind('<Return>', lambda e: self.on_search_change())
+        self.search_entry.bind('<FocusOut>', self.on_search_change)
 
-        # Export button aligned with search
+        # Export button aligned with search - right side
         export_btn = ctk.CTkButton(
             search_bar_container, 
             text="Export", 
             fg_color="#1E3A8A", 
             hover_color="#1D4ED8", 
             text_color="#fff", 
-            width=70, 
+            width=80, 
             height=36, 
             corner_radius=8,
             command=self.export_data
         )
-        export_btn.pack(side="right")
+        export_btn.pack(side="right", padx=(10, 0))
 
         # Table
         self.table_frame = ctk.CTkFrame(self, fg_color="#fff", border_color="#E5E7EB", border_width=1, corner_radius=8)

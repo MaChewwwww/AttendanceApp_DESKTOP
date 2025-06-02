@@ -343,10 +343,12 @@ def seed_assigned_courses_and_attendance():
                 return True
             
             # Define student performance categories with realistic distributions
-            excellent_students = int(len(students_list) * 0.25)  # 25% excellent (95%+ attendance)
-            good_students = int(len(students_list) * 0.40)       # 40% good (85-94% attendance)
-            average_students = int(len(students_list) * 0.25)    # 25% average (75-84% attendance)
-            poor_students = len(students_list) - excellent_students - good_students - average_students  # Remaining poor (<75% attendance)
+            # Adjust to ensure more students have 90%+ attendance
+            excellent_students = int(len(students_list) * 0.30)   # 30% excellent (95%+ attendance)
+            very_good_students = int(len(students_list) * 0.25)   # 25% very good (90-94% attendance)
+            good_students = int(len(students_list) * 0.25)        # 25% good (80-89% attendance)
+            average_students = int(len(students_list) * 0.15)     # 15% average (70-79% attendance)
+            poor_students = len(students_list) - excellent_students - very_good_students - good_students - average_students  # Remaining poor (<70% attendance)
             
             # Shuffle students and assign performance categories
             shuffled_students = students_list.copy()
@@ -365,37 +367,48 @@ def seed_assigned_courses_and_attendance():
                 }
                 idx += 1
             
-            # Assign good students (85-94% attendance)
+            # Assign very good students (90-94% attendance)
+            for i in range(very_good_students):
+                student_id = shuffled_students[idx][0]
+                student_performance[student_id] = {
+                    'category': 'very_good',
+                    'attendance_rate': random.uniform(0.90, 0.94),
+                    'consistency': random.uniform(0.85, 0.95)  # Very consistent
+                }
+                idx += 1
+            
+            # Assign good students (80-89% attendance)
             for i in range(good_students):
                 student_id = shuffled_students[idx][0]
                 student_performance[student_id] = {
                     'category': 'good',
-                    'attendance_rate': random.uniform(0.85, 0.94),
-                    'consistency': random.uniform(0.8, 0.9)  # Fairly consistent
+                    'attendance_rate': random.uniform(0.80, 0.89),
+                    'consistency': random.uniform(0.75, 0.85)  # Fairly consistent
                 }
                 idx += 1
             
-            # Assign average students (75-84% attendance)
+            # Assign average students (70-79% attendance)
             for i in range(average_students):
                 student_id = shuffled_students[idx][0]
                 student_performance[student_id] = {
                     'category': 'average',
-                    'attendance_rate': random.uniform(0.75, 0.84),
-                    'consistency': random.uniform(0.6, 0.8)  # Moderately consistent
+                    'attendance_rate': random.uniform(0.70, 0.79),
+                    'consistency': random.uniform(0.6, 0.75)  # Moderately consistent
                 }
                 idx += 1
             
-            # Assign poor students (<75% attendance)
+            # Assign poor students (<70% attendance)
             for i in range(poor_students):
                 student_id = shuffled_students[idx][0]
                 student_performance[student_id] = {
                     'category': 'poor',
-                    'attendance_rate': random.uniform(0.40, 0.74),
+                    'attendance_rate': random.uniform(0.40, 0.69),
                     'consistency': random.uniform(0.3, 0.6)  # Inconsistent
                 }
                 idx += 1
             
-            logger.info(f"Student distribution: {excellent_students} excellent, {good_students} good, {average_students} average, {poor_students} poor")
+            logger.info(f"Student distribution: {excellent_students} excellent (95%+), {very_good_students} very good (90-94%), {good_students} good (80-89%), {average_students} average (70-79%), {poor_students} poor (<70%)")
+            logger.info(f"Total students with 90%+ attendance: {excellent_students + very_good_students} ({((excellent_students + very_good_students) / len(students_list)) * 100:.1f}%)")
             
             # Generate attendance logs for the past 60 days (more data for better statistics)
             start_date = datetime.now() - timedelta(days=60)
@@ -461,13 +474,15 @@ def seed_assigned_courses_and_attendance():
                         if random.random() < attendance_probability:
                             # Student attends - determine if present or late
                             if perf['category'] == 'excellent':
-                                status = 'present' if random.random() < 0.95 else 'late'
+                                status = 'present' if random.random() < 0.96 else 'late'
+                            elif perf['category'] == 'very_good':
+                                status = 'present' if random.random() < 0.93 else 'late'
                             elif perf['category'] == 'good':
-                                status = 'present' if random.random() < 0.90 else 'late'
+                                status = 'present' if random.random() < 0.88 else 'late'
                             elif perf['category'] == 'average':
-                                status = 'present' if random.random() < 0.85 else 'late'
+                                status = 'present' if random.random() < 0.82 else 'late'
                             else:  # poor
-                                status = 'present' if random.random() < 0.80 else 'late'
+                                status = 'present' if random.random() < 0.75 else 'late'
                         else:
                             status = 'absent'
                         
@@ -533,9 +548,10 @@ def seed_assigned_courses_and_attendance():
         
         # Count students by attendance ranges
         excellent_count = len([s for s in student_stats if s[5] >= 95])
-        good_count = len([s for s in student_stats if 85 <= s[5] < 95])
-        average_count = len([s for s in student_stats if 75 <= s[5] < 85])
-        poor_count = len([s for s in student_stats if s[5] < 75])
+        very_good_count = len([s for s in student_stats if 90 <= s[5] < 95])
+        good_count = len([s for s in student_stats if 80 <= s[5] < 90])
+        average_count = len([s for s in student_stats if 70 <= s[5] < 80])
+        poor_count = len([s for s in student_stats if s[5] < 70])
         
         logger.info(f"✓ Created {course_count} assigned courses")
         logger.info(f"✓ Created {attendance_count} attendance logs")
@@ -549,10 +565,23 @@ def seed_assigned_courses_and_attendance():
         
         logger.info(f"\nStudent attendance distribution:")
         logger.info(f"  Excellent (95%+): {excellent_count} students")
-        logger.info(f"  Good (85-94%): {good_count} students")
-        logger.info(f"  Average (75-84%): {average_count} students")
-        logger.info(f"  Poor (<75%): {poor_count} students")
+        logger.info(f"  Very Good (90-94%): {very_good_count} students")
+        logger.info(f"  Good (80-89%): {good_count} students")
+        logger.info(f"  Average (70-79%): {average_count} students")
+        logger.info(f"  Poor (<70%): {poor_count} students")
         
+        # Calculate 90%+ and 80%+ totals
+        ninety_plus = excellent_count + very_good_count
+        eighty_plus = excellent_count + very_good_count + good_count
+        total_students_with_attendance = len(student_stats)
+        
+        if total_students_with_attendance > 0:
+            ninety_plus_percent = (ninety_plus / total_students_with_attendance) * 100
+            eighty_plus_percent = (eighty_plus / total_students_with_attendance) * 100
+            logger.info(f"\nSummary:")
+            logger.info(f"  Students with 90%+ attendance: {ninety_plus} ({ninety_plus_percent:.1f}%)")
+            logger.info(f"  Students with 80%+ attendance: {eighty_plus} ({eighty_plus_percent:.1f}%)")
+
         # Show top and bottom performers
         if student_stats:
             logger.info(f"\nTop 3 performers:")

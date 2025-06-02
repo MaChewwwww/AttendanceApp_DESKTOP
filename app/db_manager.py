@@ -855,6 +855,46 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error initializing database: {e}")
 
+    def _seed_default_statuses(self, cursor):
+        """Seed default status values"""
+        try:
+            current_time = datetime.now().isoformat()
+            
+            # Default student statuses
+            student_statuses = [
+                ('Enrolled', 'Student is currently enrolled', 'student'),
+                ('Graduated', 'Student has graduated', 'student'),
+                ('Dropout', 'Student has dropped out', 'student'),
+                ('On Leave', 'Student is on leave', 'student'),
+                ('Suspended', 'Student is suspended', 'student')
+            ]
+            
+            # Default faculty statuses
+            faculty_statuses = [
+                ('Active', 'Faculty member is active', 'faculty'),
+                ('Inactive', 'Faculty member is inactive', 'faculty'),
+                ('Retired', 'Faculty member has retired', 'faculty'),
+                ('Probationary', 'Faculty member is on probation', 'faculty'),
+                ('Tenure Track', 'Faculty member is on tenure track', 'faculty'),
+                ('Tenured', 'Faculty member has tenure', 'faculty')
+            ]
+            
+            all_statuses = student_statuses + faculty_statuses
+            
+            for name, description, user_type in all_statuses:
+                # Check if status already exists
+                cursor.execute("SELECT id FROM statuses WHERE name = ? AND user_type = ?", (name, user_type))
+                if not cursor.fetchone():
+                    # Insert new status
+                    cursor.execute("""
+                        INSERT INTO statuses (name, description, user_type, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (name, description, user_type, current_time, current_time))
+                    print(f"Created default status: {name} ({user_type})")
+                    
+        except Exception as e:
+            print(f"Error seeding default statuses: {e}")
+
     def _run_database_seeder(self):
         """Run the database seeder for full initialization"""
         try:
@@ -877,178 +917,19 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error running database seeder: {e}")
     
-    def get_all_users(self):
-        """Get all users with their status information"""
+    def get_all_users_simple(self):
+        """Get all users with basic joins - simple query"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
             
-            # Query to get users with their status and role-specific information
+            # Simple query to get all user data with basic joins
             query = """
             SELECT 
-                u.id,
-                u.first_name,
-                u.last_name,
-                u.first_name || ' ' || u.last_name as full_name,
-                u.email,
-                u.role,
-                u.contact_number,
-                u.birthday,
-                u.verified,
-                u.created_at,
-                u.face_image,
+                u.*,
                 s.name as status_name,
-                s.description as status_description,
                 st.student_number,
-                st.section,
-                f.employee_number
-            FROM users u
-            LEFT JOIN statuses s ON u.status_id = s.id
-            LEFT JOIN students st ON u.id = st.user_id
-            LEFT JOIN faculties f ON u.id = f.user_id
-            WHERE u.isDeleted = 0
-            ORDER BY u.role, u.last_name, u.first_name
-            """
-            
-            cursor.execute(query)
-            results = cursor.fetchall()
-            
-            users = []
-            for row in results:
-                user_dict = dict(row)
-                users.append(user_dict)
-            
-            conn.close()
-            
-            return True, users
-            
-        except Exception as e:
-            print(f"Error getting all users: {e}")
-            return False, str(e)
-
-    def _seed_default_statuses(self, cursor):
-        """Seed default statuses if they don't exist"""
-        try:
-            current_time = datetime.now().isoformat()
-            
-            # Student statuses
-            student_statuses = [
-                ('Enrolled', 'Currently enrolled student', 'student'),
-                ('Graduated', 'Successfully graduated student', 'student'),
-                ('Dropout', 'Student who dropped out', 'student'),
-                ('On Leave', 'Student on temporary leave', 'student'),
-                ('Suspended', 'Temporarily suspended student', 'student')
-            ]
-            
-            # Faculty statuses
-            faculty_statuses = [
-                ('Active', 'Currently active faculty member', 'faculty'),
-                ('Inactive', 'Inactive faculty member', 'faculty'),
-                ('Retired', 'Retired faculty member', 'faculty'),
-                ('On Leave', 'Faculty member on leave', 'faculty'),
-                ('Probationary', 'Faculty member on probation', 'faculty'),
-                ('Tenure Track', 'Faculty member on tenure track', 'faculty'),
-                ('Tenured', 'Tenured faculty member', 'faculty')
-            ]
-            
-            all_statuses = student_statuses + faculty_statuses
-            
-            for name, description, user_type in all_statuses:
-                # Use INSERT OR IGNORE to handle duplicates
-                cursor.execute("""
-                    INSERT OR IGNORE INTO statuses (name, description, user_type, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (name, description, user_type, current_time, current_time))
-            
-            print("✓ Default statuses seeded")
-            
-        except Exception as e:
-            print(f"Error seeding default statuses: {e}")
-
-    def get_filter_options(self):
-        """Get all available filter options from database"""
-        try:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-            
-            # Get all programs
-            cursor.execute("SELECT DISTINCT name FROM programs ORDER BY name")
-            programs = [row[0] for row in cursor.fetchall()]
-            
-            # Get all sections
-            cursor.execute("SELECT DISTINCT name FROM sections ORDER BY name")
-            sections = [row[0] for row in cursor.fetchall()]
-            
-            # Get student statuses
-            cursor.execute("SELECT DISTINCT name FROM statuses WHERE user_type = 'student' ORDER BY name")
-            student_statuses = [row[0] for row in cursor.fetchall()]
-            
-            # Get faculty statuses
-            cursor.execute("SELECT DISTINCT name FROM statuses WHERE user_type = 'faculty' ORDER BY name")
-            faculty_statuses = [row[0] for row in cursor.fetchall()]
-            
-            # Get all roles
-            cursor.execute("SELECT DISTINCT role FROM users WHERE isDeleted = 0 ORDER BY role")
-            roles = [row[0] for row in cursor.fetchall()]
-            
-            # Extract year levels from sections (1-1, 2-1, etc.)
-            years = set()
-            for section in sections:
-                if '-' in section:
-                    year_num = section.split('-')[0]
-                    if year_num.isdigit():
-                        year_mapping = {'1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year'}
-                        if year_num in year_mapping:
-                            years.add(year_mapping[year_num])
-            
-            years = sorted(list(years))
-            
-            conn.close()
-            
-            return {
-                'programs': programs,
-                'sections': sections,
-                'years': years,
-                'student_statuses': student_statuses,
-                'faculty_statuses': faculty_statuses,
-                'roles': roles
-            }
-            
-        except Exception as e:
-            print(f"Error getting filter options: {e}")
-            return {
-                'programs': [],
-                'sections': [],
-                'years': [],
-                'student_statuses': [],
-                'faculty_statuses': [],
-                'roles': []
-            }
-
-    def search_and_filter_users(self, search_term="", role_filter="", year_filter="", section_filter="", program_filter="", status_filter=""):
-        """Search and filter users based on multiple criteria"""
-        try:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-            
-            # Base query
-            base_query = """
-            SELECT 
-                u.id,
-                u.first_name,
-                u.last_name,
-                u.first_name || ' ' || u.last_name as full_name,
-                u.email,
-                u.role,
-                u.contact_number,
-                u.birthday,
-                u.verified,
-                u.created_at,
-                u.face_image,
-                s.name as status_name,
-                s.description as status_description,
-                st.student_number,
-                st.section,
+                st.section as section_id,
                 f.employee_number,
                 sec.name as section_name,
                 p.name as program_name
@@ -1059,118 +940,157 @@ class DatabaseManager:
             LEFT JOIN sections sec ON st.section = sec.id
             LEFT JOIN programs p ON sec.course_id = p.id
             WHERE u.isDeleted = 0
+            ORDER BY u.role, u.last_name, u.first_name
             """
             
-            # Build WHERE conditions
-            conditions = []
-            params = []
-            
-            # Search term (searches in name, email, student number, employee number)
-            if search_term:
-                search_conditions = [
-                    "u.first_name LIKE ?",
-                    "u.last_name LIKE ?", 
-                    "u.email LIKE ?",
-                    "st.student_number LIKE ?",
-                    "f.employee_number LIKE ?"
-                ]
-                search_term_param = f"%{search_term}%"
-                conditions.append(f"({' OR '.join(search_conditions)})")
-                params.extend([search_term_param] * 5)
-            
-            # Role filter
-            if role_filter and role_filter != "All":
-                conditions.append("u.role = ?")
-                params.append(role_filter)
-            
-            # Status filter
-            if status_filter and status_filter != "All":
-                conditions.append("s.name = ?")
-                params.append(status_filter)
-            
-            # Year filter (extract from section name)
-            if year_filter and year_filter != "All":
-                year_mapping = {'1st Year': '1', '2nd Year': '2', '3rd Year': '3', '4th Year': '4'}
-                year_num = year_mapping.get(year_filter)
-                if year_num:
-                    conditions.append("sec.name LIKE ?")
-                    params.append(f"{year_num}-%")
-            
-            # Section filter
-            if section_filter and section_filter != "All":
-                conditions.append("sec.name = ?")
-                params.append(section_filter)
-            
-            # Program filter
-            if program_filter and program_filter != "All":
-                # Handle both full names and abbreviations
-                program_mapping = {
-                    'BSIT': 'Bachelor of Science in Information Technology',
-                    'BSCS': 'Bachelor of Science in Computer Science', 
-                    'BSIS': 'Bachelor of Science in Information Systems'
-                }
-                full_program_name = program_mapping.get(program_filter, program_filter)
-                conditions.append("p.name = ?")
-                params.append(full_program_name)
-            
-            # Combine all conditions
-            if conditions:
-                base_query += " AND " + " AND ".join(conditions)
-            
-            # Add ordering
-            base_query += " ORDER BY u.role, u.last_name, u.first_name"
-            
-            cursor.execute(base_query, params)
+            cursor.execute(query)
             results = cursor.fetchall()
             
             users = []
             for row in results:
                 user_dict = dict(row)
+                # Add full_name for convenience
+                user_dict['full_name'] = f"{user_dict['first_name']} {user_dict['last_name']}"
                 users.append(user_dict)
             
             conn.close()
-            
             return True, users
             
         except Exception as e:
-            print(f"Error searching and filtering users: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"Error getting all users: {e}")
             return False, str(e)
 
-    def get_students_with_filters(self, search_term="", year_filter="", section_filter="", program_filter="", status_filter=""):
-        """Get filtered students specifically"""
-        success, all_users = self.search_and_filter_users(
-            search_term=search_term,
-            role_filter="Student", 
-            year_filter=year_filter,
-            section_filter=section_filter,
-            program_filter=program_filter,
-            status_filter=status_filter
-        )
+    def filter_users_python(self, all_users, search_term="", role_filter="", year_filter="", section_filter="", program_filter="", status_filter=""):
+        """Filter users using Python instead of SQL"""
+        filtered_users = []
         
-        if success:
-            # Filter only students
-            students = [user for user in all_users if user['role'].lower() == 'student']
-            return True, students
-        else:
-            return False, all_users
+        for user in all_users:
+            # Apply role filter first
+            if role_filter and role_filter != "All":
+                if user['role'] != role_filter:
+                    continue
+            
+            # Apply status filter
+            if status_filter and status_filter != "All":
+                if user.get('status_name') != status_filter:
+                    continue
+            
+            # Apply search term (search in multiple fields)
+            if search_term:
+                search_fields = [
+                    user.get('first_name', ''),
+                    user.get('last_name', ''),
+                    user.get('email', ''),
+                    user.get('student_number', ''),
+                    user.get('employee_number', ''),
+                    user.get('full_name', '')
+                ]
+                
+                # Check if search term exists in any field
+                search_found = False
+                for field in search_fields:
+                    if field and search_term.lower() in str(field).lower():
+                        search_found = True
+                        break
+                
+                if not search_found:
+                    continue
+            
+            # Apply year filter (for students only)
+            if year_filter and year_filter != "All" and user['role'] == 'Student':
+                section_name = user.get('section_name', '')
+                if section_name:
+                    # Extract year from section name (e.g., "1-1" -> "1")
+                    section_year = section_name.split('-')[0] if '-' in section_name else ''
+                    year_mapping = {'1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year'}
+                    user_year = year_mapping.get(section_year, '')
+                    
+                    if user_year != year_filter:
+                        continue
+                else:
+                    # If no section, skip this user for year filter
+                    continue
+            
+            # Apply section filter (for students only)
+            if section_filter and section_filter != "All" and user['role'] == 'Student':
+                if user.get('section_name') != section_filter:
+                    continue
+            
+            # Apply program filter (for students only)
+            if program_filter and program_filter != "All" and user['role'] == 'Student':
+                program_name = user.get('program_name', '')
+                
+                # Handle both full names and abbreviations
+                program_matches = False
+                if program_filter == 'BSIT' and 'Information Technology' in program_name:
+                    program_matches = True
+                elif program_filter == 'BSCS' and 'Computer Science' in program_name:
+                    program_matches = True
+                elif program_filter == 'BSIS' and 'Information Systems' in program_name:
+                    program_matches = True
+                elif program_name == program_filter:
+                    program_matches = True
+                
+                if not program_matches:
+                    continue
+            
+            # If we reach here, user passes all filters
+            filtered_users.append(user)
+        
+        return filtered_users
+
+    def get_students_with_filters(self, search_term="", year_filter="", section_filter="", program_filter="", status_filter=""):
+        """Get filtered students using Python filtering"""
+        try:
+            # Get all users first
+            success, all_users = self.get_all_users_simple()
+            if not success:
+                return False, all_users
+            
+            # Filter to only students
+            students = [user for user in all_users if user['role'] == 'Student']
+            
+            # Apply filters using Python
+            filtered_students = self.filter_users_python(
+                students,
+                search_term=search_term,
+                role_filter="Student",
+                year_filter=year_filter,
+                section_filter=section_filter,
+                program_filter=program_filter,
+                status_filter=status_filter
+            )
+            
+            return True, filtered_students
+            
+        except Exception as e:
+            print(f"Error getting filtered students: {e}")
+            return False, str(e)
 
     def get_faculty_with_filters(self, search_term="", status_filter="", role_filter=""):
-        """Get filtered faculty specifically"""
-        # For faculty, we don't need year/section/program filters
-        success, all_users = self.search_and_filter_users(
-            search_term=search_term,
-            role_filter=role_filter if role_filter and role_filter != "All" else "",
-            status_filter=status_filter
-        )
-        
-        if success:
-            # Filter only faculty and admin
-            faculty = [user for user in all_users if user['role'].lower() in ['faculty', 'admin']]
-            return True, faculty
-        else:
-            return False, all_users
+        """Get filtered faculty using Python filtering"""
+        try:
+            # Get all users first
+            success, all_users = self.get_all_users_simple()
+            if not success:
+                return False, all_users
+            
+            # Filter to only faculty and admin
+            faculty = [user for user in all_users if user['role'] in ['Faculty', 'Admin']]
+            
+            # Apply filters using Python
+            filtered_faculty = self.filter_users_python(
+                faculty,
+                search_term=search_term,
+                role_filter=role_filter if role_filter and role_filter != "All" else "",
+                status_filter=status_filter
+            )
+            
+            return True, filtered_faculty
+            
+        except Exception as e:
+            print(f"Error getting filtered faculty: {e}")
+            return False, str(e)
 
     def get_attendance_logs(self, user_id=None, course_id=None, date_from=None, date_to=None):
         """Get attendance logs with optional filters"""
@@ -1461,3 +1381,49 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error getting student attendance summary: {e}")
             return False, str(e)
+
+    def get_user_details(self, user_id):
+        """Get detailed user information from database for a specific user"""
+        try:
+            if not user_id:
+                return {}
+            
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Get specific user details with joins
+            query = """
+            SELECT 
+                u.*,
+                s.name as status_name,
+                st.student_number,
+                st.section as section_id,
+                f.employee_number,
+                sec.name as section_name,
+                p.name as program_name
+            FROM users u
+            LEFT JOIN statuses s ON u.status_id = s.id
+            LEFT JOIN students st ON u.id = st.user_id
+            LEFT JOIN faculties f ON u.id = f.user_id
+            LEFT JOIN sections sec ON st.section = sec.id
+            LEFT JOIN programs p ON sec.course_id = p.id
+            WHERE u.id = ? AND u.isDeleted = 0
+            """
+            
+            cursor.execute(query, (user_id,))
+            result = cursor.fetchone()
+            conn.close()
+            
+            if not result:
+                print(f"User with ID {user_id} not found")
+                return {}
+            
+            user_details = dict(result)
+            # Add full_name for convenience
+            user_details['full_name'] = f"{user_details['first_name']} {user_details['last_name']}"
+            
+            return user_details
+                
+        except Exception as e:
+            print(f"Error getting user details: {e}")
+            return {}
