@@ -1,9 +1,10 @@
 import sqlite3
 import bcrypt
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 from pathlib import Path
 import logging
+import random
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -170,6 +171,296 @@ def seed_programs_and_courses():
             conn.rollback()
             conn.close()
         return False, {}, {}
+
+def seed_assigned_courses_and_attendance():
+    """Seed assigned courses and attendance logs"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        logger.info("Creating assigned courses and attendance logs...")
+        
+        # First, let's check the existing table structure
+        cursor.execute("PRAGMA table_info(assigned_courses)")
+        table_info = cursor.fetchall()
+        logger.info(f"Assigned courses table structure: {table_info}")
+        
+        # Get all faculty and courses
+        cursor.execute("""
+            SELECT f.user_id, u.first_name, u.last_name
+            FROM faculties f
+            JOIN users u ON f.user_id = u.id
+            WHERE u.role = 'Faculty' AND u.isDeleted = 0
+        """)
+        faculty_list = cursor.fetchall()
+        
+        cursor.execute("""
+            SELECT c.id, c.name, p.name as program_name
+            FROM courses c
+            JOIN programs p ON c.program_id = p.id
+        """)
+        courses_list = cursor.fetchall()
+        
+        cursor.execute("""
+            SELECT s.id, s.name, p.name as program_name
+            FROM sections s
+            JOIN programs p ON s.course_id = p.id
+        """)
+        sections_list = cursor.fetchall()
+        
+        logger.info(f"Found {len(faculty_list)} faculty, {len(courses_list)} courses, {len(sections_list)} sections")
+        
+        # Drop and recreate assigned_courses table with correct structure
+        cursor.execute("DROP TABLE IF EXISTS assigned_courses")
+        cursor.execute("DROP TABLE IF EXISTS attendance_logs")
+        
+        # Create assigned_courses table with correct structure
+        cursor.execute("""
+            CREATE TABLE assigned_courses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                course_id INTEGER NOT NULL,
+                section_id INTEGER NOT NULL,
+                academic_year TEXT NOT NULL,
+                semester TEXT NOT NULL,
+                schedule_day TEXT,
+                schedule_time TEXT,
+                room TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE,
+                FOREIGN KEY (section_id) REFERENCES sections (id) ON DELETE CASCADE
+            )
+        """)
+        
+        # Create attendance_logs table with correct structure
+        cursor.execute("""
+            CREATE TABLE attendance_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                assigned_course_id INTEGER NOT NULL,
+                date TEXT NOT NULL,
+                image BLOB,
+                status TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                FOREIGN KEY (assigned_course_id) REFERENCES assigned_courses (id) ON DELETE CASCADE
+            )
+        """)
+        
+        current_time = datetime.now().isoformat()
+        current_year = datetime.now().year
+        academic_year = f"{current_year}-{current_year + 1}"
+        
+        # Sample assigned courses data
+        assigned_course_ids = []
+        
+        # Ensure we have data to work with
+        if not faculty_list:
+            logger.warning("No faculty found to assign courses")
+            conn.close()
+            return False
+            
+        if not courses_list:
+            logger.warning("No courses found to assign")
+            conn.close()
+            return False
+            
+        if not sections_list:
+            logger.warning("No sections found to assign")
+            conn.close()
+            return False
+        
+        # Assign each faculty member to 2-3 courses
+        for faculty_user_id, first_name, last_name in faculty_list:
+            # Randomly select 2-3 courses for this faculty (ensure we don't exceed available courses)
+            num_courses_to_assign = min(3, len(courses_list), random.randint(2, 3))
+            selected_courses = random.sample(courses_list, num_courses_to_assign)
+            
+            for course_id, course_name, program_name in selected_courses:
+                # Find matching sections for this program
+                matching_sections = [s for s in sections_list if s[2] == program_name]
+                
+                if matching_sections:
+                    # Select a random section
+                    section_id, section_name, _ = random.choice(matching_sections)
+                    
+                    # Generate random schedule
+                    days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+                    times = ['8:00-9:30', '9:30-11:00', '11:00-12:30', '1:30-3:00', '3:00-4:30']
+                    rooms = ['Room 101', 'Room 102', 'Room 103', 'Lab 1', 'Lab 2', 'Conference Room']
+                    
+                    schedule_day = random.choice(days)
+                    schedule_time = random.choice(times)
+                    room = random.choice(rooms)
+                    semester = random.choice(['1st Semester', '2nd Semester'])
+                    
+                    # Check if this assignment already exists
+                    cursor.execute("""
+                        SELECT id FROM assigned_courses 
+                        WHERE user_id = ? AND course_id = ? AND section_id = ? AND academic_year = ?
+                    """, (faculty_user_id, course_id, section_id, academic_year))
+                    
+                    existing = cursor.fetchone()
+                    if existing:
+                        assigned_course_ids.append(existing[0])
+                        logger.info(f"Course assignment already exists for {first_name} {last_name} - {course_name}")
+                        continue
+                    
+                    # Insert assigned course (using user_id instead of faculty_id)
+                    cursor.execute("""
+                        INSERT INTO assigned_courses 
+                        (user_id, course_id, section_id, academic_year, semester, schedule_day, schedule_time, room, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (faculty_user_id, course_id, section_id, academic_year, semester, schedule_day, schedule_time, room, current_time, current_time))
+                    
+                    assigned_course_id = cursor.lastrowid
+                    assigned_course_ids.append(assigned_course_id)
+                    
+                    logger.info(f"Assigned {first_name} {last_name} to teach {course_name} for section {section_name} (ID: {assigned_course_id})")
+        
+        logger.info(f"Created {len(assigned_course_ids)} course assignments")
+        
+        # Now seed attendance logs
+        if assigned_course_ids:
+            # Get all students
+            cursor.execute("""
+                SELECT u.id, u.first_name, u.last_name, st.section
+                FROM users u
+                JOIN students st ON u.id = st.user_id
+                WHERE u.role = 'Student' AND u.isDeleted = 0
+            """)
+            students_list = cursor.fetchall()
+            
+            logger.info(f"Found {len(students_list)} students for attendance logs")
+            
+            if not students_list:
+                logger.warning("No students found to generate attendance logs")
+                conn.commit()
+                conn.close()
+                return True
+            
+            # Generate attendance logs for the past 30 days
+            start_date = datetime.now() - timedelta(days=30)
+            attendance_statuses = ['present', 'absent', 'late']
+            attendance_weights = [0.7, 0.2, 0.1]  # 70% present, 20% absent, 10% late
+            
+            total_attendance_logs = 0
+            
+            for assigned_course_id in assigned_course_ids:
+                # Get course and section info for this assignment
+                cursor.execute("""
+                    SELECT ac.section_id, c.name as course_name, s.name as section_name
+                    FROM assigned_courses ac
+                    JOIN courses c ON ac.course_id = c.id
+                    JOIN sections s ON ac.section_id = s.id
+                    WHERE ac.id = ?
+                """, (assigned_course_id,))
+                
+                course_info = cursor.fetchone()
+                if not course_info:
+                    logger.warning(f"Could not find course info for assigned course {assigned_course_id}")
+                    continue
+                
+                section_id, course_name, section_name = course_info
+                
+                # Find students in this section
+                section_students = [s for s in students_list if s[3] == section_id]
+                
+                if not section_students:
+                    logger.warning(f"No students found for section {section_name} (ID: {section_id})")
+                    continue
+                
+                logger.info(f"Generating attendance for {len(section_students)} students in {course_name} - {section_name}")
+                
+                # Generate attendance for the past 30 days (skip weekends)
+                for day_offset in range(30):
+                    attendance_date = start_date + timedelta(days=day_offset)
+                    
+                    # Skip weekends
+                    if attendance_date.weekday() >= 5:  # Saturday = 5, Sunday = 6
+                        continue
+                    
+                    # Only create attendance logs 3 times per week for each course (60% chance)
+                    if random.random() > 0.6:
+                        continue
+                    
+                    # Generate attendance for each student in this section
+                    for student_id, student_first, student_last, _ in section_students:
+                        # Generate realistic attendance pattern (some students are more regular than others)
+                        student_reliability = random.uniform(0.6, 0.95)  # Individual student reliability
+                        
+                        if random.random() < student_reliability:
+                            status = random.choices(attendance_statuses, weights=attendance_weights)[0]
+                        else:
+                            status = 'absent'
+                        
+                        # Check if attendance already exists for this date/student/course
+                        cursor.execute("""
+                            SELECT id FROM attendance_logs 
+                            WHERE user_id = ? AND assigned_course_id = ? AND date = ?
+                        """, (student_id, assigned_course_id, attendance_date.strftime('%Y-%m-%d')))
+                        
+                        if cursor.fetchone():
+                            continue  # Skip if already exists
+                        
+                        # Insert attendance log
+                        cursor.execute("""
+                            INSERT INTO attendance_logs 
+                            (user_id, assigned_course_id, date, status, created_at, updated_at)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        """, (
+                            student_id, 
+                            assigned_course_id, 
+                            attendance_date.strftime('%Y-%m-%d'),
+                            status, 
+                            current_time, 
+                            current_time
+                        ))
+                        
+                        total_attendance_logs += 1
+                
+                logger.info(f"Generated attendance logs for course {course_name} - {section_name}")
+        
+        conn.commit()
+        
+        # Log final statistics
+        cursor.execute("SELECT COUNT(*) FROM assigned_courses")
+        course_count = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM attendance_logs")
+        attendance_count = cursor.fetchone()[0]
+        
+        cursor.execute("""
+            SELECT status, COUNT(*) 
+            FROM attendance_logs 
+            GROUP BY status
+        """)
+        status_counts = cursor.fetchall()
+        
+        logger.info(f"✓ Created {course_count} assigned courses")
+        logger.info(f"✓ Created {attendance_count} attendance logs")
+        
+        if status_counts:
+            logger.info("Attendance distribution:")
+            for status, count in status_counts:
+                logger.info(f"  {status}: {count}")
+        else:
+            logger.warning("No attendance logs were created!")
+        
+        conn.close()
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error creating assigned courses and attendance logs: {e}")
+        import traceback
+        traceback.print_exc()
+        if conn:
+            conn.rollback()
+            conn.close()
+        return False
 
 def seed_users():
     """Seed the database with sample users"""
@@ -555,6 +846,16 @@ def seed_users():
         logger.info(f"Database also has: {program_count} programs, {course_count} courses, {section_count} sections")
         
         conn.close()
+        
+        # Now seed assigned courses and attendance logs
+        logger.info("\nSeeding assigned courses and attendance logs...")
+        attendance_success = seed_assigned_courses_and_attendance()
+        
+        if attendance_success:
+            logger.info("Successfully created assigned courses and attendance logs!")
+        else:
+            logger.warning("Failed to create assigned courses and attendance logs")
+        
         return True
         
     except Exception as e:

@@ -1171,3 +1171,183 @@ class DatabaseManager:
             return True, faculty
         else:
             return False, all_users
+
+    def get_attendance_logs(self, user_id=None, course_id=None, date_from=None, date_to=None):
+        """Get attendance logs with optional filters"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            base_query = """
+            SELECT 
+                al.id,
+                al.user_id,
+                al.assigned_course_id,
+                al.date,
+                al.status,
+                al.created_at,
+                u.first_name || ' ' || u.last_name as student_name,
+                c.name as course_name,
+                s.name as section_name,
+                p.name as program_name,
+                fu.first_name || ' ' || fu.last_name as faculty_name
+            FROM attendance_logs al
+            JOIN users u ON al.user_id = u.id
+            JOIN assigned_courses ac ON al.assigned_course_id = ac.id
+            JOIN courses c ON ac.course_id = c.id
+            JOIN sections s ON ac.section_id = s.id
+            JOIN programs p ON s.course_id = p.id
+            JOIN users fu ON ac.user_id = fu.id
+            WHERE u.isDeleted = 0
+            """
+            
+            params = []
+            conditions = []
+            
+            if user_id:
+                conditions.append("al.user_id = ?")
+                params.append(user_id)
+            
+            if course_id:
+                conditions.append("ac.id = ?")
+                params.append(course_id)
+            
+            if date_from:
+                conditions.append("al.date >= ?")
+                params.append(date_from)
+            
+            if date_to:
+                conditions.append("al.date <= ?")
+                params.append(date_to)
+            
+            if conditions:
+                base_query += " AND " + " AND ".join(conditions)
+            
+            base_query += " ORDER BY al.date DESC, u.last_name, u.first_name"
+            
+            cursor.execute(base_query, params)
+            results = cursor.fetchall()
+            
+            attendance_logs = []
+            for row in results:
+                log_dict = dict(row)
+                attendance_logs.append(log_dict)
+            
+            conn.close()
+            return True, attendance_logs
+            
+        except Exception as e:
+            print(f"Error getting attendance logs: {e}")
+            return False, str(e)
+
+    def get_assigned_courses(self, faculty_id=None):
+        """Get assigned courses with optional faculty filter"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            query = """
+            SELECT 
+                ac.id,
+                ac.user_id as faculty_id,
+                ac.course_id,
+                ac.section_id,
+                ac.academic_year,
+                ac.semester,
+                ac.schedule_day,
+                ac.schedule_time,
+                ac.room,
+                c.name as course_name,
+                c.description as course_description,
+                s.name as section_name,
+                p.name as program_name,
+                u.first_name || ' ' || u.last_name as faculty_name
+            FROM assigned_courses ac
+            JOIN courses c ON ac.course_id = c.id
+            JOIN sections s ON ac.section_id = s.id
+            JOIN programs p ON s.course_id = p.id
+            JOIN users u ON ac.user_id = u.id
+            WHERE u.isDeleted = 0
+            """
+            
+            params = []
+            if faculty_id:
+                query += " AND ac.user_id = ?"
+                params.append(faculty_id)
+            
+            query += " ORDER BY c.name, s.name"
+            
+            cursor.execute(query, params)
+            results = cursor.fetchall()
+            
+            courses = []
+            for row in results:
+                course_dict = dict(row)
+                courses.append(course_dict)
+            
+            conn.close()
+            return True, courses
+            
+        except Exception as e:
+            print(f"Error getting assigned courses: {e}")
+            return False, str(e)
+
+    def get_filter_options(self):
+        """Get all available filter options from database"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Get all programs
+            cursor.execute("SELECT DISTINCT name FROM programs ORDER BY name")
+            programs = [row[0] for row in cursor.fetchall()]
+            
+            # Get all sections
+            cursor.execute("SELECT DISTINCT name FROM sections ORDER BY name")
+            sections = [row[0] for row in cursor.fetchall()]
+            
+            # Get student statuses
+            cursor.execute("SELECT DISTINCT name FROM statuses WHERE user_type = 'student' ORDER BY name")
+            student_statuses = [row[0] for row in cursor.fetchall()]
+            
+            # Get faculty statuses
+            cursor.execute("SELECT DISTINCT name FROM statuses WHERE user_type = 'faculty' ORDER BY name")
+            faculty_statuses = [row[0] for row in cursor.fetchall()]
+            
+            # Get all roles
+            cursor.execute("SELECT DISTINCT role FROM users WHERE isDeleted = 0 ORDER BY role")
+            roles = [row[0] for row in cursor.fetchall()]
+            
+            # Extract year levels from sections (1-1, 2-1, etc.)
+            years = set()
+            for section in sections:
+                if '-' in section:
+                    year_num = section.split('-')[0]
+                    if year_num.isdigit():
+                        year_mapping = {'1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year'}
+                        if year_num in year_mapping:
+                            years.add(year_mapping[year_num])
+            
+            years = sorted(list(years))
+            
+            conn.close()
+            
+            return {
+                'programs': programs,
+                'sections': sections,
+                'years': years,
+                'student_statuses': student_statuses,
+                'faculty_statuses': faculty_statuses,
+                'roles': roles
+            }
+            
+        except Exception as e:
+            print(f"Error getting filter options: {e}")
+            return {
+                'programs': [],
+                'sections': [],
+                'years': [],
+                'student_statuses': [],
+                'faculty_statuses': [],
+                'roles': []
+            }
