@@ -325,15 +325,15 @@ class UsersView(ctk.CTkFrame):
             text="Users",
             font=ctk.CTkFont(family="Inter", size=20, weight="bold"),
             text_color="black"
-        ).pack(anchor="w", padx=20, pady=(20, 10))
+        ).pack(anchor="w", padx=20, pady=(0, 5))
 
         # Create tab container
         tab_container = ctk.CTkFrame(self, fg_color="transparent")
-        tab_container.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+        tab_container.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
         # Tab header frame
         tab_header_frame = ctk.CTkFrame(tab_container, fg_color="#F8FAFC", height=60, border_width=0, corner_radius=12)
-        tab_header_frame.pack(fill="x", pady=(0, 8))
+        tab_header_frame.pack(fill="x", pady=(0, 4))
         tab_header_frame.pack_propagate(False)
 
         # Tab buttons container
