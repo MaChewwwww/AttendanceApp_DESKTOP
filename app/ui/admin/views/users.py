@@ -905,6 +905,12 @@ class UsersView(ctk.CTkFrame):
         if action == "View":
             UsersViewModal(self, data, "student")
         elif action == "Edit":
+            # Temporarily release grab before opening edit modal
+            try:
+                if hasattr(self, 'grab_release'):
+                    self.grab_release()
+            except:
+                pass
             UsersEditModal(self, data['id'], "student")  # Pass user ID
         elif action == "Delete":
             UsersDeleteModal(self, data, "student")
@@ -914,6 +920,12 @@ class UsersView(ctk.CTkFrame):
         if action == "View":
             UsersViewModal(self, data, "faculty")
         elif action == "Edit":
+            # Temporarily release grab before opening edit modal
+            try:
+                if hasattr(self, 'grab_release'):
+                    self.grab_release()
+            except:
+                pass
             UsersEditModal(self, data['id'], "faculty")  # Pass user ID
         elif action == "Delete":
             UsersDeleteModal(self, data, "faculty")

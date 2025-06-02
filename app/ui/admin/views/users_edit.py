@@ -278,25 +278,15 @@ class IndependentFacialRecognitionWindow:
         self.face_image_data = None
         self.video_label = None
         
-        # Make it stay on top and modal-like
+        # Make it stay on top
         self.root.attributes('-topmost', True)
         
-        # Set up proper parent relationship for modal behavior
+        # Simplified parent relationship - just disable the parent temporarily
         try:
-            # Try to get the actual tkinter root window
-            if hasattr(parent_edit, 'winfo_toplevel'):
-                # Get the top-level window
-                top_level = parent_edit.winfo_toplevel()
-                # Set transient to the main tkinter root instead
-                main_root = top_level.nametowidget(top_level.winfo_parent()) if top_level.winfo_parent() else top_level
-                if main_root != self.root:
-                    self.root.transient(main_root)
-            else:
-                # Fallback - just make it modal without transient
-                pass
+            if hasattr(parent_edit, 'grab_release'):
+                parent_edit.grab_release()
         except Exception as e:
-            print(f"Could not set transient relationship: {e}")
-            # Continue without transient - window will still be modal through grab
+            print(f"Could not release parent grab: {e}")
         
         # Center window
         self._center_window()
@@ -307,20 +297,26 @@ class IndependentFacialRecognitionWindow:
         # Handle close
         self.root.protocol("WM_DELETE_WINDOW", self._on_closing)
         
-        # Focus and grab for modal behavior
+        # Focus without grab initially
         self.root.focus_force()
         
-        # Set grab after a small delay to ensure window is ready
-        self.root.after(100, self._set_grab)
-    
-    def _set_grab(self):
-        """Set grab with error handling"""
-        try:
-            self.root.grab_set()
-        except Exception as e:
-            print(f"Could not set grab: {e}")
-            # Continue without grab - window will still work
-    
+        # Wait a moment then try to set grab
+        self.root.after(200, self._try_set_grab)
+
+    def _try_set_grab(self):
+        """Try to set grab with multiple attempts"""
+        for attempt in range(3):
+            try:
+                self.root.grab_set()
+                print("Successfully set grab")
+                break
+            except Exception as e:
+                print(f"Grab attempt {attempt + 1} failed: {e}")
+                if attempt < 2:  # Not the last attempt
+                    self.root.after(100, lambda: None)  # Small delay before retry
+                else:
+                    print("Could not set grab after 3 attempts, continuing without grab")
+
     def _center_window(self):
         """Center the window on screen"""
         self.root.update_idletasks()
@@ -329,7 +325,7 @@ class IndependentFacialRecognitionWindow:
         x = (screen_width - 454) // 2
         y = (screen_height - 450) // 2
         self.root.geometry(f"454x450+{x}+{y}")
-    
+
     def _setup_ui(self):
         """Setup the UI to match original design with proper spacing"""
         # Main container with proper padding and rounded corners effect
@@ -457,7 +453,7 @@ class IndependentFacialRecognitionWindow:
             highlightthickness=0
         )
         self.save_btn.place(x=0, y=375, width=410, height=38)
-    
+
     def _show_info(self):
         """Show info message like original - ensure it appears on top"""
         # Temporarily disable topmost to show messagebox properly
@@ -469,14 +465,14 @@ class IndependentFacialRecognitionWindow:
         )
         # Re-enable topmost after messagebox
         self.root.attributes('-topmost', True)
-    
+
     def _toggle_camera(self):
         """Toggle camera on/off"""
         if self.is_camera_active:
             self._stop_camera()
         else:
             self._start_camera()
-    
+
     def _start_camera(self):
         """Start camera capture"""
         try:
@@ -499,7 +495,7 @@ class IndependentFacialRecognitionWindow:
             
         except Exception as e:
             self._show_error(f"Error starting camera: {str(e)}")
-    
+
     def _stop_camera(self):
         """Stop camera capture"""
         self.is_camera_active = False
@@ -523,7 +519,7 @@ class IndependentFacialRecognitionWindow:
                 image="",
                 text="Camera will appear here\nClick 'Open Camera' to begin"
             )
-    
+
     def _camera_loop(self):
         """Camera loop running in separate thread"""
         while self.is_camera_active:
@@ -560,7 +556,7 @@ class IndependentFacialRecognitionWindow:
                 break
         
         print("Camera loop ended")
-    
+
     def _update_video_display(self, photo):
         """Update video display (runs in main thread)"""
         try:
@@ -569,7 +565,7 @@ class IndependentFacialRecognitionWindow:
                 self.video_label.image = photo  # Keep reference
         except Exception as e:
             print(f"Video display error: {e}")
-    
+
     def _capture_image(self):
         """Capture current frame"""
         if self.current_frame is None:
@@ -595,7 +591,7 @@ class IndependentFacialRecognitionWindow:
             
         except Exception as e:
             self._show_error(f"Failed to capture image: {str(e)}")
-    
+
     def _show_captured_image(self):
         """Show the captured image"""
         try:
@@ -610,7 +606,7 @@ class IndependentFacialRecognitionWindow:
                 self.video_label.image = photo
         except Exception as e:
             print(f"Error showing captured image: {e}")
-    
+
     def _update_buttons_after_capture(self):
         """Update button states after capture like original"""
         self.camera_btn.configure(
@@ -628,7 +624,7 @@ class IndependentFacialRecognitionWindow:
             bg="#dc2626",
             fg="#ffffff"
         )
-    
+
     def _retake_image(self):
         """Retake photo"""
         # Clear captured data
@@ -658,7 +654,7 @@ class IndependentFacialRecognitionWindow:
         
         # Restart camera
         self._start_camera()
-    
+
     def _save_photo(self):
         """Save photo and close window"""
         try:
@@ -678,45 +674,57 @@ class IndependentFacialRecognitionWindow:
                 self._show_warning("No face image to save.")
         except Exception as e:
             self._show_error(f"Failed to save photo: {str(e)}")
-    
+
     def _show_error(self, message):
         """Show error message ensuring it appears on top"""
         self.root.attributes('-topmost', False)
         tk.messagebox.showerror("Error", message, parent=self.root)
         self.root.attributes('-topmost', True)
-    
+
     def _show_warning(self, message):
         """Show warning message ensuring it appears on top"""
         self.root.attributes('-topmost', False)
         tk.messagebox.showwarning("Warning", message, parent=self.root)
         self.root.attributes('-topmost', True)
-    
+
     def _show_info_msg(self, message):
         """Show info message ensuring it appears on top"""
         self.root.attributes('-topmost', False)
         tk.messagebox.showinfo("Success", message, parent=self.root)
         self.root.attributes('-topmost', True)
-    
+
     def _on_closing(self):
         """Handle window closing"""
         try:
-            # Stop camera
+            # Stop camera first
             self.is_camera_active = False
             
-            # Wait for thread
+            # Wait for camera thread to finish
             if self.camera_thread and self.camera_thread.is_alive():
                 self.camera_thread.join(timeout=1.0)
             
             # Release camera
             if self.camera:
                 self.camera.release()
+                self.camera = None
             
-            # Release grab and destroy window
+            # Release grab safely
             try:
                 self.root.grab_release()
             except Exception as e:
                 print(f"Could not release grab: {e}")
             
+            # Re-enable parent grab if possible
+            try:
+                if (hasattr(self.parent_edit, 'grab_set') and 
+                    hasattr(self.parent_edit, 'winfo_exists') and 
+                    self.parent_edit.winfo_exists()):
+                    self.parent_edit.grab_set()
+                    self.parent_edit.focus_force()
+            except Exception as e:
+                print(f"Could not restore parent grab: {e}")
+            
+            # Destroy window
             try:
                 self.root.destroy()
             except Exception as e:
@@ -724,6 +732,7 @@ class IndependentFacialRecognitionWindow:
             
         except Exception as e:
             print(f"Error closing window: {e}")
+            # Force destroy as last resort
             try:
                 self.root.destroy()
             except:
