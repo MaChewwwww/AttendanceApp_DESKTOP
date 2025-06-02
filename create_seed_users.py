@@ -323,7 +323,7 @@ def seed_assigned_courses_and_attendance():
         
         logger.info(f"Created {len(assigned_course_ids)} course assignments")
         
-        # Now seed attendance logs
+        # Now seed attendance logs with realistic distributions
         if assigned_course_ids:
             # Get all students
             cursor.execute("""
@@ -342,11 +342,63 @@ def seed_assigned_courses_and_attendance():
                 conn.close()
                 return True
             
-            # Generate attendance logs for the past 30 days
-            start_date = datetime.now() - timedelta(days=30)
-            attendance_statuses = ['present', 'absent', 'late']
-            attendance_weights = [0.7, 0.2, 0.1]  # 70% present, 20% absent, 10% late
+            # Define student performance categories with realistic distributions
+            excellent_students = int(len(students_list) * 0.25)  # 25% excellent (95%+ attendance)
+            good_students = int(len(students_list) * 0.40)       # 40% good (85-94% attendance)
+            average_students = int(len(students_list) * 0.25)    # 25% average (75-84% attendance)
+            poor_students = len(students_list) - excellent_students - good_students - average_students  # Remaining poor (<75% attendance)
             
+            # Shuffle students and assign performance categories
+            shuffled_students = students_list.copy()
+            random.shuffle(shuffled_students)
+            
+            student_performance = {}
+            idx = 0
+            
+            # Assign excellent students (95-99% attendance)
+            for i in range(excellent_students):
+                student_id = shuffled_students[idx][0]
+                student_performance[student_id] = {
+                    'category': 'excellent',
+                    'attendance_rate': random.uniform(0.95, 0.99),
+                    'consistency': random.uniform(0.9, 1.0)  # Very consistent
+                }
+                idx += 1
+            
+            # Assign good students (85-94% attendance)
+            for i in range(good_students):
+                student_id = shuffled_students[idx][0]
+                student_performance[student_id] = {
+                    'category': 'good',
+                    'attendance_rate': random.uniform(0.85, 0.94),
+                    'consistency': random.uniform(0.8, 0.9)  # Fairly consistent
+                }
+                idx += 1
+            
+            # Assign average students (75-84% attendance)
+            for i in range(average_students):
+                student_id = shuffled_students[idx][0]
+                student_performance[student_id] = {
+                    'category': 'average',
+                    'attendance_rate': random.uniform(0.75, 0.84),
+                    'consistency': random.uniform(0.6, 0.8)  # Moderately consistent
+                }
+                idx += 1
+            
+            # Assign poor students (<75% attendance)
+            for i in range(poor_students):
+                student_id = shuffled_students[idx][0]
+                student_performance[student_id] = {
+                    'category': 'poor',
+                    'attendance_rate': random.uniform(0.40, 0.74),
+                    'consistency': random.uniform(0.3, 0.6)  # Inconsistent
+                }
+                idx += 1
+            
+            logger.info(f"Student distribution: {excellent_students} excellent, {good_students} good, {average_students} average, {poor_students} poor")
+            
+            # Generate attendance logs for the past 60 days (more data for better statistics)
+            start_date = datetime.now() - timedelta(days=60)
             total_attendance_logs = 0
             
             for assigned_course_id in assigned_course_ids:
@@ -375,25 +427,47 @@ def seed_assigned_courses_and_attendance():
                 
                 logger.info(f"Generating attendance for {len(section_students)} students in {course_name} - {section_name}")
                 
-                # Generate attendance for the past 30 days (skip weekends)
-                for day_offset in range(30):
+                # Generate class schedule (3 times per week for each course)
+                class_days = []
+                for day_offset in range(60):
                     attendance_date = start_date + timedelta(days=day_offset)
                     
                     # Skip weekends
                     if attendance_date.weekday() >= 5:  # Saturday = 5, Sunday = 6
                         continue
                     
-                    # Only create attendance logs 3 times per week for each course (60% chance)
-                    if random.random() > 0.6:
-                        continue
-                    
+                    # Schedule classes 3 times per week (Monday, Wednesday, Friday pattern)
+                    if attendance_date.weekday() in [0, 2, 4]:  # Monday, Wednesday, Friday
+                        class_days.append(attendance_date)
+                
+                # Generate attendance for each class day
+                for class_date in class_days:
                     # Generate attendance for each student in this section
                     for student_id, student_first, student_last, _ in section_students:
-                        # Generate realistic attendance pattern (some students are more regular than others)
-                        student_reliability = random.uniform(0.6, 0.95)  # Individual student reliability
+                        if student_id not in student_performance:
+                            continue
                         
-                        if random.random() < student_reliability:
-                            status = random.choices(attendance_statuses, weights=attendance_weights)[0]
+                        perf = student_performance[student_id]
+                        
+                        # Determine if student attends based on their profile
+                        base_rate = perf['attendance_rate']
+                        consistency = perf['consistency']
+                        
+                        # Add some randomness but weighted by consistency
+                        attendance_probability = base_rate + (random.uniform(-0.1, 0.1) * (1 - consistency))
+                        attendance_probability = max(0, min(1, attendance_probability))  # Clamp between 0 and 1
+                        
+                        # Determine attendance status
+                        if random.random() < attendance_probability:
+                            # Student attends - determine if present or late
+                            if perf['category'] == 'excellent':
+                                status = 'present' if random.random() < 0.95 else 'late'
+                            elif perf['category'] == 'good':
+                                status = 'present' if random.random() < 0.90 else 'late'
+                            elif perf['category'] == 'average':
+                                status = 'present' if random.random() < 0.85 else 'late'
+                            else:  # poor
+                                status = 'present' if random.random() < 0.80 else 'late'
                         else:
                             status = 'absent'
                         
@@ -401,7 +475,7 @@ def seed_assigned_courses_and_attendance():
                         cursor.execute("""
                             SELECT id FROM attendance_logs 
                             WHERE user_id = ? AND assigned_course_id = ? AND date = ?
-                        """, (student_id, assigned_course_id, attendance_date.strftime('%Y-%m-%d')))
+                        """, (student_id, assigned_course_id, class_date.strftime('%Y-%m-%d')))
                         
                         if cursor.fetchone():
                             continue  # Skip if already exists
@@ -414,7 +488,7 @@ def seed_assigned_courses_and_attendance():
                         """, (
                             student_id, 
                             assigned_course_id, 
-                            attendance_date.strftime('%Y-%m-%d'),
+                            class_date.strftime('%Y-%m-%d'),
                             status, 
                             current_time, 
                             current_time
@@ -426,7 +500,7 @@ def seed_assigned_courses_and_attendance():
         
         conn.commit()
         
-        # Log final statistics
+        # Log final statistics with detailed breakdown
         cursor.execute("SELECT COUNT(*) FROM assigned_courses")
         course_count = cursor.fetchone()[0]
         
@@ -440,15 +514,54 @@ def seed_assigned_courses_and_attendance():
         """)
         status_counts = cursor.fetchall()
         
+        # Calculate attendance statistics per student
+        cursor.execute("""
+            SELECT 
+                u.first_name || ' ' || u.last_name as student_name,
+                COUNT(al.id) as total_classes,
+                SUM(CASE WHEN al.status = 'present' THEN 1 ELSE 0 END) as present_count,
+                SUM(CASE WHEN al.status = 'late' THEN 1 ELSE 0 END) as late_count,
+                SUM(CASE WHEN al.status = 'absent' THEN 1 ELSE 0 END) as absent_count,
+                ROUND((SUM(CASE WHEN al.status = 'present' THEN 1 ELSE 0 END) * 100.0 / COUNT(al.id)), 2) as attendance_percentage
+            FROM users u
+            JOIN attendance_logs al ON u.id = al.user_id
+            WHERE u.role = 'Student'
+            GROUP BY u.id, u.first_name, u.last_name
+            ORDER BY attendance_percentage DESC
+        """)
+        student_stats = cursor.fetchall()
+        
+        # Count students by attendance ranges
+        excellent_count = len([s for s in student_stats if s[5] >= 95])
+        good_count = len([s for s in student_stats if 85 <= s[5] < 95])
+        average_count = len([s for s in student_stats if 75 <= s[5] < 85])
+        poor_count = len([s for s in student_stats if s[5] < 75])
+        
         logger.info(f"✓ Created {course_count} assigned courses")
         logger.info(f"✓ Created {attendance_count} attendance logs")
         
         if status_counts:
-            logger.info("Attendance distribution:")
+            logger.info("Overall attendance distribution:")
+            total_logs = sum(count for _, count in status_counts)
             for status, count in status_counts:
-                logger.info(f"  {status}: {count}")
-        else:
-            logger.warning("No attendance logs were created!")
+                percentage = (count / total_logs) * 100 if total_logs > 0 else 0
+                logger.info(f"  {status}: {count} ({percentage:.1f}%)")
+        
+        logger.info(f"\nStudent attendance distribution:")
+        logger.info(f"  Excellent (95%+): {excellent_count} students")
+        logger.info(f"  Good (85-94%): {good_count} students")
+        logger.info(f"  Average (75-84%): {average_count} students")
+        logger.info(f"  Poor (<75%): {poor_count} students")
+        
+        # Show top and bottom performers
+        if student_stats:
+            logger.info(f"\nTop 3 performers:")
+            for i, (name, total, present, late, absent, percentage) in enumerate(student_stats[:3]):
+                logger.info(f"  {i+1}. {name}: {percentage}% ({present}/{total} present)")
+            
+            logger.info(f"\nBottom 3 performers:")
+            for i, (name, total, present, late, absent, percentage) in enumerate(student_stats[-3:]):
+                logger.info(f"  {i+1}. {name}: {percentage}% ({present}/{total} present)")
         
         conn.close()
         return True

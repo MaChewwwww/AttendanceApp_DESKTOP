@@ -1292,62 +1292,172 @@ class DatabaseManager:
             print(f"Error getting assigned courses: {e}")
             return False, str(e)
 
-    def get_filter_options(self):
-        """Get all available filter options from database"""
+    def get_user_by_name(self, first_name, last_name, role=None):
+        """Get user details by name"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
             
-            # Get all programs
-            cursor.execute("SELECT DISTINCT name FROM programs ORDER BY name")
-            programs = [row[0] for row in cursor.fetchall()]
+            query = """
+            SELECT u.*, s.student_number, f.employee_number, st.name as status_name
+            FROM users u
+            LEFT JOIN students s ON u.id = s.user_id
+            LEFT JOIN faculties f ON u.id = f.user_id
+            LEFT JOIN statuses st ON u.status_id = st.id
+            WHERE u.first_name = ? AND u.last_name = ?
+            """
             
-            # Get all sections
-            cursor.execute("SELECT DISTINCT name FROM sections ORDER BY name")
-            sections = [row[0] for row in cursor.fetchall()]
+            params = [first_name, last_name]
             
-            # Get student statuses
-            cursor.execute("SELECT DISTINCT name FROM statuses WHERE user_type = 'student' ORDER BY name")
-            student_statuses = [row[0] for row in cursor.fetchall()]
+            if role:
+                query += " AND u.role = ?"
+                params.append(role)
             
-            # Get faculty statuses
-            cursor.execute("SELECT DISTINCT name FROM statuses WHERE user_type = 'faculty' ORDER BY name")
-            faculty_statuses = [row[0] for row in cursor.fetchall()]
+            query += " AND u.isDeleted = 0 LIMIT 1"
             
-            # Get all roles
-            cursor.execute("SELECT DISTINCT role FROM users WHERE isDeleted = 0 ORDER BY role")
-            roles = [row[0] for row in cursor.fetchall()]
-            
-            # Extract year levels from sections (1-1, 2-1, etc.)
-            years = set()
-            for section in sections:
-                if '-' in section:
-                    year_num = section.split('-')[0]
-                    if year_num.isdigit():
-                        year_mapping = {'1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year'}
-                        if year_num in year_mapping:
-                            years.add(year_mapping[year_num])
-            
-            years = sorted(list(years))
-            
+            cursor.execute(query, params)
+            result = cursor.fetchone()
             conn.close()
             
-            return {
-                'programs': programs,
-                'sections': sections,
-                'years': years,
-                'student_statuses': student_statuses,
-                'faculty_statuses': faculty_statuses,
-                'roles': roles
-            }
+            if result:
+                return True, dict(result)
+            else:
+                return False, "User not found"
+                
+        except Exception as e:
+            print(f"Error getting user by name: {e}")
+            return False, str(e)
+
+    def get_course_enrollment_count(self, assigned_course_id):
+        """Get number of students with attendance records for a course"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT COUNT(DISTINCT user_id) as student_count
+                FROM attendance_logs
+                WHERE assigned_course_id = ?
+            """, (assigned_course_id,))
+            
+            result = cursor.fetchone()
+            conn.close()
+            
+            return result['student_count'] if result else 0
             
         except Exception as e:
-            print(f"Error getting filter options: {e}")
-            return {
-                'programs': [],
-                'sections': [],
-                'years': [],
-                'student_statuses': [],
-                'faculty_statuses': [],
-                'roles': []
-            }
+            print(f"Error getting course enrollment count: {e}")
+            return 0
+
+    def get_detailed_attendance_logs(self, user_id=None, assigned_course_id=None, date_from=None, date_to=None, limit=None):
+        """Get detailed attendance logs with additional information"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            query = """
+            SELECT 
+                al.*,
+                u.first_name || ' ' || u.last_name as student_name,
+                u.email as student_email,
+                s.student_number,
+                c.name as course_name,
+                sec.name as section_name,
+                p.name as program_name,
+                fu.first_name || ' ' || fu.last_name as faculty_name,
+                ac.schedule_day,
+                ac.schedule_time,
+                ac.room
+            FROM attendance_logs al
+            JOIN users u ON al.user_id = u.id
+            JOIN students s ON u.id = s.user_id
+            JOIN assigned_courses ac ON al.assigned_course_id = ac.id
+            JOIN courses c ON ac.course_id = c.id
+            JOIN sections sec ON ac.section_id = sec.id
+            JOIN programs p ON sec.course_id = p.id
+            JOIN users fu ON ac.user_id = fu.id
+            WHERE u.isDeleted = 0
+            """
+            
+            params = []
+            
+            if user_id:
+                query += " AND al.user_id = ?"
+                params.append(user_id)
+            
+            if assigned_course_id:
+                query += " AND al.assigned_course_id = ?"
+                params.append(assigned_course_id)
+            
+            if date_from:
+                query += " AND al.date >= ?"
+                params.append(date_from)
+            
+            if date_to:
+                query += " AND al.date <= ?"
+                params.append(date_to)
+            
+            query += " ORDER BY al.date DESC, al.created_at DESC"
+            
+            if limit:
+                query += f" LIMIT {limit}"
+            
+            cursor.execute(query, params)
+            results = cursor.fetchall()
+            
+            logs = [dict(row) for row in results]
+            conn.close()
+            
+            return True, logs
+            
+        except Exception as e:
+            print(f"Error getting detailed attendance logs: {e}")
+            return False, str(e)
+
+    def get_student_attendance_summary(self, user_id):
+        """Get attendance summary for a specific student"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Get attendance summary grouped by course
+            query = """
+            SELECT 
+                c.name as course_name,
+                s.name as section_name,
+                p.name as program_name,
+                COUNT(al.id) as total_classes,
+                SUM(CASE WHEN al.status = 'present' THEN 1 ELSE 0 END) as present_count,
+                SUM(CASE WHEN al.status = 'absent' THEN 1 ELSE 0 END) as absent_count,
+                SUM(CASE WHEN al.status = 'late' THEN 1 ELSE 0 END) as late_count,
+                ac.id as assigned_course_id,
+                ac.schedule_day,
+                ac.schedule_time,
+                ac.room,
+                ac.semester,
+                ac.academic_year
+            FROM attendance_logs al
+            JOIN assigned_courses ac ON al.assigned_course_id = ac.id
+            JOIN courses c ON ac.course_id = c.id
+            JOIN sections sec ON ac.section_id = sec.id
+            JOIN programs p ON sec.course_id = p.id
+            LEFT JOIN sections s ON ac.section_id = s.id
+            WHERE al.user_id = ?
+            GROUP BY ac.id, c.name, s.name, p.name
+            ORDER BY c.name, s.name
+            """
+            
+            cursor.execute(query, (user_id,))
+            results = cursor.fetchall()
+            
+            summary = []
+            for row in results:
+                summary_dict = dict(row)
+                summary.append(summary_dict)
+            
+            conn.close()
+            return True, summary
+            
+        except Exception as e:
+            print(f"Error getting student attendance summary: {e}")
+            return False, str(e)

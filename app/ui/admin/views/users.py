@@ -684,6 +684,10 @@ class UsersView(ctk.CTkFrame):
                 # Actions (column 5)
                 action_var = tk.StringVar(value="Edit")
                 actions = ["Edit", "View", "Delete"]
+                
+                # Get the full student data for this row
+                student_data = self.get_students_for_page(self.current_students_page)[idx-1]
+                
                 action_menu = ctk.CTkOptionMenu(
                     table_frame,
                     values=actions,
@@ -698,7 +702,7 @@ class UsersView(ctk.CTkFrame):
                     dropdown_fg_color="#fff",
                     dropdown_hover_color="#E5E7EB",
                     dropdown_text_color="#222",
-                    command=lambda choice, data=(name, year, section, program): self.handle_action(choice, data)
+                    command=lambda choice, data=student_data: self.handle_action(choice, data)
                 )
                 action_menu.grid(row=idx, column=5, sticky="w", padx=10, pady=3)
 
@@ -854,6 +858,10 @@ class UsersView(ctk.CTkFrame):
                 # Actions (column 5)
                 action_var = tk.StringVar(value="Edit")
                 actions = ["Edit", "View", "Delete"]
+                
+                # Get the full faculty data for this row
+                faculty_data = self.get_faculty_for_page(self.current_faculty_page)[idx-1]
+                
                 action_menu = ctk.CTkOptionMenu(
                     table_frame,
                     values=actions,
@@ -868,7 +876,7 @@ class UsersView(ctk.CTkFrame):
                     dropdown_fg_color="#fff",
                     dropdown_hover_color="#E5E7EB",
                     dropdown_text_color="#222",
-                    command=lambda choice, data=(name, emp_num, email, role): self.handle_faculty_action(choice, data)
+                    command=lambda choice, data=faculty_data: self.handle_faculty_action(choice, data)
                 )
                 action_menu.grid(row=idx, column=5, sticky="w", padx=10, pady=3)
 
