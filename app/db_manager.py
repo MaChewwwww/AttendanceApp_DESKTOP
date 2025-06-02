@@ -1388,7 +1388,7 @@ class DatabaseManager:
             conn = self.get_connection()
             cursor = conn.cursor()
             
-            # Get comprehensive user data with joins - only existing columns
+            # Get comprehensive user data with joins - handle null sections/programs
             query = """
             SELECT 
                 u.id, u.first_name, u.last_name, u.email, u.birthday, 
@@ -1397,8 +1397,8 @@ class DatabaseManager:
                 s.name as status_name,
                 st.student_number, st.section as section_id,
                 f.employee_number,
-                sec.name as section_name,
-                p.name as program_name
+                COALESCE(sec.name, '') as section_name,
+                COALESCE(p.name, '') as program_name
             FROM users u
             LEFT JOIN statuses s ON u.status_id = s.id
             LEFT JOIN students st ON u.id = st.user_id
@@ -1415,7 +1415,7 @@ class DatabaseManager:
                 conn.close()
                 return (False, "User not found")
             
-            # Convert row to dictionary - only include existing columns
+            # Convert row to dictionary - handle null values properly
             user_data = {
                 'id': result['id'],
                 'first_name': result['first_name'],
@@ -1432,9 +1432,9 @@ class DatabaseManager:
                 'updated_at': result['updated_at'],
                 'student_number': result['student_number'] if result['student_number'] else '',
                 'section_id': result['section_id'],
-                'section_name': result['section_name'] or '',
+                'section_name': result['section_name'] if result['section_name'] else '',
                 'employee_number': result['employee_number'] if result['employee_number'] else '',
-                'program_name': result['program_name'] or ''
+                'program_name': result['program_name'] if result['program_name'] else ''
             }
             
             conn.close()
@@ -1443,3 +1443,183 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error getting user details: {e}")
             return (False, f"Database error: {str(e)}")
+
+    def get_programs(self):
+        """Get all available programs"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT id, name, description 
+                FROM programs 
+                ORDER BY name
+            """)
+            
+            results = cursor.fetchall()
+            programs = [dict(row) for row in results]
+            
+            conn.close()
+            return True, programs
+            
+        except Exception as e:
+            print(f"Error getting programs: {e}")
+            return False, str(e)
+
+    def get_sections(self, program_id=None):
+        """Get all sections, optionally filtered by program"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            if program_id:
+                cursor.execute("""
+                    SELECT id, name, program_id 
+                    FROM sections 
+                    WHERE program_id = ?
+                    ORDER BY name
+                """, (program_id,))
+            else:
+                cursor.execute("""
+                    SELECT s.id, s.name, s.program_id, p.name as program_name
+                    FROM sections s
+                    JOIN programs p ON s.program_id = p.id
+                    ORDER BY p.name, s.name
+                """)
+            
+            results = cursor.fetchall()
+            sections = [dict(row) for row in results]
+            
+            conn.close()
+            return True, sections
+            
+        except Exception as e:
+            print(f"Error getting sections: {e}")
+            return False, str(e)
+
+    def get_sections_by_program(self, program_id):
+        """Get sections filtered by program ID"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT id, name, program_id 
+                FROM sections 
+                WHERE program_id = ?
+                ORDER BY name
+            """, (program_id,))
+            
+            results = cursor.fetchall()
+            sections = [dict(row) for row in results]
+            
+            conn.close()
+            return True, sections
+            
+        except Exception as e:
+            print(f"Error getting sections by program: {e}")
+            return False, str(e)
+
+    def get_statuses(self, user_type=None):
+        """Get all statuses, optionally filtered by user type"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            if user_type:
+                cursor.execute("""
+                    SELECT id, name, description, user_type 
+                    FROM statuses 
+                    WHERE user_type = ?
+                    ORDER BY name
+                """, (user_type,))
+            else:
+                cursor.execute("""
+                    SELECT id, name, description, user_type 
+                    FROM statuses 
+                    ORDER BY user_type, name
+                """)
+            
+            results = cursor.fetchall()
+            statuses = [dict(row) for row in results]
+            
+            conn.close()
+            return True, statuses
+            
+        except Exception as e:
+            print(f"Error getting statuses: {e}")
+            return False, str(e)
+
+    def get_dropdown_options_for_user_type(self, user_type):
+        """Get all dropdown options for a specific user type (student/faculty)"""
+        try:
+            # Get programs
+            success_programs, programs = self.get_programs()
+            if not success_programs:
+                return False, f"Error fetching programs: {programs}"
+            
+            # Get sections  
+            success_sections, sections = self.get_sections()
+            if not success_sections:
+                return False, f"Error fetching sections: {sections}"
+            
+            # Get statuses for this user type
+            success_statuses, statuses = self.get_statuses(user_type)
+            if not success_statuses:
+                return False, f"Error fetching statuses: {statuses}"
+            
+            # Format for dropdown usage
+            dropdown_options = {
+                'programs': [{'id': p['id'], 'name': p['name'], 'abbreviation': self._get_program_abbreviation(p['name'])} for p in programs],
+                'sections': [{'id': s['id'], 'name': s['name'], 'program_id': s.get('program_id')} for s in sections],
+                'statuses': [{'id': s['id'], 'name': s['name']} for s in statuses]
+            }
+            
+            return True, dropdown_options
+            
+        except Exception as e:
+            print(f"Error getting dropdown options: {e}")
+            return False, str(e)
+
+    def _get_program_abbreviation(self, program_name):
+        """Convert program name to abbreviation"""
+        if not program_name:
+            return "N/A"
+        
+        if "Information Technology" in program_name:
+            return "BSIT"
+        elif "Computer Science" in program_name:
+            return "BSCS"  
+        elif "Information Systems" in program_name:
+            return "BSIS"
+        else:
+            # Extract abbreviation from name if possible, or return first letters
+            words = program_name.split()
+            if len(words) >= 2:
+                return ''.join([word[0].upper() for word in words])
+            return program_name[:4].upper()
+
+    def get_user_section_and_program_ids(self, user_id):
+        """Get the current section_id and program_id for a user"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT st.section as section_id, s.program_id
+                FROM students st
+                JOIN sections s ON st.section = s.id
+                WHERE st.user_id = ?
+            """, (user_id,))
+            
+            result = cursor.fetchone()
+            conn.close()
+            
+            if result:
+                return True, {'section_id': result['section_id'], 'program_id': result['program_id']}
+            else:
+                return False, "User section/program not found"
+                
+        except Exception as e:
+            print(f"Error getting user section/program: {e}")
+            return False, str(e)

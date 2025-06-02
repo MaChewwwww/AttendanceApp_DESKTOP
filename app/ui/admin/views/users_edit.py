@@ -59,6 +59,9 @@ class UsersEditModal(ctk.CTkToplevel):
         title_text = f"Edit {self.user_type.title()} Profile"
         ctk.CTkLabel(self, text=title_text, font=ctk.CTkFont(size=18, weight="bold"), text_color="#000").pack(anchor="w", padx=30, pady=(20, 10))
         
+        # Load dropdown options from backend
+        self.load_dropdown_options()
+        
         # Main form frame
         form_frame = ctk.CTkFrame(self, fg_color="#fff")
         form_frame.pack(fill="both", expand=True, padx=30, pady=(0, 10))
@@ -119,14 +122,22 @@ class UsersEditModal(ctk.CTkToplevel):
             program_container,
             fg_color="#fff",
             border_width=2,
-            border_color="#565b5e",
+            border_color="#d1d1d1",
             corner_radius=6,
-            height=32
+            height=36
         )
         program_dropdown_container.pack(fill="x", pady=(0, 10))
         program_dropdown_container.pack_propagate(False)
         
-        program_options = ["BSIT", "BSCS", "BSIS"]
+        # Use backend data for program options
+        program_options = [p['abbreviation'] for p in self.dropdown_data.get('programs', [])]
+        if not program_options:
+            program_options = ["BSIT", "BSCS", "BSIS"]  # Fallback
+        
+        # Always include "Not Yet Assigned" option for users without programs
+        if "Not Yet Assigned" not in program_options:
+            program_options.insert(0, "Not Yet Assigned")
+        
         self.form_fields['program'] = ctk.CTkOptionMenu(
             program_dropdown_container,
             fg_color="#fff",
@@ -138,11 +149,13 @@ class UsersEditModal(ctk.CTkToplevel):
             dropdown_text_color="#000",
             values=program_options,
             font=ctk.CTkFont(size=13),
-            corner_radius=0,
-            anchor="w"
+            corner_radius=4,
+            anchor="w",
+            height=32,
+            command=self.on_program_change
         )
-        self.form_fields['program'].pack(fill="both", expand=True, padx=2, pady=2)
-        self.form_fields['program'].set(program_options[0])
+        self.form_fields['program'].pack(fill="both", expand=True, padx=1, pady=1)
+        self.form_fields['program'].set("Not Yet Assigned")  # Default to not assigned
         
         # Section (right side)
         section_container = ctk.CTkFrame(program_section_frame, fg_color="transparent")
@@ -154,31 +167,33 @@ class UsersEditModal(ctk.CTkToplevel):
             section_container,
             fg_color="#fff",
             border_width=2,
-            border_color="#565b5e",
+            border_color="#d1d1d1",
             corner_radius=6,
-            height=32
+            height=36
         )
         section_dropdown_container.pack(fill="x", pady=(0, 10))
         section_dropdown_container.pack_propagate(False)
         
-        section_options = ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1"]
+        # Initially, section should be locked until program is selected
         self.form_fields['section'] = ctk.CTkOptionMenu(
             section_dropdown_container,
-            fg_color="#fff",
-            text_color="#000",
-            button_color="#fff",
-            button_hover_color="#f0f0f0",
+            fg_color="#f5f5f5",  # Disabled appearance
+            text_color="#999999",  # Grayed out text
+            button_color="#f5f5f5",
+            button_hover_color="#f5f5f5",
             dropdown_fg_color="#fff",
             dropdown_hover_color="#f0f0f0",
             dropdown_text_color="#000",
-            values=section_options,
+            values=["Select Program First"],  # Placeholder message
             font=ctk.CTkFont(size=13),
-            corner_radius=0,
-            anchor="w"
+            corner_radius=4,
+            anchor="w",
+            height=32,
+            state="disabled"  # Initially disabled
         )
-        self.form_fields['section'].pack(fill="both", expand=True, padx=2, pady=2)
-        self.form_fields['section'].set(section_options[0])
-        
+        self.form_fields['section'].pack(fill="both", expand=True, padx=1, pady=1)
+        self.form_fields['section'].set("Select Program First")
+
         # Row 4: New Password - Status
         password_status_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
         password_status_frame.pack(fill="x", pady=(0, 15))
@@ -202,18 +217,22 @@ class UsersEditModal(ctk.CTkToplevel):
             status_container,
             fg_color="#fff",
             border_width=2,
-            border_color="#565b5e",
+            border_color="#d1d1d1",
             corner_radius=6,
-            height=32
+            height=36
         )
         status_dropdown_container.pack(fill="x", pady=(0, 10))
         status_dropdown_container.pack_propagate(False)
         
         # Status dropdown - placeholder options for now
         if self.user_type == "student":
-            status_options = ["Enrolled", "Graduated", "Dropout", "On Leave", "Suspended"]
+            status_options = [s['name'] for s in self.dropdown_data.get('statuses', []) if s.get('name')]
+            if not status_options:
+                status_options = ["Enrolled", "Graduated", "Dropout", "On Leave", "Suspended"]  # Fallback
         else:
-            status_options = ["Active", "Inactive", "Retired", "Probationary", "Tenure Track", "Tenured"]
+            status_options = [s['name'] for s in self.dropdown_data.get('statuses', []) if s.get('name')]
+            if not status_options:
+                status_options = ["Active", "Inactive", "Retired", "Probationary", "Tenure Track", "Tenured"]  # Fallback
         
         self.form_fields['status'] = ctk.CTkOptionMenu(
             status_dropdown_container,
@@ -226,10 +245,11 @@ class UsersEditModal(ctk.CTkToplevel):
             dropdown_text_color="#000",
             values=status_options,
             font=ctk.CTkFont(size=13),
-            corner_radius=0,
-            anchor="w"
+            corner_radius=4,
+            anchor="w",
+            height=32
         )
-        self.form_fields['status'].pack(fill="both", expand=True, padx=2, pady=2)
+        self.form_fields['status'].pack(fill="both", expand=True, padx=1, pady=1)
         self.form_fields['status'].set(status_options[0])
         
         # Row 5: Face Recognition Button (Centered)
@@ -302,6 +322,103 @@ class UsersEditModal(ctk.CTkToplevel):
         entry.pack(fill="x", pady=(0, 10))
         return entry
 
+    def load_dropdown_options(self):
+        """Load dropdown options from backend"""
+        try:
+            # Get dropdown options for this user type
+            success, dropdown_data = self.db_manager.get_dropdown_options_for_user_type(self.user_type)
+            
+            if success:
+                self.dropdown_data = dropdown_data
+                print(f"Loaded dropdown options: {len(dropdown_data.get('programs', []))} programs, {len(dropdown_data.get('sections', []))} sections, {len(dropdown_data.get('statuses', []))} statuses")
+            else:
+                print(f"Error loading dropdown options: {dropdown_data}")
+                self.dropdown_data = {'programs': [], 'sections': [], 'statuses': []}
+                
+        except Exception as e:
+            print(f"Error in load_dropdown_options: {e}")
+            self.dropdown_data = {'programs': [], 'sections': [], 'statuses': []}
+
+    def on_program_change(self, selected_program):
+        """Handle program selection change to filter sections"""
+        try:
+            if selected_program == "Not Yet Assigned":
+                # Lock section dropdown when no program is selected
+                self.form_fields['section'].configure(
+                    values=["Select Program First"],
+                    fg_color="#f5f5f5",
+                    text_color="#999999",
+                    button_color="#f5f5f5",
+                    button_hover_color="#f5f5f5",
+                    state="disabled"
+                )
+                self.form_fields['section'].set("Select Program First")
+                return
+            
+            # Find the program ID for the selected abbreviation
+            selected_program_id = None
+            for program in self.dropdown_data.get('programs', []):
+                if program['abbreviation'] == selected_program:
+                    selected_program_id = program['id']
+                    break
+            
+            if selected_program_id:
+                # Filter sections by program
+                filtered_sections = [
+                    s['name'] for s in self.dropdown_data.get('sections', [])
+                    if s.get('program_id') == selected_program_id
+                ]
+                
+                # Always include "Not Yet Assigned" option
+                if "Not Yet Assigned" not in filtered_sections:
+                    filtered_sections.insert(0, "Not Yet Assigned")
+                
+                if filtered_sections:
+                    # Enable and update section dropdown with filtered options
+                    self.form_fields['section'].configure(
+                        values=filtered_sections,
+                        fg_color="#fff",
+                        text_color="#000",
+                        button_color="#fff",
+                        button_hover_color="#f0f0f0",
+                        state="normal"
+                    )
+                    # Set to "Not Yet Assigned" by default when program changes
+                    self.form_fields['section'].set("Not Yet Assigned")
+                else:
+                    # No sections found for this program, show only "Not Yet Assigned"
+                    self.form_fields['section'].configure(
+                        values=["Not Yet Assigned"],
+                        fg_color="#fff",
+                        text_color="#000",
+                        button_color="#fff",
+                        button_hover_color="#f0f0f0",
+                        state="normal"
+                    )
+                    self.form_fields['section'].set("Not Yet Assigned")
+            else:
+                # If no valid program selected, lock section dropdown
+                self.form_fields['section'].configure(
+                    values=["Select Program First"],
+                    fg_color="#f5f5f5",
+                    text_color="#999999",
+                    button_color="#f5f5f5",
+                    button_hover_color="#f5f5f5",
+                    state="disabled"
+                )
+                self.form_fields['section'].set("Select Program First")
+            
+        except Exception as e:
+            print(f"Error handling program change: {e}")
+            # Fallback to locked state on error
+            self.form_fields['section'].configure(
+                values=["Select Program First"],
+                fg_color="#f5f5f5",
+                text_color="#999999",
+                state="disabled"
+            )
+            self.form_fields['section'].set("Select Program First")
+
     def populate_form_data(self):
         """Populate form fields with user data"""
         if not self.user_data:
@@ -320,32 +437,47 @@ class UsersEditModal(ctk.CTkToplevel):
         if 'contact_number' in self.form_fields and self.user_data.get('contact_number'):
             self.form_fields['contact_number'].insert(0, self.user_data['contact_number'])
         
-        # Set dropdown values based on user data
-        if 'program' in self.form_fields and self.user_data.get('program_name'):
-            program_name = self.user_data['program_name']
-            # Convert full program names to abbreviations for dropdown
-            if "Information Technology" in program_name:
-                self.form_fields['program'].set("BSIT")
-            elif "Computer Science" in program_name:
-                self.form_fields['program'].set("BSCS")
-            elif "Information Systems" in program_name:
-                self.form_fields['program'].set("BSIS")
+        # Set program dropdown based on user data
+        program_set = False
+        if 'program' in self.form_fields:
+            program_name = self.user_data.get('program_name')
+            
+            if program_name and program_name.strip():
+                # User has a program - find matching abbreviation
+                for program in self.dropdown_data.get('programs', []):
+                    if program['name'] == program_name or program['abbreviation'] in program_name:
+                        self.form_fields['program'].set(program['abbreviation'])
+                        # Trigger section filtering for this program
+                        self.on_program_change(program['abbreviation'])
+                        program_set = True
+                        break
+            
+            if not program_set:
+                # User has no program or program not found - set to "Not Yet Assigned"
+                self.form_fields['program'].set("Not Yet Assigned")
+                # This will trigger the program change handler to lock sections
+                self.on_program_change("Not Yet Assigned")
         
-        if 'section' in self.form_fields and self.user_data.get('section_name'):
-            section_name = self.user_data['section_name']
-            # Check if section exists in dropdown options
-            if section_name in ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1"]:
-                self.form_fields['section'].set(section_name)
+        # Set section after program filtering is applied
+        if 'section' in self.form_fields and program_set:
+            section_name = self.user_data.get('section_name')
+            if section_name and section_name.strip():
+                # Check if section exists in current dropdown options
+                current_sections = self.form_fields['section'].cget("values")
+                if section_name in current_sections:
+                    self.form_fields['section'].set(section_name)
+                else:
+                    # Section not available for selected program, set to "Not Yet Assigned"
+                    self.form_fields['section'].set("Not Yet Assigned")
+            else:
+                # User has no section, set to "Not Yet Assigned"
+                self.form_fields['section'].set("Not Yet Assigned")
         
         if 'status' in self.form_fields and self.user_data.get('status_name'):
             status_name = self.user_data['status_name']
             # Check if status exists in dropdown options
-            if self.user_type == "student":
-                status_options = ["Enrolled", "Graduated", "Dropout", "On Leave", "Suspended"]
-            else:
-                status_options = ["Active", "Inactive", "Retired", "Probationary", "Tenure Track", "Tenured"]
-            
-            if status_name in status_options:
+            current_statuses = self.form_fields['status'].cget("values")
+            if status_name in current_statuses:
                 self.form_fields['status'].set(status_name)
         
         # Load existing face image if available
@@ -406,10 +538,6 @@ class UsersEditModal(ctk.CTkToplevel):
         except Exception as e:
             print(f"Error updating face status: {e}")
 
-    def update_image_preview(self):
-        """Update face status (renamed for compatibility)"""
-        self.update_face_status()
-
     def open_facial_recognition(self):
         """Open facial recognition popup"""
         # Create completely independent window
@@ -447,9 +575,13 @@ class UsersEditModal(ctk.CTkToplevel):
             if new_password:
                 form_data['password'] = new_password
             
-            # Get dropdown values
-            form_data['program'] = self.form_fields['program'].get()
-            form_data['section'] = self.form_fields['section'].get()
+            # Get dropdown values - handle "Not Yet Assigned" properly
+            program_value = self.form_fields['program'].get()
+            section_value = self.form_fields['section'].get()
+            
+            # Convert "Not Yet Assigned" to None for database storage
+            form_data['program'] = None if program_value == "Not Yet Assigned" else program_value
+            form_data['section'] = None if section_value in ["Not Yet Assigned", "Select Program First"] else section_value
             form_data['status'] = self.form_fields['status'].get()
             
             # Add face image data if available
@@ -461,18 +593,30 @@ class UsersEditModal(ctk.CTkToplevel):
                 messagebox.showerror("Error", "First name, last name, and email are required.")
                 return
             
-            # TODO: Call the database update method when ready
-            # success, message = self.update_user_in_database(form_data)
-            
-            # For now, just show success message
-            messagebox.showinfo("Success", "User data saved successfully!\n\n(Database update will be implemented next)")
+            # Show what will be saved (for debugging)
             print(f"Form data to save: {form_data}")
             
-            # Refresh the parent view if possible
-            if hasattr(self.master, 'load_filtered_data'):
-                self.master.load_filtered_data()
+            # Show confirmation with special handling for unassigned values
+            program_display = form_data['program'] or "Not Yet Assigned"
+            section_display = form_data['section'] or "Not Yet Assigned"
             
-            self.destroy()
+            confirmation_msg = f"Save changes for {form_data['first_name']} {form_data['last_name']}?\n\n"
+            confirmation_msg += f"Program: {program_display}\n"
+            confirmation_msg += f"Section: {section_display}\n"
+            confirmation_msg += f"Status: {form_data['status']}"
+            
+            if messagebox.askyesno("Confirm Changes", confirmation_msg):
+                # TODO: Call the database update method when ready
+                # success, message = self.update_user_in_database(form_data)
+                
+                # For now, just show success message
+                messagebox.showinfo("Success", "User data saved successfully!\n\n(Database update will be implemented next)")
+                
+                # Refresh the parent view if possible
+                if hasattr(self.master, 'load_filtered_data'):
+                    self.master.load_filtered_data()
+                
+                self.destroy()
                 
         except Exception as e:
             print(f"Error saving changes: {e}")
