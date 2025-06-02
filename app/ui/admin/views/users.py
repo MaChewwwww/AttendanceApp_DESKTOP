@@ -8,6 +8,12 @@ import base64
 from app.ui.admin.components.sidebar import DateTimePill  # adjust path if needed
 from app.db_manager import DatabaseManager
 
+# Import separated modal classes
+from .users_view import UsersViewModal
+from .users_edit import UsersEditModal
+from .users_delete import UsersDeleteModal
+from .users_modals import FacialRecognitionPopup
+
 class FilterPopup(ctk.CTkToplevel):
     def __init__(self, parent, user_type="student"):
         super().__init__(parent)
@@ -211,341 +217,6 @@ class FilterPopup(ctk.CTkToplevel):
         # Apply reset filters
         self.parent_view.reset_filters(self.user_type)
         self.destroy()
-
-class ActionPopup(ctk.CTkToplevel):
-    def __init__(self, parent, action, user_data):
-        super().__init__(parent)
-        self.title(f"{action} User")
-        self.geometry("350x220")
-        self.resizable(False, False)
-        self.configure(fg_color="#fff")
-        self.transient(parent)
-        self.grab_set()
-        self.action = action
-        self.user_data = user_data
-        self.update_idletasks()
-        # Center for default, will re-center for other actions in setup_ui
-        self._center_window(350, 220)
-        self.setup_ui()
-
-    def _center_window(self, width, height):
-        x = (self.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.winfo_screenheight() // 2) - (height // 2)
-        self.geometry(f"{width}x{height}+{x}+{y}")
-
-    def setup_ui(self):
-        action = self.action
-        # Unpack user data
-        name, year, section, program = self.user_data
-        if action == "View":
-            self.geometry("800x500")
-            self._center_window(800, 500)
-            
-            # Header
-            ctk.CTkLabel(self, text=f"View User - {name}", font=ctk.CTkFont(size=18, weight="bold")).pack(pady=20)
-            
-            # Table frame
-            table_frame = ctk.CTkFrame(self, fg_color="#fff", corner_radius=8, border_width=1, border_color="#E5E7EB")
-            table_frame.pack(fill="both", expand=True, padx=20, pady=(0, 20))
-            
-            # Configure grid
-            table_frame.grid_columnconfigure(0, weight=1)
-            table_frame.grid_columnconfigure(1, weight=1)
-            table_frame.grid_columnconfigure(2, weight=1)
-            table_frame.grid_columnconfigure(3, weight=1)
-            
-            # Headers
-            columns = ["Course Subject", "Attendance", "Absent", "Rating"]
-            for i, col in enumerate(columns):
-                ctk.CTkLabel(table_frame, text=col, font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=i, padx=10, pady=10, sticky="w")
-            
-            # Sample table data
-            table_data = [
-                ("Ethics 101", "1", "1", "100%") for _ in range(6)
-            ]
-            for idx, (subject, attendance, absent, rating) in enumerate(table_data, start=1):
-                ctk.CTkLabel(table_frame, text=subject).grid(row=idx, column=0, padx=10, pady=5, sticky="w")
-                ctk.CTkLabel(table_frame, text=attendance).grid(row=idx, column=1, padx=10, pady=5, sticky="w")
-                ctk.CTkLabel(table_frame, text=absent).grid(row=idx, column=2, padx=10, pady=5, sticky="w")
-                ctk.CTkLabel(table_frame, text=rating).grid(row=idx, column=3, padx=10, pady=5, sticky="w")
-        else:
-            if action == "Edit":
-                ctk.CTkLabel(self, text=f"Edit User - {name}", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=20)
-                ctk.CTkLabel(self, text="Edit functionality coming soon...").pack(pady=10)
-                
-                ctk.CTkButton(self, text="Save Changes", command=self.show_caution_modal).pack(pady=10)
-                
-            elif action == "Delete":
-                ctk.CTkLabel(self, text=f"Delete User - {name}", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=20)
-                ctk.CTkLabel(self, text="Are you sure you want to delete this user?", text_color="red").pack(pady=10)
-                
-                button_frame = ctk.CTkFrame(self, fg_color="transparent")
-                button_frame.pack(pady=20)
-                
-                ctk.CTkButton(button_frame, text="Cancel", command=self.destroy).pack(side="left", padx=5)
-                ctk.CTkButton(button_frame, text="Delete", fg_color="red", command=self.show_success_modal).pack(side="left", padx=5)
-                
-            else:
-                ctk.CTkLabel(self, text=f"Action: {action}").pack(pady=20)
-                ctk.CTkLabel(self, text=f"User: {name}").pack(pady=10)
-
-    def show_caution_modal(self):
-        def on_continue():
-            print('Changes saved!')
-            # Place your save logic here
-        CautionModal(self, on_continue=on_continue)
-
-    def show_success_modal(self):
-        SuccessModal(self)
-
-class FacialRecognitionPopup(ctk.CTkToplevel):
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.title("Facial Recognition")
-        self.geometry("454x450")
-        self.resizable(False, False)
-        self.configure(fg_color="#222222")
-        self.minsize(454, 450)
-        self.maxsize(454, 450)
-        self.transient(parent)
-        self.grab_set()
-        self.update_idletasks()
-        self._center_window(454, 450)
-        self.update()
-        self._create_verification_dialog_content()
-
-    def _center_window(self, width, height):
-        x = (self.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.winfo_screenheight() // 2) - (height // 2)
-        self.geometry(f"{width}x{height}+{x}+{y}")
-
-    def _create_verification_dialog_content(self):
-        """Create content for the face verification dialog (as main popup content)"""
-        import tkinter.messagebox as messagebox
-        # Card Frame with explicit sizing
-        card = ctk.CTkFrame(
-            self, 
-            width=454, 
-            height=450, 
-            corner_radius=12, 
-            fg_color="#ffffff", 
-            border_width=0
-        )
-        card.place(x=0, y=0)
-        card.pack_propagate(False)
-        card.grid_propagate(False)
-
-        # Info icon (top right)
-        info_btn = ctk.CTkButton(
-            card, 
-            text="i", 
-            width=24, 
-            height=24, 
-            corner_radius=12, 
-            fg_color="#f5f5f5", 
-            text_color="#222", 
-            font=ctk.CTkFont("Roboto", 14, "bold"), 
-            hover_color="#e0e0e0", 
-            command=lambda: messagebox.showinfo("Info", "Please ensure you're in a well-lit environment before capturing your photo for the best image quality", parent=self)
-        )
-        info_btn.place(x=420, y=10)
-
-        # Camera Preview Frame with explicit sizing
-        self.face_preview_frame = ctk.CTkFrame(
-            card, 
-            width=410, 
-            height=240, 
-            fg_color="#fafafa", 
-            border_width=1, 
-            border_color="#d1d1d1"
-        )
-        self.face_preview_frame.place(x=22, y=38)
-        self.face_preview_frame.pack_propagate(False)
-        self.face_preview_frame.grid_propagate(False)
-
-        # Default Preview Label (centered)
-        self.preview_label = ctk.CTkLabel(
-            self.face_preview_frame,
-            text="Camera will appear here\nClick 'Open Camera' to begin",
-            font=ctk.CTkFont("Roboto", 12),
-            text_color="#a0a0a0"
-        )
-        self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
-
-        # Open Camera Button with explicit sizing
-        self.camera_button = ctk.CTkButton(
-            card,
-            text="Open Camera",
-            width=410,
-            height=32,
-            corner_radius=6,
-            font=ctk.CTkFont("Roboto", 13, "bold"),
-            fg_color="#ffffff",
-            text_color="#222",
-            border_width=1,
-            border_color="#d1d1d1",
-            hover_color="#f5f5f5",
-            command=self.toggle_camera if hasattr(self, 'toggle_camera') else None
-        )
-        self.camera_button.place(x=22, y=290)
-
-        # Retake and Capture Buttons with explicit sizing
-        self.retake_button = ctk.CTkButton(
-            card,
-            text="Retake",
-            width=200,
-            height=38,
-            corner_radius=8,
-            font=ctk.CTkFont("Roboto", 13, "bold"),
-            fg_color="#e5e5e5",
-            text_color="#707070",
-            border_width=0,
-            hover_color="#cccccc",
-            state="disabled",
-            command=self.retake_photo if hasattr(self, 'retake_photo') else None
-        )
-        self.retake_button.place(x=22, y=335)
-
-        self.capture_button = ctk.CTkButton(
-            card,
-            text="Capture",
-            width=200,
-            height=38,
-            corner_radius=8,
-            font=ctk.CTkFont("Roboto", 13, "bold"),
-            fg_color="#1E3A8A",
-            text_color="#fff",
-            border_width=0,
-            hover_color="#152a63",
-            state="disabled",
-            command=self.capture_face if hasattr(self, 'capture_face') else None
-        )
-        self.capture_button.place(x=232, y=335)
-
-        # Register Button with explicit sizing
-        self.register_button = ctk.CTkButton(
-            card,
-            text="Next",
-            width=410,
-            height=38,
-            corner_radius=8,
-            font=ctk.CTkFont("Roboto", 13, "bold"),
-            fg_color="#1E3A8A",
-            text_color="#fff",
-            border_width=0,
-            hover_color="#152a63",
-            command=self.complete_registration if hasattr(self, 'complete_registration') else None,
-            state="disabled"
-        )
-        self.register_button.place(x=22, y=385)
-
-class CautionModal(ctk.CTkToplevel):
-    def __init__(self, parent, on_continue=None):
-        super().__init__(parent)
-        self.title("Caution")
-        self.geometry("340x210")
-        self.resizable(False, False)
-        self.configure(fg_color="#FAFAFA")
-        self.transient(parent)
-        self.grab_set()
-        self.update_idletasks()
-        self._center_window(340, 210)
-        # Card frame for rounded corners, responsive
-        card = ctk.CTkFrame(self, fg_color="#fff", corner_radius=16)
-        card.pack(expand=True, fill="both", padx=16, pady=16)
-        card.pack_propagate(True)
-        # Draw yellow circle with exclamation mark
-        canvas = tk.Canvas(card, width=56, height=56, bg="#fff", highlightthickness=0)
-        canvas.create_oval(4, 4, 52, 52, outline="#FBBF24", width=3)
-        canvas.create_text(28, 28, text="!", font=("Segoe UI", 28, "bold"), fill="#FBBF24")
-        canvas.pack(pady=(8, 0))
-        # Title
-        ctk.CTkLabel(card, text="Caution", font=ctk.CTkFont(size=16, weight="bold"), text_color="#222", fg_color="#fff").pack(pady=(4, 0))
-        # Subtitle
-        ctk.CTkLabel(card, text="Do you want to make changes to this?", font=ctk.CTkFont(size=13), text_color="#888", fg_color="#fff").pack(pady=(0, 8))
-        # Buttons
-        btns_frame = ctk.CTkFrame(card, fg_color="#fff")
-        btns_frame.pack(side="bottom", fill="x", pady=(0, 16), padx=0)
-        ctk.CTkButton(
-            btns_frame,
-            text="Cancel",
-            fg_color="#D1D5DB",
-            text_color="#444",
-            hover_color="#BDBDBD",
-            height=38,
-            corner_radius=8,
-            command=self.destroy
-        ).pack(side="left", expand=True, fill="x", padx=(0, 8))
-        ctk.CTkButton(
-            btns_frame,
-            text="Continue",
-            fg_color="#FBBF24",
-            text_color="#fff",
-            hover_color="#f59e1b",
-            height=38,
-            corner_radius=8,
-            command=self.show_success_modal
-        ).pack(side="left", expand=True, fill="x", padx=(8, 0))
-
-    def _center_window(self, width, height):
-        x = (self.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.winfo_screenheight() // 2) - (height // 2)
-        self.geometry(f"{width}x{height}+{x}+{y}")
-
-    def show_success_modal(self):
-        SuccessModal(self)
-
-class SuccessModal(ctk.CTkToplevel):
-    def __init__(self, parent, on_continue=None):
-        super().__init__(parent)
-        self.title("Success")
-        self.geometry("340x210")
-        self.resizable(False, False)
-        self.configure(fg_color="#FAFAFA")
-        self.transient(parent)
-        self.grab_set()
-        self.update_idletasks()
-        self._center_window(340, 210)
-        self._parent_modal = parent
-        # Card frame for rounded corners, responsive and matching other modals
-        card = ctk.CTkFrame(self, fg_color="#fff", corner_radius=16)
-        card.pack(expand=True, fill="both", padx=16, pady=16)
-        card.pack_propagate(True)
-        # Draw green circle with checkmark
-        canvas = tk.Canvas(card, width=56, height=56, bg="#fff", highlightthickness=0)
-        canvas.create_oval(4, 4, 52, 52, outline="#22C55E", width=3)
-        # Draw checkmark
-        canvas.create_line(18, 32, 27, 42, 40, 18, fill="#22C55E", width=4, capstyle=tk.ROUND, joinstyle=tk.ROUND)
-        canvas.pack(pady=(8, 0))
-        # Title
-        ctk.CTkLabel(card, text="Success!", font=ctk.CTkFont(size=16, weight="bold"), text_color="#222", fg_color="#fff").pack(pady=(4, 0))
-        # Subtitle
-        ctk.CTkLabel(card, text="Action is done successfully.", font=ctk.CTkFont(size=13), text_color="#888", fg_color="#fff").pack(pady=(0, 8))
-        # Responsive Continue button (full width, bottom, fixed height)
-        btns_frame = ctk.CTkFrame(card, fg_color="#fff", height=38)
-        btns_frame.pack(side="bottom", fill="x", pady=(0, 16), padx=0)
-        btns_frame.pack_propagate(False)
-        ctk.CTkButton(
-            btns_frame,
-            text="Continue",
-            fg_color="#22C55E",
-            text_color="#fff",
-            hover_color="#16a34a",
-            font=ctk.CTkFont(size=15, weight="bold"),
-            corner_radius=8,
-            command=self._close_all        ).pack(expand=True, fill="both", padx=0)
-
-    def _center_window(self, width, height):
-        x = (self.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.winfo_screenheight() // 2) - (height // 2)
-        self.geometry(f"{width}x{height}+{x}+{y}")
-
-    def _close_all(self):
-        self.destroy()
-        try:
-            self._parent_modal.destroy()
-        except Exception:
-            pass
 
 class UsersView(ctk.CTkFrame):
     def __init__(self, parent):
@@ -1209,11 +880,22 @@ class UsersView(ctk.CTkFrame):
             FilterPopup(self, "faculty")
 
     def handle_action(self, action, data):
-        ActionPopup(self, action, data)
+        """Handle action selection for students"""
+        if action == "View":
+            UsersViewModal(self, data, "student")
+        elif action == "Edit":
+            UsersEditModal(self, data, "student")
+        elif action == "Delete":
+            UsersDeleteModal(self, data, "student")
 
     def handle_faculty_action(self, action, data):
-        # Reuse existing ActionPopup for faculty
-        ActionPopup(self, action, data)
+        """Handle action selection for faculty"""
+        if action == "View":
+            UsersViewModal(self, data, "faculty")
+        elif action == "Edit":
+            UsersEditModal(self, data, "faculty")
+        elif action == "Delete":
+            UsersDeleteModal(self, data, "faculty")
 
     def apply_filters(self, filter_values, user_type):
         """Apply filters to the specified user type"""
