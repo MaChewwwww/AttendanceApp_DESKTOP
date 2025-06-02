@@ -142,7 +142,7 @@ def create_superadmin(db_path):
         cursor.execute("""
             INSERT INTO users (first_name, last_name, email, birthday, password_hash, contact_number, role, status_id, verified, isDeleted, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, ("System", "Administrator", "admin@iskolarngbayan.pup.edu.ph", "1990-01-01", admin_password.decode('utf-8'), "+1234567890", "Admin", status_id, 1, 0, current_time, current_time))
+        """, ("System", "Administrator", "admin@iskolarngbayan.pup.edu.ph", "1990-01-01", admin_password.decode('utf-8'), "09123456789", "Admin", status_id, 1, 0, current_time, current_time))
         
         admin_id = cursor.lastrowid
         
