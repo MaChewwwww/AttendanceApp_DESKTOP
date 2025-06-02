@@ -475,21 +475,6 @@ class UsersView(ctk.CTkFrame):
         
         return status_colors.get(status, status_colors['No Status'])
 
-    def create_status_badge(self, parent, status, row, column):
-        """Create a colored status text"""
-        color = self.get_status_color(status)
-        
-        # Create simple label with colored text
-        status_label = ctk.CTkLabel(
-            parent,
-            text=status,
-            font=ctk.CTkFont(size=12, weight="bold"),
-            text_color=color,
-            fg_color="transparent",
-            anchor="w"
-        )
-        status_label.grid(row=row, column=column, sticky="w", padx=10, pady=3)
-
     def setup_students_tab(self, parent):
         # Search and filter bar
         search_bar_container = ctk.CTkFrame(parent, fg_color="#fff")
@@ -561,17 +546,16 @@ class UsersView(ctk.CTkFrame):
             clear_filters_btn = ctk.CTkButton(
                 filter_container,
                 text="✕",
-                width=24,
-                height=36,
-                fg_color="#dc2626",
-                text_color="#fff",
-                hover_color="#b91c1c",
-                border_width=0,
-                corner_radius=0,
+                width=20,
+                height=20,
                 font=ctk.CTkFont(size=12),
+                fg_color="transparent",
+                text_color="#1E3A8A",
+                hover_color="#F3F4F6",
+                border_width=0,
                 command=lambda: self.reset_filters('student')
             )
-            clear_filters_btn.pack(side="left")
+            clear_filters_btn.pack(side="left", padx=(5, 0))
 
         # Table
         table_frame = ctk.CTkFrame(parent, fg_color="#fff", corner_radius=8, border_width=1, border_color="#E5E7EB")
@@ -579,21 +563,20 @@ class UsersView(ctk.CTkFrame):
 
         # Columns (removed Photo column)
         columns = ["Student Name", "Year", "Section", "Program", "Status", "Actions"]
-        col_widths = [6, 1, 1, 1, 2, 1]  # Removed photo column weight
+        col_widths = [5, 2, 2, 3, 2, 2]  # More balanced column widths
         for i, weight in enumerate(col_widths):
             table_frame.grid_columnconfigure(i, weight=weight)
 
-        # Header row
+        # Header row with proper alignment
         for i, col in enumerate(columns):
             header_label = ctk.CTkLabel(
                 table_frame,
                 text=col,
-                font=ctk.CTkFont(size=12, weight="bold"),
+                font=ctk.CTkFont(size=13, weight="bold"),
                 text_color="#374151",
-                fg_color="#F9FAFB",
-                corner_radius=0
+                anchor="w"
             )
-            header_label.grid(row=0, column=i, sticky="ew", padx=0, pady=0, ipady=12)
+            header_label.grid(row=0, column=i, sticky="ew", padx=(15, 5), pady=8)
 
         # Use simplified data processing
         data_to_display = []
@@ -642,36 +625,43 @@ class UsersView(ctk.CTkFrame):
                 
                 # Student Name
                 name_label = ctk.CTkLabel(table_frame, text=student_data['name'], anchor="w", font=ctk.CTkFont(size=12), text_color="#111827")
-                name_label.grid(row=row, column=0, sticky="w", padx=10, pady=3)
+                name_label.grid(row=row, column=0, sticky="w", padx=(15, 5), pady=3)
                 
                 # Year
                 year_label = ctk.CTkLabel(table_frame, text=student_data['year'], anchor="w", font=ctk.CTkFont(size=12), text_color="#111827")
-                year_label.grid(row=row, column=1, sticky="w", padx=10, pady=3)
+                year_label.grid(row=row, column=1, sticky="w", padx=(15, 5), pady=3)
                 
                 # Section
                 section_label = ctk.CTkLabel(table_frame, text=student_data['section'], anchor="w", font=ctk.CTkFont(size=12), text_color="#111827")
-                section_label.grid(row=row, column=2, sticky="w", padx=10, pady=3)
+                section_label.grid(row=row, column=2, sticky="w", padx=(15, 5), pady=3)
                 
                 # Program
                 program_label = ctk.CTkLabel(table_frame, text=student_data['program'], anchor="w", font=ctk.CTkFont(size=12), text_color="#111827")
-                program_label.grid(row=row, column=3, sticky="w", padx=10, pady=3)
+                program_label.grid(row=row, column=3, sticky="w", padx=(15, 5), pady=3)
                 
                 # Status with color
                 self.create_status_badge(table_frame, student_data['status'], row, 4)
                 
-                # Actions dropdown - keep existing design unchanged
-                actions_var = ctk.StringVar(value="Actions")
-                actions_menu = ctk.CTkOptionMenu(
+                # Actions dropdown
+                action_var = tk.StringVar(value="Actions")
+                actions = ["View", "Edit", "Delete"]
+                action_menu = ctk.CTkOptionMenu(
                     table_frame,
-                    values=["View", "Edit", "Delete"],
-                    variable=actions_var,
-                    width=80,
+                    values=actions,
+                    variable=action_var,
+                    width=100,
                     height=28,
-                    font=ctk.CTkFont(size=11),
-                    dropdown_font=ctk.CTkFont(size=11),
+                    font=ctk.CTkFont(size=12),
+                    fg_color="#F3F4F6",
+                    text_color="#222",
+                    button_color="#E5E7EB",
+                    button_hover_color="#D1D5DB",
+                    dropdown_fg_color="#fff",
+                    dropdown_hover_color="#E5E7EB",
+                    dropdown_text_color="#222",
                     command=lambda choice, data=student_data['data']: self.handle_action(choice, data)
                 )
-                actions_menu.grid(row=row, column=5, padx=10, pady=2)
+                action_menu.grid(row=row, column=5, sticky="w", padx=(15, 5), pady=6)
 
         # Add pagination controls
         self.add_students_pagination(parent)
@@ -744,20 +734,19 @@ class UsersView(ctk.CTkFrame):
         
         # Clear filters button (x icon) - show if filters are active OR search is active
         if is_active:
-            clear_filter_btn = ctk.CTkButton(
+            clear_filters_btn = ctk.CTkButton(
                 filter_container,
                 text="✕",
-                width=24,
-                height=36,
+                width=20,
+                height=20,
                 font=ctk.CTkFont(size=12),
-                fg_color="#EF4444",
-                text_color="#fff",
-                hover_color="#DC2626",
+                fg_color="transparent",
+                text_color="#1E3A8A",
+                hover_color="#F3F4F6",
                 border_width=0,
-                corner_radius=0,
-                command=lambda: self.clear_filters('faculty')
+                command=lambda: self.reset_filters('faculty')
             )
-            clear_filter_btn.pack(side="left")
+            clear_filters_btn.pack(side="left", padx=(5, 0))
 
         # Faculty table
         table_frame = ctk.CTkFrame(parent, fg_color="#fff", corner_radius=8, border_width=1, border_color="#E5E7EB")
@@ -765,122 +754,127 @@ class UsersView(ctk.CTkFrame):
 
         # Columns for faculty (removed Photo column)
         columns = ["Faculty Name", "Employee Number", "Email", "Role", "Status", "Actions"]
-        col_widths = [4, 2, 4, 2, 2, 2]
+        col_widths = [4, 3, 4, 2, 2, 2]  # More balanced column widths
         for i, weight in enumerate(col_widths):
             table_frame.grid_columnconfigure(i, weight=weight)
 
-        # Header row with reduced padding
+        # Header row with proper alignment
         for i, col in enumerate(columns):
-            ctk.CTkLabel(
+            header_label = ctk.CTkLabel(
                 table_frame,
                 text=col,
-                font=ctk.CTkFont(size=14, weight="bold"),
-                text_color="#6B7280",
+                font=ctk.CTkFont(size=13, weight="bold"),
+                text_color="#374151",
                 anchor="w"
-            ).grid(row=0, column=i, padx=10, pady=6, sticky="w")
+            )
+            header_label.grid(row=0, column=i, sticky="ew", padx=(15, 5), pady=8)
 
         # Use simplified data processing
         data_to_display = []
         
         if self.faculty_data:
-            # Get data for current page
-            paginated_faculty = self.get_faculty_for_page(self.current_faculty_page)
+            current_page_data = self.get_faculty_for_page(self.current_faculty_page)
             
-            for faculty in paginated_faculty:
-                # Handle None/empty values for all fields
-                faculty_name = f"{faculty.get('first_name', '')} {faculty.get('last_name', '')}".strip() or "N/A"
-                employee_number = faculty.get('employee_number', '') or "N/A"
-                email = faculty.get('email', '') or "N/A"
-                role = faculty.get('role', '') or "N/A"
-                status = faculty.get('status_name', '') or "N/A"
-                
-                data_to_display.append((faculty_name, employee_number, email, role, status, faculty))
+            for i, faculty in enumerate(current_page_data):
+                data_to_display.append({
+                    'name': f"{faculty.get('first_name', '')} {faculty.get('last_name', '')}",
+                    'employee_number': faculty.get('employee_number', 'N/A'),
+                    'email': faculty.get('email', ''),
+                    'role': faculty.get('role', 'Faculty'),
+                    'status': faculty.get('status_name', 'No Status'),
+                    'data': faculty
+                })
 
         # Display message if no data
         if not data_to_display:
             no_data_label = ctk.CTkLabel(
                 table_frame,
-                text="No faculty found.",
+                text="No faculty found matching your criteria",
                 font=ctk.CTkFont(size=14),
                 text_color="#6B7280"
             )
-            no_data_label.grid(row=1, column=0, columnspan=6, pady=20)
+            no_data_label.grid(row=1, column=0, columnspan=len(columns), pady=40)
         else:
-            for idx, (name, emp_num, email, role, status, faculty_data) in enumerate(data_to_display, start=1):
+            # Display faculty data
+            for i, faculty_data in enumerate(data_to_display):
+                row = i + 1
+                
                 # Faculty Name
-                ctk.CTkLabel(
-                    table_frame,
-                    text=name,
-                    font=ctk.CTkFont(size=12),
-                    text_color="#000",
-                    anchor="w"
-                ).grid(row=idx, column=0, sticky="w", padx=10, pady=3)
+                name_label = ctk.CTkLabel(table_frame, text=faculty_data['name'], anchor="w", font=ctk.CTkFont(size=12), text_color="#111827")
+                name_label.grid(row=row, column=0, sticky="w", padx=(15, 5), pady=3)
                 
                 # Employee Number
-                ctk.CTkLabel(
-                    table_frame,
-                    text=emp_num,
-                    font=ctk.CTkFont(size=12),
-                    text_color="#000",
-                    anchor="w"
-                ).grid(row=idx, column=1, sticky="w", padx=10, pady=3)
+                emp_label = ctk.CTkLabel(table_frame, text=faculty_data['employee_number'], anchor="w", font=ctk.CTkFont(size=12), text_color="#111827")
+                emp_label.grid(row=row, column=1, sticky="w", padx=(15, 5), pady=3)
                 
                 # Email
-                ctk.CTkLabel(
-                    table_frame,
-                    text=email,
-                    font=ctk.CTkFont(size=12),
-                    text_color="#000",
-                    anchor="w"
-                ).grid(row=idx, column=2, sticky="w", padx=10, pady=3)
+                email_label = ctk.CTkLabel(table_frame, text=faculty_data['email'], anchor="w", font=ctk.CTkFont(size=12), text_color="#111827")
+                email_label.grid(row=row, column=2, sticky="w", padx=(15, 5), pady=3)
                 
                 # Role
-                ctk.CTkLabel(
-                    table_frame,
-                    text=role,
-                    font=ctk.CTkFont(size=12),
-                    text_color="#000",
-                    anchor="w"
-                ).grid(row=idx, column=3, sticky="w", padx=10, pady=3)
+                role_label = ctk.CTkLabel(table_frame, text=faculty_data['role'], anchor="w", font=ctk.CTkFont(size=12), text_color="#111827")
+                role_label.grid(row=row, column=3, sticky="w", padx=(15, 5), pady=3)
                 
                 # Status with color
-                self.create_status_badge(table_frame, status, idx, 4)
+                self.create_status_badge(table_frame, faculty_data['status'], row, 4)
                 
-                # Actions dropdown
-                actions = ["View", "Edit", "Delete"]
-                action_var = tk.StringVar(value="Actions")
-                action_menu = ctk.CTkOptionMenu(
-                    table_frame,
-                    values=actions,
-                    variable=action_var,
-                    width=80,
-                    height=28,
-                    font=ctk.CTkFont(size=11),
-                    fg_color="#F3F4F6",
-                    text_color="#222",
-                    button_color="#E5E7EB",
-                    button_hover_color="#D1D5DB",
-                    dropdown_fg_color="#fff",
-                    dropdown_hover_color="#E5E7EB",
-                    dropdown_text_color="#222",
-                    command=lambda action, data=faculty_data: self.handle_faculty_action(action, data)
-                )
-                action_menu.grid(row=idx, column=5, padx=10, pady=3)
+                # Actions - Check if user is Admin
+                if faculty_data['role'].lower() == 'admin':
+                    # For admins, show "Not Available" text instead of dropdown
+                    not_available_label = ctk.CTkLabel(
+                        table_frame,
+                        text="Not Available",
+                        anchor="w",
+                        font=ctk.CTkFont(size=12),
+                        text_color="#9CA3AF"
+                    )
+                    not_available_label.grid(row=row, column=5, sticky="w", padx=(15, 5), pady=3)
+                else:
+                    # For non-admin users, show actions dropdown
+                    action_var = tk.StringVar(value="Actions")
+                    actions = ["View", "Edit", "Delete"]
+                    action_menu = ctk.CTkOptionMenu(
+                        table_frame,
+                        values=actions,
+                        variable=action_var,
+                        width=100,
+                        height=28,
+                        font=ctk.CTkFont(size=12),
+                        fg_color="#F3F4F6",
+                        text_color="#222",
+                        button_color="#E5E7EB",
+                        button_hover_color="#D1D5DB",
+                        dropdown_fg_color="#fff",
+                        dropdown_hover_color="#E5E7EB",
+                        dropdown_text_color="#222",
+                        command=lambda choice, data=faculty_data['data']: self.handle_faculty_action(choice, data)
+                    )
+                    action_menu.grid(row=row, column=5, sticky="w", padx=(15, 5), pady=6)
 
         # Add pagination controls
         self.add_faculty_pagination(parent)
+
+    def create_status_badge(self, parent, status, row, column):
+        """Create a colored status text with proper alignment"""
+        color = self.get_status_color(status)
+        
+        # Create simple label with colored text
+        status_label = ctk.CTkLabel(
+            parent,
+            text=status,
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color=color,
+            fg_color="transparent",
+            anchor="w"
+        )
+        status_label.grid(row=row, column=column, sticky="w", padx=(15, 5), pady=3)
 
     def handle_action(self, action, data):
         """Handle action selection for students"""
         if action == "View":
             UsersViewModal(self, data, "student")
         elif action == "Edit":
-            # Temporarily release grab before opening edit modal
-            try:
-                self.grab_release()
-            except:
-                pass
-            UsersEditModal(self, data['id'], "student")  # Pass user ID
+            UsersEditModal(self, data, "student")
         elif action == "Delete":
             UsersDeleteModal(self, data, "student")
 
@@ -889,12 +883,7 @@ class UsersView(ctk.CTkFrame):
         if action == "View":
             UsersViewModal(self, data, "faculty")
         elif action == "Edit":
-            # Temporarily release grab before opening edit modal
-            try:
-                self.grab_release()
-            except:
-                pass
-            UsersEditModal(self, data['id'], "faculty")  # Pass user ID
+            UsersEditModal(self, data, "faculty")
         elif action == "Delete":
             UsersDeleteModal(self, data, "faculty")
 
