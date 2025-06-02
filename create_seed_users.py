@@ -634,21 +634,7 @@ def seed_users():
         
         # Sample users data with proper section assignments and status
         users_data = [
-            # Admin user 
-            {
-                'first_name': 'Super',
-                'last_name': 'Admin',
-                'email': 'admin@admin.com',
-                'birthday': '1990-01-01',
-                'password': 'admin',
-                'contact_number': '+63912345678',
-                'role': 'Admin',
-                'verified': 1,
-                'user_type': 'faculty',
-                'employee_number': 'EMP-2024-001',
-                'status': 'Active'
-            },
-            # Faculty users
+            # Faculty users (removed admin user - already created in create_db.py)
             {
                 'first_name': 'Dr. Maria',
                 'last_name': 'Santos',

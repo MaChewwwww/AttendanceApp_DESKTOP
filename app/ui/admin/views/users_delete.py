@@ -3,12 +3,16 @@ import tkinter as tk
 from tkinter import messagebox
 import os
 from PIL import Image, ImageTk, ImageOps
+from app.db_manager import DatabaseManager
+from datetime import datetime
 
 class UsersDeleteModal(ctk.CTkToplevel):
     def __init__(self, parent, user_data, user_type="student"):
         super().__init__(parent)
+        self.parent_view = parent
         self.user_data = user_data
         self.user_type = user_type
+        self.db_manager = DatabaseManager()
         self.title(f"Delete User")
         # Responsive Modern Delete Modal
         self.geometry("340x210")
@@ -85,5 +89,48 @@ class UsersDeleteModal(ctk.CTkToplevel):
 
     def show_success_modal(self):
         """Show success modal after deletion"""
-        from .users_modals import SuccessModal
-        SuccessModal(self)
+        # Perform the actual deletion first
+        if self.delete_user():
+            from .users_modals import SuccessModal
+            SuccessModal(self)
+        else:
+            # Show error message if deletion failed
+            messagebox.showerror("Error", "Failed to delete user. Please try again.")
+
+    def delete_user(self):
+        """Delete user by setting isDeleted = 1"""
+        try:
+            conn = self.db_manager.get_connection()
+            cursor = conn.cursor()
+            
+            user_id = self.user_data.get('id')
+            if not user_id:
+                print("Error: No user ID found")
+                return False
+            
+            # Update the user record to mark as deleted
+            cursor.execute("""
+                UPDATE users 
+                SET isDeleted = 1, updated_at = ?
+                WHERE id = ?
+            """, (datetime.now().isoformat(), user_id))
+            
+            if cursor.rowcount == 0:
+                print(f"No user found with ID {user_id}")
+                conn.close()
+                return False
+            
+            conn.commit()
+            conn.close()
+            
+            print(f"Successfully marked user {user_id} as deleted")
+            
+            # Refresh the parent view to update the user list
+            if hasattr(self.parent_view, 'load_filtered_data'):
+                self.parent_view.load_filtered_data()
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error deleting user: {e}")
+            return False

@@ -830,29 +830,68 @@ class UsersView(ctk.CTkFrame):
                 # Status - now with colored badge (column 4)
                 self.create_status_badge(table_frame, status, idx, 4)
                 # Actions (column 5)
-                action_var = tk.StringVar(value="Edit")
-                actions = ["Edit", "View", "Delete"]
                 
                 # Get the full faculty data for this row
                 faculty_data = self.get_faculty_for_page(self.current_faculty_page)[idx-1]
                 
-                action_menu = ctk.CTkOptionMenu(
-                    table_frame,
-                    values=actions,
-                    variable=action_var,
-                    width=90,
-                    height=24,
-                    font=ctk.CTkFont(size=11),
-                    fg_color="#F3F4F6",
-                    text_color="#222",
-                    button_color="#E5E7EB",
-                    button_hover_color="#D1D5DB",
-                    dropdown_fg_color="#fff",
-                    dropdown_hover_color="#E5E7EB",
-                    dropdown_text_color="#222",
-                    command=lambda choice, data=faculty_data: self.handle_faculty_action(choice, data)
-                )
-                action_menu.grid(row=idx, column=5, sticky="w", padx=10, pady=3)
+                # Check if this is an admin user - disable actions for admin
+                if faculty_data.get('role') == 'Admin':
+                    # Show disabled action menu that looks the same but isn't clickable
+                    disabled_action_frame = ctk.CTkFrame(
+                        table_frame,
+                        fg_color="#F9FAFB",  # Lighter gray background
+                        corner_radius=6,
+                        border_width=1,
+                        border_color="#E5E7EB",
+                        width=90,
+                        height=24
+                    )
+                    disabled_action_frame.grid(row=idx, column=5, sticky="w", padx=10, pady=3)
+                    disabled_action_frame.grid_propagate(False)
+                    
+                    # Disabled text that looks like option menu
+                    disabled_label = ctk.CTkLabel(
+                        disabled_action_frame,
+                        text="Cannot Edit",
+                        font=ctk.CTkFont(size=11),
+                        text_color="#9CA3AF",
+                        fg_color="transparent",
+                        anchor="w"
+                    )
+                    disabled_label.pack(side="left", padx=8, pady=2, fill="both", expand=True)
+                    
+                    # Disabled dropdown arrow
+                    arrow_label = ctk.CTkLabel(
+                        disabled_action_frame,
+                        text="▼",
+                        font=ctk.CTkFont(size=8),
+                        text_color="#D1D5DB",
+                        fg_color="transparent",
+                        width=12
+                    )
+                    arrow_label.pack(side="right", padx=(0, 4))
+                else:
+                    # Show normal action menu for faculty
+                    action_var = tk.StringVar(value="Edit")
+                    actions = ["Edit", "View", "Delete"]
+                    
+                    action_menu = ctk.CTkOptionMenu(
+                        table_frame,
+                        values=actions,
+                        variable=action_var,
+                        width=90,
+                        height=24,
+                        font=ctk.CTkFont(size=11),
+                        fg_color="#F3F4F6",
+                        text_color="#222",
+                        button_color="#E5E7EB",
+                        button_hover_color="#D1D5DB",
+                        dropdown_fg_color="#fff",
+                        dropdown_hover_color="#E5E7EB",
+                        dropdown_text_color="#222",
+                        command=lambda choice, data=faculty_data: self.handle_faculty_action(choice, data)
+                    )
+                    action_menu.grid(row=idx, column=5, sticky="w", padx=10, pady=3)
 
     def show_filter_popup(self):
         # Determine which tab is active and show appropriate filter
