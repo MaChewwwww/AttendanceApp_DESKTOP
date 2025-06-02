@@ -938,7 +938,7 @@ class DatabaseManager:
             LEFT JOIN students st ON u.id = st.user_id
             LEFT JOIN faculties f ON u.id = f.user_id
             LEFT JOIN sections sec ON st.section = sec.id
-            LEFT JOIN programs p ON sec.course_id = p.id
+            LEFT JOIN programs p ON sec.program_id = p.id
             WHERE u.isDeleted = 0
             ORDER BY u.role, u.last_name, u.first_name
             """
@@ -1185,7 +1185,7 @@ class DatabaseManager:
             FROM assigned_courses ac
             JOIN courses c ON ac.course_id = c.id
             JOIN sections s ON ac.section_id = s.id
-            JOIN programs p ON s.course_id = p.id
+            JOIN programs p ON s.program_id = p.id
             JOIN users u ON ac.user_id = u.id
             WHERE u.isDeleted = 0
             """
@@ -1294,7 +1294,7 @@ class DatabaseManager:
             JOIN assigned_courses ac ON al.assigned_course_id = ac.id
             JOIN courses c ON ac.course_id = c.id
             JOIN sections sec ON ac.section_id = sec.id
-            JOIN programs p ON sec.course_id = p.id
+            JOIN programs p ON sec.program_id = p.id
             JOIN users fu ON ac.user_id = fu.id
             WHERE u.isDeleted = 0
             """
@@ -1360,7 +1360,7 @@ class DatabaseManager:
             JOIN assigned_courses ac ON al.assigned_course_id = ac.id
             JOIN courses c ON ac.course_id = c.id
             JOIN sections sec ON ac.section_id = sec.id
-            JOIN programs p ON sec.course_id = p.id
+            JOIN programs p ON sec.program_id = p.id
             LEFT JOIN sections s ON ac.section_id = s.id
             WHERE al.user_id = ?
             GROUP BY ac.id, c.name, s.name, p.name
@@ -1404,7 +1404,7 @@ class DatabaseManager:
             LEFT JOIN students st ON u.id = st.user_id
             LEFT JOIN faculties f ON u.id = f.user_id
             LEFT JOIN sections sec ON st.section = sec.id
-            LEFT JOIN programs p ON sec.course_id = p.id
+            LEFT JOIN programs p ON sec.program_id = p.id
             WHERE u.id = ? AND u.isDeleted = 0
             """
             

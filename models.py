@@ -76,7 +76,7 @@ class Section(Base):
     __tablename__ = "sections"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
-    course_id = Column(Integer, ForeignKey("programs.id"), nullable=False)
+    program_id = Column(Integer, ForeignKey("programs.id"), nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 

@@ -142,7 +142,7 @@ def seed_programs_and_courses():
             program_id = program_ids[section_data['program']]
             section_key = f"{section_data['name']}-{section_data['program']}"
             
-            cursor.execute("SELECT id FROM sections WHERE name = ? AND course_id = ?", 
+            cursor.execute("SELECT id FROM sections WHERE name = ? AND program_id = ?", 
                          (section_data['name'], program_id))
             existing = cursor.fetchone()
             
@@ -152,7 +152,7 @@ def seed_programs_and_courses():
             
             current_time = datetime.now().isoformat()
             cursor.execute("""
-                INSERT INTO sections (name, course_id, created_at, updated_at)
+                INSERT INTO sections (name, program_id, created_at, updated_at)
                 VALUES (?, ?, ?, ?)
             """, (section_data['name'], program_id, current_time, current_time))
             
@@ -204,7 +204,7 @@ def seed_assigned_courses_and_attendance():
         cursor.execute("""
             SELECT s.id, s.name, p.name as program_name
             FROM sections s
-            JOIN programs p ON s.course_id = p.id
+            JOIN programs p ON s.program_id = p.id
         """)
         sections_list = cursor.fetchall()
         
