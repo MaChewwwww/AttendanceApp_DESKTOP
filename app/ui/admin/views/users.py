@@ -12,6 +12,7 @@ from app.db_manager import DatabaseManager
 from .users_view import UsersViewModal
 from .users_edit import UsersEditModal
 from .users_delete import UsersDeleteModal
+from .users_add import UsersAddModal
 from .users_modals import FacialRecognitionPopup
 
 class FilterPopup(ctk.CTkToplevel):
@@ -477,8 +478,8 @@ class UsersView(ctk.CTkFrame):
 
     def setup_students_tab(self, parent):
         # Search and filter bar
-        search_bar_container = ctk.CTkFrame(parent, fg_color="#fff")
-        search_bar_container.pack(pady=(0, 10), padx=0, anchor="w")
+        search_bar_container = ctk.CTkFrame(parent, fg_color="#F0F0F0")
+        search_bar_container.pack(pady=(0, 10), padx=0, fill="x")
 
         # Search entry with icon and clear button
         search_entry_frame = ctk.CTkFrame(search_bar_container, fg_color="#fff", border_color="#BDBDBD", border_width=1, corner_radius=0, height=36)
@@ -556,6 +557,42 @@ class UsersView(ctk.CTkFrame):
                 command=lambda: self.reset_filters('student')
             )
             clear_filters_btn.pack(side="left", padx=(5, 0))
+
+        # Actions container (Add and Export buttons) - moved to right
+        actions_container = ctk.CTkFrame(search_bar_container, fg_color="transparent")
+        actions_container.pack(side="right", padx=(10, 0), pady=0)
+        
+        # Export button (right)
+        export_btn = ctk.CTkButton(
+            actions_container,
+            text="📊 Export",
+            width=100,
+            height=36,
+            fg_color="#3B82F6",
+            text_color="#fff",
+            hover_color="#2563EB",
+            border_width=0,
+            corner_radius=6,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            command=lambda: self.export_students()
+        )
+        export_btn.pack(side="right")
+        
+        # Add Student button (left of export)
+        add_btn = ctk.CTkButton(
+            actions_container,
+            text="+ Add Student",
+            width=120,
+            height=36,
+            fg_color="#22C55E",
+            text_color="#fff",
+            hover_color="#16A34A",
+            border_width=0,
+            corner_radius=6,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            command=lambda: UsersAddModal(self, "student")
+        )
+        add_btn.pack(side="right", padx=(0, 8))
 
         # Table
         table_frame = ctk.CTkFrame(parent, fg_color="#fff", corner_radius=8, border_width=1, border_color="#E5E7EB")
@@ -668,8 +705,8 @@ class UsersView(ctk.CTkFrame):
 
     def setup_faculty_tab(self, parent):
         # Search and filter bar for faculty
-        search_bar_container = ctk.CTkFrame(parent, fg_color="#fff")
-        search_bar_container.pack(pady=(0, 10), padx=0, anchor="w")
+        search_bar_container = ctk.CTkFrame(parent, fg_color="#F0F0F0")
+        search_bar_container.pack(pady=(0, 10), padx=0, fill="x")
 
         # Search entry with icon and clear button
         search_entry_frame = ctk.CTkFrame(search_bar_container, fg_color="#fff", border_color="#BDBDBD", border_width=1, corner_radius=0, height=36)
@@ -747,6 +784,42 @@ class UsersView(ctk.CTkFrame):
                 command=lambda: self.reset_filters('faculty')
             )
             clear_filters_btn.pack(side="left", padx=(5, 0))
+
+        # Actions container (Add and Export buttons) - moved to right
+        actions_container = ctk.CTkFrame(search_bar_container, fg_color="transparent")
+        actions_container.pack(side="right", padx=(10, 0), pady=0)
+        
+        # Export button (right)
+        export_btn = ctk.CTkButton(
+            actions_container,
+            text="📊 Export",
+            width=100,
+            height=36,
+            fg_color="#3B82F6",
+            text_color="#fff",
+            hover_color="#2563EB",
+            border_width=0,
+            corner_radius=6,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            command=lambda: self.export_faculty()
+        )
+        export_btn.pack(side="right")
+        
+        # Add Faculty button (left of export)
+        add_btn = ctk.CTkButton(
+            actions_container,
+            text="+ Add Faculty",
+            width=120,
+            height=36,
+            fg_color="#22C55E",
+            text_color="#fff",
+            hover_color="#16A34A",
+            border_width=0,
+            corner_radius=6,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            command=lambda: UsersAddModal(self, "faculty")
+        )
+        add_btn.pack(side="right", padx=(0, 8))
 
         # Faculty table
         table_frame = ctk.CTkFrame(parent, fg_color="#fff", corner_radius=8, border_width=1, border_color="#E5E7EB")
@@ -1091,3 +1164,107 @@ class UsersView(ctk.CTkFrame):
             command=lambda: self.change_faculty_page("next")
         )
         next_btn.pack(side="left")
+
+    def export_students(self):
+        """Export students data to CSV"""
+        try:
+            import csv
+            from tkinter import filedialog
+            import os
+            from datetime import datetime
+            
+            # Ask user where to save the file
+            filename = filedialog.asksaveasfilename(
+                defaultextension=".csv",
+                filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+                initialname=f"students_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            )
+            
+            if not filename:
+                return
+            
+            # Export current filtered/searched data
+            with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                
+                # Write header
+                writer.writerow(['Student Name', 'Student Number', 'Email', 'Year', 'Section', 'Program', 'Status', 'Contact Number', 'Date of Birth'])
+                
+                # Write data
+                for student in self.students_data:
+                    # Handle section display
+                    section_display = student.get('section_name', '') or "N/A"
+                    
+                    # Handle year display
+                    year_display = "N/A"
+                    if student.get('section_name'):
+                        section_name = student['section_name']
+                        if '-' in section_name:
+                            year_num = section_name.split('-')[0]
+                            year_mapping = {'1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year'}
+                            year_display = year_mapping.get(year_num, "N/A")
+                    
+                    writer.writerow([
+                        f"{student.get('first_name', '')} {student.get('last_name', '')}",
+                        student.get('student_number', ''),
+                        student.get('email', ''),
+                        year_display,
+                        section_display,
+                        student.get('program_name', '') or "N/A",
+                        student.get('status_name', 'No Status'),
+                        student.get('contact_number', ''),
+                        student.get('date_of_birth', '')
+                    ])
+            
+            # Show success message
+            from tkinter import messagebox
+            messagebox.showinfo("Export Successful", f"Students data exported successfully to:\n{filename}")
+            
+        except Exception as e:
+            from tkinter import messagebox
+            messagebox.showerror("Export Error", f"Failed to export students data:\n{str(e)}")
+
+    def export_faculty(self):
+        """Export faculty data to CSV"""
+        try:
+            import csv
+            from tkinter import filedialog
+            import os
+            from datetime import datetime
+            
+            # Ask user where to save the file
+            filename = filedialog.asksaveasfilename(
+                defaultextension=".csv",
+                filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+                initialname=f"faculty_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            )
+            
+            if not filename:
+                return
+            
+            # Export current filtered/searched data
+            with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                
+                # Write header
+                writer.writerow(['Faculty Name', 'Employee Number', 'Email', 'Role', 'Status', 'Contact Number', 'Date of Birth'])
+                
+                # Write data
+                for faculty in self.faculty_data:
+                    writer.writerow([
+                        f"{faculty.get('first_name', '')} {faculty.get('last_name', '')}",
+                        faculty.get('employee_number', 'N/A'),
+                        faculty.get('email', ''),
+                        faculty.get('role', 'Faculty'),
+                        faculty.get('status_name', 'No Status'),
+                        faculty.get('contact_number', ''),
+                        faculty.get('date_of_birth', '')
+                    ])
+            
+            # Show success message
+            from tkinter import messagebox
+            messagebox.showinfo("Export Successful", f"Faculty data exported successfully to:\n{filename}")
+            
+        except Exception as e:
+            from tkinter import messagebox
+            messagebox.showerror("Export Error", f"Failed to export faculty data:\n{str(e)}")
