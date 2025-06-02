@@ -232,9 +232,20 @@ class UsersEditModal(ctk.CTkToplevel):
         except Exception as e:
             print(f"Error updating face status: {e}")
 
+    def update_image_preview(self):
+        """Update face status (renamed for compatibility)"""
+        self.update_face_status()
+
     def open_facial_recognition(self):
         """Open facial recognition popup"""
-        FacialRecognitionPopup(self)
+        # Create completely independent window
+        popup = IndependentFacialRecognitionWindow(self)
+
+    def on_face_capture_complete(self, face_image, face_image_data):
+        """Callback when face capture is completed"""
+        self.face_image = face_image
+        self.face_image_data = face_image_data
+        self.update_face_status()
 
     def show_caution_modal(self):
         """Show caution modal before saving"""
@@ -245,438 +256,475 @@ class UsersEditModal(ctk.CTkToplevel):
         from .users_modals import CautionModal
         CautionModal(self, on_continue=on_continue)
 
-class FacialRecognitionPopup(ctk.CTkToplevel):
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.parent_edit = parent
-        self.title("Facial Recognition")
-        self.geometry("454x450")
-        self.resizable(False, False)
-        self.configure(fg_color="#222222")
+class IndependentFacialRecognitionWindow:
+    """Completely independent facial recognition window using tkinter directly"""
+    
+    def __init__(self, parent_edit):
+        self.parent_edit = parent_edit
+        
+        # Create independent Tkinter window (not CTk)
+        self.root = tk.Toplevel()
+        self.root.title("Facial Recognition")
+        self.root.geometry("454x450")
+        self.root.resizable(False, False)
+        self.root.configure(bg="#222222")
         
         # Camera variables
         self.camera = None
         self.is_camera_active = False
         self.camera_thread = None
         self.current_frame = None
-        self.camera_canvas = None
-        self.current_photo = None
+        self.face_image = None
+        self.face_image_data = None
+        self.video_label = None
         
-        # Make modal
-        self.transient(parent)
-        self.grab_set()
+        # Make it stay on top and modal-like
+        self.root.attributes('-topmost', True)
+        
+        # Set up proper parent relationship for modal behavior
+        try:
+            # Try to get the actual tkinter root window
+            if hasattr(parent_edit, 'winfo_toplevel'):
+                # Get the top-level window
+                top_level = parent_edit.winfo_toplevel()
+                # Set transient to the main tkinter root instead
+                main_root = top_level.nametowidget(top_level.winfo_parent()) if top_level.winfo_parent() else top_level
+                if main_root != self.root:
+                    self.root.transient(main_root)
+            else:
+                # Fallback - just make it modal without transient
+                pass
+        except Exception as e:
+            print(f"Could not set transient relationship: {e}")
+            # Continue without transient - window will still be modal through grab
         
         # Center window
         self._center_window()
         
         # Setup UI
-        self.setup_ui()
+        self._setup_ui()
         
         # Handle close
-        self.protocol("WM_DELETE_WINDOW", self.on_closing)
-
+        self.root.protocol("WM_DELETE_WINDOW", self._on_closing)
+        
+        # Focus and grab for modal behavior
+        self.root.focus_force()
+        
+        # Set grab after a small delay to ensure window is ready
+        self.root.after(100, self._set_grab)
+    
+    def _set_grab(self):
+        """Set grab with error handling"""
+        try:
+            self.root.grab_set()
+        except Exception as e:
+            print(f"Could not set grab: {e}")
+            # Continue without grab - window will still work
+    
     def _center_window(self):
         """Center the window on screen"""
-        self.update_idletasks()
-        screen_width = self.winfo_screenwidth()
-        screen_height = self.winfo_screenheight()
+        self.root.update_idletasks()
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
         x = (screen_width - 454) // 2
         y = (screen_height - 450) // 2
-        self.geometry(f"454x450+{x}+{y}")
-
-    def setup_ui(self):
-        """Setup the facial recognition UI"""
-        # Card Frame
-        card = ctk.CTkFrame(
-            self, 
-            width=454, 
-            height=450, 
-            corner_radius=12, 
-            fg_color="#ffffff", 
-            border_width=0
+        self.root.geometry(f"454x450+{x}+{y}")
+    
+    def _setup_ui(self):
+        """Setup the UI to match original design with proper spacing"""
+        # Main container with proper padding and rounded corners effect
+        self.main_frame = tk.Frame(
+            self.root, 
+            bg="#ffffff", 
+            relief="flat", 
+            bd=0,
+            padx=0,
+            pady=0
         )
-        card.place(x=0, y=0)
-        card.pack_propagate(False)
-
-        # Info button
-        info_btn = ctk.CTkButton(
-            card, 
-            text="i", 
-            width=24, 
-            height=24, 
-            corner_radius=12, 
-            fg_color="#f5f5f5", 
-            text_color="#222", 
-            font=ctk.CTkFont("Roboto", 14, "bold"), 
-            hover_color="#e0e0e0", 
-            command=lambda: messagebox.showinfo("Info", "Please ensure you're in a well-lit environment before capturing your photo for the best image quality", parent=self)
+        self.main_frame.pack(fill="both", expand=True, padx=0, pady=0)
+        
+        # Create inner content frame with proper margins
+        content_frame = tk.Frame(
+            self.main_frame,
+            bg="#ffffff",
+            relief="flat",
+            bd=0
         )
-        info_btn.place(x=420, y=10)
-
-        # Camera Preview Frame
-        self.face_preview_frame = ctk.CTkFrame(
-            card, 
-            width=410, 
-            height=240, 
-            fg_color="#fafafa", 
-            border_width=1, 
-            border_color="#d1d1d1"
+        content_frame.pack(fill="both", expand=True, padx=22, pady=22)
+        
+        # Info button (top right with proper positioning)
+        info_btn = tk.Button(
+            content_frame,
+            text="i",
+            font=("Roboto", 14, "bold"),
+            bg="#f5f5f5",
+            fg="#222222",
+            relief="flat",
+            bd=0,
+            width=2,
+            height=1,
+            command=self._show_info,
+            cursor="hand2"
         )
-        self.face_preview_frame.place(x=22, y=38)
-        self.face_preview_frame.pack_propagate(False)
-
-        # Default Preview Label
-        self.preview_label = ctk.CTkLabel(
-            self.face_preview_frame,
+        info_btn.place(x=388, y=0)
+        
+        # Camera preview frame (exact positioning like original)
+        self.preview_frame = tk.Frame(
+            content_frame, 
+            bg="#fafafa", 
+            relief="solid", 
+            bd=1,
+            highlightthickness=0
+        )
+        self.preview_frame.place(x=0, y=30, width=410, height=240)
+        
+        # Video display label with proper centering
+        self.video_label = tk.Label(
+            self.preview_frame,
             text="Camera will appear here\nClick 'Open Camera' to begin",
-            font=ctk.CTkFont("Roboto", 12),
-            text_color="#a0a0a0"
+            font=("Roboto", 12),
+            bg="#fafafa",
+            fg="#a0a0a0",
+            justify="center",
+            wraplength=350
         )
-        self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
-
-        # Camera button
-        self.camera_button = ctk.CTkButton(
-            card,
+        self.video_label.place(relx=0.5, rely=0.5, anchor="center")
+        
+        # Camera button with exact positioning
+        self.camera_btn = tk.Button(
+            content_frame,
             text="Open Camera",
-            width=410,
-            height=32,
-            corner_radius=6,
-            font=ctk.CTkFont("Roboto", 13, "bold"),
-            fg_color="#ffffff",
-            text_color="#222",
-            border_width=1,
-            border_color="#d1d1d1",
-            hover_color="#f5f5f5",
-            command=self.toggle_camera
+            font=("Roboto", 13, "bold"),
+            bg="#ffffff",
+            fg="#222222",
+            relief="solid",
+            bd=1,
+            borderwidth=1,
+            highlightthickness=0,
+            command=self._toggle_camera,
+            cursor="hand2"
         )
-        self.camera_button.place(x=22, y=290)
-
-        # Retake and Capture buttons
-        self.retake_button = ctk.CTkButton(
-            card,
+        self.camera_btn.place(x=0, y=280, width=410, height=32)
+        
+        # Action buttons frame for proper alignment
+        action_frame = tk.Frame(content_frame, bg="#ffffff")
+        action_frame.place(x=0, y=325, width=410, height=38)
+        
+        # Retake button (left side with exact spacing)
+        self.retake_btn = tk.Button(
+            action_frame,
             text="Retake",
-            width=200,
-            height=38,
-            corner_radius=8,
-            font=ctk.CTkFont("Roboto", 13, "bold"),
-            fg_color="#e5e5e5",
-            text_color="#707070",
-            border_width=0,
-            hover_color="#cccccc",
+            font=("Roboto", 13, "bold"),
+            bg="#e5e5e5",
+            fg="#707070",
+            relief="flat",
+            bd=0,
             state="disabled",
-            command=self.retake_photo
+            command=self._retake_image,
+            cursor="hand2",
+            highlightthickness=0
         )
-        self.retake_button.place(x=22, y=335)
-
-        self.capture_button = ctk.CTkButton(
-            card,
+        self.retake_btn.place(x=0, y=0, width=200, height=38)
+        
+        # Capture button (right side with exact spacing)
+        self.capture_btn = tk.Button(
+            action_frame,
             text="Capture",
-            width=200,
-            height=38,
-            corner_radius=8,
-            font=ctk.CTkFont("Roboto", 13, "bold"),
-            fg_color="#1E3A8A",
-            text_color="#fff",
-            border_width=0,
-            hover_color="#152a63",
+            font=("Roboto", 13, "bold"),
+            bg="#1E3A8A",
+            fg="#ffffff",
+            relief="flat",
+            bd=0,
             state="disabled",
-            command=self.capture_face
+            command=self._capture_image,
+            cursor="hand2",
+            highlightthickness=0
         )
-        self.capture_button.place(x=232, y=335)
-
-        # Save button
-        self.save_button = ctk.CTkButton(
-            card,
+        self.capture_btn.place(x=210, y=0, width=200, height=38)
+        
+        # Save button (full width with proper positioning)
+        self.save_btn = tk.Button(
+            content_frame,
             text="Save Photo",
-            width=410,
-            height=38,
-            corner_radius=8,
-            font=ctk.CTkFont("Roboto", 13, "bold"),
-            fg_color="#1E3A8A",
-            text_color="#fff",
-            border_width=0,
-            hover_color="#152a63",
-            command=self.save_photo,
-            state="disabled"
+            font=("Roboto", 13, "bold"),
+            bg="#1E3A8A",
+            fg="#ffffff",
+            relief="flat",
+            bd=0,
+            state="disabled",
+            command=self._save_photo,
+            cursor="hand2",
+            highlightthickness=0
         )
-        self.save_button.place(x=22, y=385)
-
-    def toggle_camera(self):
+        self.save_btn.place(x=0, y=375, width=410, height=38)
+    
+    def _show_info(self):
+        """Show info message like original - ensure it appears on top"""
+        # Temporarily disable topmost to show messagebox properly
+        self.root.attributes('-topmost', False)
+        tk.messagebox.showinfo(
+            "Camera Info", 
+            "Please ensure you're in a well-lit environment before capturing your photo for the best image quality",
+            parent=self.root
+        )
+        # Re-enable topmost after messagebox
+        self.root.attributes('-topmost', True)
+    
+    def _toggle_camera(self):
         """Toggle camera on/off"""
-        try:
-            if self.is_camera_active:
-                self.stop_camera()
-            else:
-                self.start_camera()
-        except Exception as e:
-            messagebox.showerror("Camera Error", f"Error with camera: {str(e)}", parent=self)
-
-    def start_camera(self):
+        if self.is_camera_active:
+            self._stop_camera()
+        else:
+            self._start_camera()
+    
+    def _start_camera(self):
         """Start camera capture"""
         try:
+            # Try to open camera
             self.camera = cv2.VideoCapture(0)
             if not self.camera.isOpened():
-                messagebox.showerror("Camera Error", "Could not open camera. Please check your camera connection.", parent=self)
-                return False
-
+                self._show_error("Could not open camera. Please check your camera connection.")
+                return
+            
             self.is_camera_active = True
-            self.camera_button.configure(text="Close Camera")
-            self.capture_button.configure(state="normal")
+            self.camera_btn.configure(text="Close Camera", bg="#ffffff")
+            self.capture_btn.configure(state="normal", bg="#1E3A8A", fg="#ffffff")
             
-            # Hide placeholder
-            self.preview_label.place_forget()
+            # Hide placeholder text
+            self.video_label.configure(text="")
             
-            # Create canvas for camera display
-            self.camera_canvas = tk.Canvas(
-                self.face_preview_frame,
-                width=410,
-                height=240,
-                bg="#fafafa",
-                highlightthickness=0
-            )
-            self.camera_canvas.place(x=0, y=0, width=410, height=240)
-            
-            # Start video feed thread
-            self.camera_thread = threading.Thread(target=self._update_camera_display)
-            self.camera_thread.daemon = True
+            # Start camera thread
+            self.camera_thread = threading.Thread(target=self._camera_loop, daemon=True)
             self.camera_thread.start()
             
-            return True
         except Exception as e:
-            messagebox.showerror("Camera Error", f"Error starting camera: {str(e)}", parent=self)
-            return False
-
-    def stop_camera(self):
+            self._show_error(f"Error starting camera: {str(e)}")
+    
+    def _stop_camera(self):
         """Stop camera capture"""
-        try:
-            self.is_camera_active = False
-            self._cleanup_camera()
-            self._update_ui_after_camera_close()
-        except Exception as e:
-            print(f"Error stopping camera: {e}")
-
-    def _update_camera_display(self):
-        """Update camera feed display"""
-        while self.is_camera_active:
-            try:
-                ret, frame = self.camera.read()
-                if ret:
-                    self.current_frame = frame.copy()
-                    frame_resized = cv2.resize(frame, (410, 240))
-                    frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
-                    
-                    # Add guide rectangle
-                    h, w = frame_rgb.shape[:2]
-                    center_x, center_y = w // 2, h // 2
-                    rect_w, rect_h = 160, 180
-                    cv2.rectangle(frame_rgb, 
-                                 (center_x - rect_w//2, center_y - rect_h//2),
-                                 (center_x + rect_w//2, center_y + rect_h//2),
-                                 (0, 255, 0), 2)
-                    
-                    # Convert and display
-                    pil_image = Image.fromarray(frame_rgb)
-                    
-                    if (hasattr(self, 'camera_canvas') and 
-                        self.camera_canvas and 
-                        self.winfo_exists()):
-                        
-                        def update_canvas(img=pil_image):
-                            try:
-                                if (hasattr(self, 'camera_canvas') and 
-                                    self.camera_canvas and 
-                                    self.camera_canvas.winfo_exists()):
-                                    
-                                    photo = ImageTk.PhotoImage(img)
-                                    self.camera_canvas.delete("all")
-                                    self.camera_canvas.create_image(205, 120, image=photo, anchor="center")
-                                    self.current_photo = photo
-                                    
-                            except tk.TclError:
-                                self.is_camera_active = False
-                            except Exception as e:
-                                print(f"Canvas update error: {e}")
-                        
-                        self.after(0, update_canvas)
-                    else:
-                        break
-                        
-            except Exception as e:
-                print(f"Camera display error: {e}")
-                break
-
-            time.sleep(0.03)
-
-    def _cleanup_camera(self):
-        """Clean up camera resources"""
         self.is_camera_active = False
         
-        if hasattr(self, 'camera_thread') and self.camera_thread and self.camera_thread.is_alive():
-            try:
-                self.camera_thread.join(0.5)
-            except Exception:
-                pass
-
-        if hasattr(self, 'camera') and self.camera and self.camera.isOpened():
-            try:
-                self.camera.release()
-            except Exception:
-                pass
-            finally:
-                self.camera = None
-
-        if hasattr(self, 'camera_canvas') and self.camera_canvas:
-            try:
-                if self.camera_canvas.winfo_exists():
-                    self.camera_canvas.destroy()
-            except Exception:
-                pass
-            finally:
-                self.camera_canvas = None
+        # Wait for thread to finish
+        if self.camera_thread and self.camera_thread.is_alive():
+            self.camera_thread.join(timeout=1.0)
         
-        self.current_photo = None
-
-    def _update_ui_after_camera_close(self):
-        """Update UI after camera closes"""
-        self.camera_button.configure(text="Open Camera")
-        self.capture_button.configure(state="disabled")
+        # Release camera
+        if self.camera:
+            self.camera.release()
+            self.camera = None
         
-        if not hasattr(self.parent_edit, 'face_image') or not self.parent_edit.face_image:
-            self.preview_label = ctk.CTkLabel(
-                self.face_preview_frame,
-                text="Camera will appear here\nClick 'Open Camera' to begin",
-                font=ctk.CTkFont("Roboto", 12),
-                text_color="#a0a0a0"
+        # Update UI
+        self.camera_btn.configure(text="Open Camera", bg="#ffffff")
+        self.capture_btn.configure(state="disabled", bg="#cccccc", fg="#999999")
+        
+        # Show placeholder if no image captured
+        if not self.face_image:
+            self.video_label.configure(
+                image="",
+                text="Camera will appear here\nClick 'Open Camera' to begin"
             )
-            self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
-
-    def capture_face(self):
-        """Capture face from camera"""
-        if not self.is_camera_active or not hasattr(self, 'current_frame') or self.current_frame is None:
-            messagebox.showwarning("Camera Error", "No frame available. Please wait for camera to initialize.", parent=self)
+    
+    def _camera_loop(self):
+        """Camera loop running in separate thread"""
+        while self.is_camera_active:
+            try:
+                if self.camera and self.camera.isOpened():
+                    ret, frame = self.camera.read()
+                    if ret:
+                        self.current_frame = frame.copy()
+                        
+                        # Resize and convert frame to match original dimensions
+                        frame_resized = cv2.resize(frame, (410, 240))
+                        frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
+                        
+                        # Add guide rectangle like original
+                        h, w = frame_rgb.shape[:2]
+                        center_x, center_y = w // 2, h // 2
+                        rect_w, rect_h = 160, 180
+                        cv2.rectangle(frame_rgb, 
+                                     (center_x - rect_w//2, center_y - rect_h//2),
+                                     (center_x + rect_w//2, center_y + rect_h//2),
+                                     (0, 255, 0), 2)
+                        
+                        # Convert to PhotoImage
+                        pil_image = Image.fromarray(frame_rgb)
+                        photo = ImageTk.PhotoImage(pil_image)
+                        
+                        # Update display in main thread
+                        self.root.after(0, self._update_video_display, photo)
+                
+                time.sleep(0.033)  # ~30 FPS
+                
+            except Exception as e:
+                print(f"Camera loop error: {e}")
+                break
+        
+        print("Camera loop ended")
+    
+    def _update_video_display(self, photo):
+        """Update video display (runs in main thread)"""
+        try:
+            if self.video_label and self.video_label.winfo_exists():
+                self.video_label.configure(image=photo, text="")
+                self.video_label.image = photo  # Keep reference
+        except Exception as e:
+            print(f"Video display error: {e}")
+    
+    def _capture_image(self):
+        """Capture current frame"""
+        if self.current_frame is None:
+            self._show_warning("No frame available. Please wait for camera to initialize.")
             return
         
         try:
-            frame = self.current_frame.copy()
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            
-            # Store in parent
-            self.parent_edit.face_image = Image.fromarray(frame_rgb)
+            # Convert frame to RGB
+            frame_rgb = cv2.cvtColor(self.current_frame, cv2.COLOR_BGR2RGB)
+            self.face_image = Image.fromarray(frame_rgb)
             
             # Convert to bytes
             img_byte_arr = io.BytesIO()
-            self.parent_edit.face_image.save(img_byte_arr, format='PNG')
-            self.parent_edit.face_image_data = img_byte_arr.getvalue()
-
-            # Stop camera and show preview
-            self.stop_camera()
-            self.show_face_preview()
+            self.face_image.save(img_byte_arr, format='PNG')
+            self.face_image_data = img_byte_arr.getvalue()
+            
+            # Stop camera and show captured image
+            self._stop_camera()
+            self._show_captured_image()
             self._update_buttons_after_capture()
             
-            messagebox.showinfo("Success", "Face image captured successfully!", parent=self)
+            self._show_info_msg("Face image captured successfully!")
             
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to capture image: {str(e)}", parent=self)
-
-    def show_face_preview(self):
-        """Show captured face preview"""
+            self._show_error(f"Failed to capture image: {str(e)}")
+    
+    def _show_captured_image(self):
+        """Show the captured image"""
         try:
-            for widget in self.face_preview_frame.winfo_children():
-                widget.destroy()
-            
-            if self.parent_edit.face_image:
-                preview_canvas = tk.Canvas(
-                    self.face_preview_frame,
-                    width=410,
-                    height=240,
-                    bg="#fafafa",
-                    highlightthickness=0
-                )
-                preview_canvas.place(x=0, y=0, width=410, height=240)
+            if self.face_image:
+                # Resize for display to match frame size
+                display_img = self.face_image.copy()
+                display_img.thumbnail((410, 240), Image.Resampling.LANCZOS)
+                photo = ImageTk.PhotoImage(display_img)
                 
-                preview_img = self.parent_edit.face_image.copy()
-                preview_img.thumbnail((410, 240), Image.LANCZOS)
-                photo = ImageTk.PhotoImage(preview_img)
-                
-                preview_canvas.create_image(205, 120, image=photo, anchor="center")
-                preview_canvas.image = photo
-            
+                # Update display
+                self.video_label.configure(image=photo, text="")
+                self.video_label.image = photo
         except Exception as e:
-            print(f"Error showing face preview: {e}")
-
+            print(f"Error showing captured image: {e}")
+    
     def _update_buttons_after_capture(self):
-        """Update button states after capture"""
-        self.camera_button.configure(
+        """Update button states after capture like original"""
+        self.camera_btn.configure(
             state="disabled",
             text="Photo Captured",
-            fg_color="#e5e5e5",
-            text_color="#707070"
+            bg="#e5e5e5",
+            fg="#707070"
         )
         
-        self.capture_button.configure(state="disabled")
-        self.save_button.configure(state="normal")
+        self.capture_btn.configure(state="disabled", bg="#cccccc", fg="#999999")
+        self.save_btn.configure(state="normal", bg="#1E3A8A", fg="#ffffff")
         
-        self.retake_button.configure(
+        self.retake_btn.configure(
             state="normal",
-            fg_color="#dc2626",
-            text_color="#ffffff",
-            hover_color="#b91c1c"
+            bg="#dc2626",
+            fg="#ffffff"
         )
-
-    def retake_photo(self):
+    
+    def _retake_image(self):
         """Retake photo"""
-        self.parent_edit.face_image = None
-        self.parent_edit.face_image_data = None
+        # Clear captured data
+        self.face_image = None
+        self.face_image_data = None
         
-        self._reset_buttons_for_retake()
-        
-        for widget in self.face_preview_frame.winfo_children():
-            widget.destroy()
-        
-        self.preview_label = ctk.CTkLabel(
-            self.face_preview_frame,
-            text="Camera will appear here\nClick 'Open Camera' to begin",
-            font=ctk.CTkFont("Roboto", 12),
-            text_color="#a0a0a0"
-        )
-        self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
-        
-        self.start_camera()
-
-    def _reset_buttons_for_retake(self):
-        """Reset buttons for retake"""
-        self.camera_button.configure(
+        # Reset button states like original
+        self.camera_btn.configure(
             state="normal",
-            text="Close Camera",
-            fg_color="#ffffff",
-            text_color="#222"
+            text="Open Camera",
+            bg="#ffffff",
+            fg="#222222"
         )
         
-        self.save_button.configure(state="disabled")
-        
-        self.retake_button.configure(
+        self.save_btn.configure(state="disabled", bg="#cccccc", fg="#999999")
+        self.retake_btn.configure(
             state="disabled",
-            fg_color="#e5e5e5",
-            text_color="#707070"
+            bg="#e5e5e5",
+            fg="#707070"
         )
-
-    def save_photo(self):
-        """Save photo and close modal"""
+        
+        # Clear preview and restart camera
+        self.video_label.configure(
+            image="",
+            text="Camera will appear here\nClick 'Open Camera' to begin"
+        )
+        
+        # Restart camera
+        self._start_camera()
+    
+    def _save_photo(self):
+        """Save photo and close window"""
         try:
-            # Update parent's image preview
-            self.parent_edit.update_image_preview()
-            
-            messagebox.showinfo("Success", "Face image updated successfully!", parent=self)
-            self.destroy()
-            
+            if self.face_image and self.face_image_data:
+                # Send data to parent
+                if hasattr(self.parent_edit, 'on_face_capture_complete'):
+                    self.parent_edit.on_face_capture_complete(self.face_image, self.face_image_data)
+                else:
+                    # Fallback
+                    self.parent_edit.face_image = self.face_image
+                    self.parent_edit.face_image_data = self.face_image_data
+                    self.parent_edit.update_face_status()
+                
+                self._show_info_msg("Face image saved successfully!")
+                self._on_closing()
+            else:
+                self._show_warning("No face image to save.")
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to save photo: {str(e)}", parent=self)
-
-    def on_closing(self):
+            self._show_error(f"Failed to save photo: {str(e)}")
+    
+    def _show_error(self, message):
+        """Show error message ensuring it appears on top"""
+        self.root.attributes('-topmost', False)
+        tk.messagebox.showerror("Error", message, parent=self.root)
+        self.root.attributes('-topmost', True)
+    
+    def _show_warning(self, message):
+        """Show warning message ensuring it appears on top"""
+        self.root.attributes('-topmost', False)
+        tk.messagebox.showwarning("Warning", message, parent=self.root)
+        self.root.attributes('-topmost', True)
+    
+    def _show_info_msg(self, message):
+        """Show info message ensuring it appears on top"""
+        self.root.attributes('-topmost', False)
+        tk.messagebox.showinfo("Success", message, parent=self.root)
+        self.root.attributes('-topmost', True)
+    
+    def _on_closing(self):
         """Handle window closing"""
         try:
-            if self.is_camera_active:
-                self.stop_camera()
-            self.destroy()
+            # Stop camera
+            self.is_camera_active = False
+            
+            # Wait for thread
+            if self.camera_thread and self.camera_thread.is_alive():
+                self.camera_thread.join(timeout=1.0)
+            
+            # Release camera
+            if self.camera:
+                self.camera.release()
+            
+            # Release grab and destroy window
+            try:
+                self.root.grab_release()
+            except Exception as e:
+                print(f"Could not release grab: {e}")
+            
+            try:
+                self.root.destroy()
+            except Exception as e:
+                print(f"Could not destroy window: {e}")
+            
         except Exception as e:
-            print(f"Error closing facial recognition popup: {e}")
+            print(f"Error closing window: {e}")
+            try:
+                self.root.destroy()
+            except:
+                pass
