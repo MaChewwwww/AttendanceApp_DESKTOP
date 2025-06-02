@@ -1623,3 +1623,262 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error getting user section/program: {e}")
             return False, str(e)
+
+    def update_user(self, user_id, user_data):
+        """Update user information with comprehensive validations"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Begin transaction
+            conn.execute("BEGIN TRANSACTION")
+            
+            # Validate required fields
+            if not user_data.get('first_name') or not user_data.get('first_name').strip():
+                conn.rollback()
+                conn.close()
+                return False, "First name is required"
+            
+            if not user_data.get('last_name') or not user_data.get('last_name').strip():
+                conn.rollback()
+                conn.close()
+                return False, "Last name is required"
+            
+            if not user_data.get('email') or not user_data.get('email').strip():
+                conn.rollback()
+                conn.close()
+                return False, "Email is required"
+            
+            # Validate email format
+            import re
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            if not re.match(email_pattern, user_data['email'].strip()):
+                conn.rollback()
+                conn.close()
+                return False, "Invalid email format"
+            
+            # Check if user exists
+            cursor.execute("SELECT role FROM users WHERE id = ? AND isDeleted = 0", (user_id,))
+            user_result = cursor.fetchone()
+            if not user_result:
+                conn.rollback()
+                conn.close()
+                return False, "User not found"
+            
+            user_role = user_result['role']
+            
+            # Check if email is already used by another user
+            cursor.execute("SELECT id FROM users WHERE email = ? AND id != ? AND isDeleted = 0", 
+                          (user_data['email'].strip(), user_id))
+            if cursor.fetchone():
+                conn.rollback()
+                conn.close()
+                return False, "Email is already in use by another user"
+            
+            # Validate contact number if provided
+            contact_number = user_data.get('contact_number', '').strip()
+            if contact_number:
+                # Basic phone number validation (digits, spaces, dashes, parentheses, plus)
+                phone_pattern = r'^[\d\s\-\(\)\+]+$'
+                if not re.match(phone_pattern, contact_number) or len(contact_number.replace(' ', '').replace('-', '').replace('(', '').replace(')', '').replace('+', '')) < 10:
+                    conn.rollback()
+                    conn.close()
+                    return False, "Invalid contact number format"
+            
+            # Get status ID if status is provided
+            status_id = None
+            if user_data.get('status'):
+                cursor.execute("SELECT id FROM statuses WHERE name = ?", (user_data['status'],))
+                status_result = cursor.fetchone()
+                if status_result:
+                    status_id = status_result['id']
+                else:
+                    conn.rollback()
+                    conn.close()
+                    return False, f"Invalid status: {user_data['status']}"
+            
+            # Prepare update data
+            current_time = datetime.now().isoformat()
+            
+            # Build update query dynamically based on provided fields
+            update_fields = []
+            update_values = []
+            
+            # Always update these basic fields
+            update_fields.extend(['first_name', 'last_name', 'email', 'contact_number', 'updated_at'])
+            update_values.extend([
+                user_data['first_name'].strip(),
+                user_data['last_name'].strip(), 
+                user_data['email'].strip(),
+                contact_number,
+                current_time
+            ])
+            
+            # Update status if provided
+            if status_id:
+                update_fields.append('status_id')
+                update_values.append(status_id)
+            
+            # Update password if provided
+            if user_data.get('password'):
+                # Validate password strength
+                password = user_data['password']
+                if len(password) < 6:
+                    conn.rollback()
+                    conn.close()
+                    return False, "Password must be at least 6 characters long"
+                
+                # Hash the new password
+                hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+                update_fields.append('password_hash')
+                update_values.append(hashed_pw.decode('utf-8'))
+            
+            # Update face image if provided
+            if user_data.get('face_image'):
+                # Validate face image size (max 5MB)
+                if len(user_data['face_image']) > 5 * 1024 * 1024:
+                    conn.rollback()
+                    conn.close()
+                    return False, "Face image size exceeds 5MB limit"
+                
+                update_fields.append('face_image')
+                update_values.append(user_data['face_image'])
+            
+            # Update users table
+            update_query = f"UPDATE users SET {', '.join([f'{field} = ?' for field in update_fields])} WHERE id = ?"
+            update_values.append(user_id)
+            
+            cursor.execute(update_query, update_values)
+            
+            # Handle role-specific updates
+            if user_role == 'Student':
+                # Handle program and section updates for students
+                program_name = user_data.get('program')
+                section_name = user_data.get('section')
+                
+                # Get current student record
+                cursor.execute("SELECT section FROM students WHERE user_id = ?", (user_id,))
+                student_result = cursor.fetchone()
+                
+                if student_result:
+                    new_section_id = None
+                    
+                    # Handle program and section assignment
+                    if program_name and section_name:
+                        # Find program ID
+                        program_id = None
+                        for prog in self.dropdown_data.get('programs', []):
+                            if prog['abbreviation'] == program_name:
+                                program_id = prog['id']
+                                break
+                        
+                        if program_id:
+                            # Find section ID within the program
+                            cursor.execute("SELECT id FROM sections WHERE name = ? AND program_id = ?", 
+                                         (section_name, program_id))
+                            section_result = cursor.fetchone()
+                            if section_result:
+                                new_section_id = section_result['id']
+                            else:
+                                conn.rollback()
+                                conn.close()
+                                return False, f"Section '{section_name}' not found in program '{program_name}'"
+                        else:
+                            conn.rollback()
+                            conn.close()
+                            return False, f"Program '{program_name}' not found"
+                    
+                    # Update student section (None if not assigned)
+                    cursor.execute("UPDATE students SET section = ? WHERE user_id = ?", 
+                                 (new_section_id, user_id))
+                else:
+                    conn.rollback()
+                    conn.close()
+                    return False, "Student record not found"
+            
+            elif user_role in ['Faculty', 'Admin']:
+                # Handle faculty-specific updates if needed
+                cursor.execute("SELECT user_id FROM faculties WHERE user_id = ?", (user_id,))
+                faculty_result = cursor.fetchone()
+                
+                if not faculty_result:
+                    # Create faculty record if it doesn't exist
+                    cursor.execute("INSERT INTO faculties (user_id) VALUES (?)", (user_id,))
+            
+            # Commit transaction
+            conn.commit()
+            conn.close()
+            
+            print(f"Successfully updated user {user_id}: {user_data['first_name']} {user_data['last_name']}")
+            
+            return True, {
+                "message": "User updated successfully",
+                "user_id": user_id,
+                "name": f"{user_data['first_name']} {user_data['last_name']}",
+                "email": user_data['email']
+            }
+            
+        except sqlite3.Error as e:
+            if conn:
+                conn.rollback()
+                conn.close()
+            print(f"Database error during user update: {e}")
+            return False, f"Database error: {str(e)}"
+        except Exception as e:
+            if conn:
+                conn.rollback()
+                conn.close()
+            print(f"Unexpected error during user update: {e}")
+            return False, f"Update failed: {str(e)}"
+
+    def validate_section_assignment(self, program_abbreviation, section_name):
+        """Validate that a section belongs to the specified program"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Get program ID from abbreviation
+            cursor.execute("""
+                SELECT id FROM programs 
+                WHERE name LIKE ? OR description LIKE ?
+            """, (f"%{program_abbreviation}%", f"%{program_abbreviation}%"))
+            
+            program_result = cursor.fetchone()
+            if not program_result:
+                conn.close()
+                return False, f"Program '{program_abbreviation}' not found"
+            
+            program_id = program_result['id']
+            
+            # Check if section exists in this program
+            cursor.execute("""
+                SELECT id FROM sections 
+                WHERE name = ? AND program_id = ?
+            """, (section_name, program_id))
+            
+            section_result = cursor.fetchone()
+            conn.close()
+            
+            if section_result:
+                return True, section_result['id']
+            else:
+                return False, f"Section '{section_name}' does not belong to program '{program_abbreviation}'"
+                
+        except Exception as e:
+            print(f"Error validating section assignment: {e}")
+            return False, str(e)
+
+    def get_user_update_dropdown_data(self, user_type):
+        """Get dropdown data specifically for user updates with proper structure"""
+        try:
+            # Store dropdown data for validation in update method
+            success, dropdown_data = self.get_dropdown_options_for_user_type(user_type)
+            if success:
+                self.dropdown_data = dropdown_data
+                return True, dropdown_data
+            else:
+                return False, dropdown_data
+                
+        except Exception as e:
+            print(f"Error getting update dropdown data: {e}")
+            return False, str(e)

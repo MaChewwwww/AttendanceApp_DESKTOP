@@ -325,8 +325,8 @@ class UsersEditModal(ctk.CTkToplevel):
     def load_dropdown_options(self):
         """Load dropdown options from backend"""
         try:
-            # Get dropdown options for this user type
-            success, dropdown_data = self.db_manager.get_dropdown_options_for_user_type(self.user_type)
+            # Get dropdown options for this user type and store for validation
+            success, dropdown_data = self.db_manager.get_user_update_dropdown_data(self.user_type)
             
             if success:
                 self.dropdown_data = dropdown_data
@@ -338,6 +338,115 @@ class UsersEditModal(ctk.CTkToplevel):
         except Exception as e:
             print(f"Error in load_dropdown_options: {e}")
             self.dropdown_data = {'programs': [], 'sections': [], 'statuses': []}
+
+    def validate_form_data(self, form_data):
+        """Validate form data before submission"""
+        errors = []
+        
+        # Validate required fields
+        if not form_data.get('first_name'):
+            errors.append("First name is required")
+        elif len(form_data['first_name']) < 2:
+            errors.append("First name must be at least 2 characters")
+        
+        if not form_data.get('last_name'):
+            errors.append("Last name is required")
+        elif len(form_data['last_name']) < 2:
+            errors.append("Last name must be at least 2 characters")
+        
+        if not form_data.get('email'):
+            errors.append("Email is required")
+        else:
+            # Email format validation
+            import re
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@iskolarngbayan\.pup\.edu\.ph$'
+            if not re.match(email_pattern, form_data['email']):
+                errors.append("Email must use @iskolarngbayan.pup.edu.ph domain")
+            
+            # Check if email is already used by another user
+            try:
+                email_exists, message = self.db_manager.check_email_exists(form_data['email'])
+                if email_exists:
+                    # Check if this is the same user's current email
+                    if form_data['email'] != self.user_data.get('email'):
+                        errors.append("Email is already in use by another user")
+            except Exception as e:
+                print(f"Error checking email existence: {e}")
+                errors.append("Unable to verify email availability")
+        
+        # Validate contact number - must be exactly 11 digits
+        if form_data.get('contact_number'):
+            contact = form_data['contact_number'].strip()
+            if contact:
+                # Remove common formatting characters for validation
+                clean_contact = re.sub(r'[\s\-\(\)\+]', '', contact)
+                if not clean_contact.isdigit():
+                    errors.append("Contact number must contain only digits")
+                elif len(clean_contact) != 11:
+                    errors.append("Contact number must be exactly 11 digits")
+                elif not clean_contact.startswith('09'):
+                    errors.append("Contact number must start with 09")
+        
+        # Validate password if provided - enhanced requirements
+        if form_data.get('password'):
+            password = form_data['password']
+            if len(password) < 6:
+                errors.append("Password must be at least 6 characters long")
+            elif len(password) > 50:
+                errors.append("Password must be less than 50 characters")
+            else:
+                # Check for uppercase letter
+                if not any(c.isupper() for c in password):
+                    errors.append("Password must contain at least one uppercase letter")
+                
+                # Check for lowercase letter
+                if not any(c.islower() for c in password):
+                    errors.append("Password must contain at least one lowercase letter")
+                
+                # Check for special character
+                special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+                if not any(c in special_chars for c in password):
+                    errors.append("Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)")
+        
+        # Validate program and section - BOTH are required and cannot be "Not Yet Assigned"
+        program_value = self.form_fields['program'].get()
+        section_value = self.form_fields['section'].get()
+        
+        if program_value == "Not Yet Assigned":
+            errors.append("Program selection is required")
+        
+        if section_value in ["Not Yet Assigned", "Select Program First"]:
+            errors.append("Section selection is required")
+        
+        # Validate program and section consistency (only if both are selected)
+        if (program_value and program_value != "Not Yet Assigned" and 
+            section_value and section_value not in ["Not Yet Assigned", "Select Program First"]):
+            
+            # Check if section belongs to selected program
+            program_id = None
+            for prog in self.dropdown_data.get('programs', []):
+                if prog['abbreviation'] == program_value:
+                    program_id = prog['id']
+                    break
+            
+            if program_id:
+                section_valid = False
+                for section in self.dropdown_data.get('sections', []):
+                    if section['name'] == section_value and section.get('program_id') == program_id:
+                        section_valid = True
+                        break
+                
+                if not section_valid:
+                    errors.append(f"Section '{section_value}' does not belong to program '{program_value}'")
+            else:
+                errors.append(f"Invalid program selection: {program_value}")
+        
+        # Validate face image size if provided
+        if form_data.get('face_image'):
+            if len(form_data['face_image']) > 5 * 1024 * 1024:  # 5MB limit
+                errors.append("Face image size exceeds 5MB limit")
+        
+        return errors
 
     def on_program_change(self, selected_program):
         """Handle program selection change to filter sections"""
@@ -499,15 +608,20 @@ class UsersEditModal(ctk.CTkToplevel):
                 self.face_image = Image.open(io.BytesIO(face_data))
                 self.face_image_data = face_data
                 
+                # Mark that face image hasn't been changed yet
+                self.face_image_changed = False
+                
                 # Update status
                 self.update_face_status()
             else:
                 # No face data
                 self.face_image_data = None
+                self.face_image_changed = False
                 self.update_face_status()
                 
         except Exception as e:
             print(f"Error loading existing face image: {e}")
+            self.face_image_changed = False
             self.update_face_status(error=True)
 
     def update_face_status(self, error=False):
@@ -548,6 +662,9 @@ class UsersEditModal(ctk.CTkToplevel):
         self.face_image = face_image
         self.face_image_data = face_image_data
         self.update_face_status()
+        
+        # Mark that the face image has been changed from the original
+        self.face_image_changed = True
 
     def show_caution_modal(self):
         """Show caution modal before saving"""
@@ -559,7 +676,7 @@ class UsersEditModal(ctk.CTkToplevel):
         CautionModal(self, on_continue=on_continue)
 
     def save_changes(self):
-        """Save the edited user data"""
+        """Save the edited user data with comprehensive validation"""
         try:
             # Collect form data
             form_data = {}
@@ -575,52 +692,139 @@ class UsersEditModal(ctk.CTkToplevel):
             if new_password:
                 form_data['password'] = new_password
             
-            # Get dropdown values - handle "Not Yet Assigned" properly
+            # Get dropdown values - do NOT convert to None, keep actual values for validation
             program_value = self.form_fields['program'].get()
             section_value = self.form_fields['section'].get()
             
-            # Convert "Not Yet Assigned" to None for database storage
-            form_data['program'] = None if program_value == "Not Yet Assigned" else program_value
-            form_data['section'] = None if section_value in ["Not Yet Assigned", "Select Program First"] else section_value
+            # Store raw values for validation first
+            form_data['program'] = program_value
+            form_data['section'] = section_value
             form_data['status'] = self.form_fields['status'].get()
             
-            # Add face image data if available
-            if hasattr(self, 'face_image_data') and self.face_image_data:
-                form_data['face_image'] = self.face_image_data
-            
-            # Validate required fields
-            if not form_data['first_name'] or not form_data['last_name'] or not form_data['email']:
-                messagebox.showerror("Error", "First name, last name, and email are required.")
+            # Validate form data BEFORE processing
+            validation_errors = self.validate_form_data(form_data)
+            if validation_errors:
+                error_message = "Please fix the following errors:\n\n" + "\n".join(f"• {error}" for error in validation_errors)
+                messagebox.showerror("Validation Error", error_message)
                 return
             
-            # Show what will be saved (for debugging)
-            print(f"Form data to save: {form_data}")
+            # After validation passes, convert "Not Yet Assigned" to None for database storage
+            # (This should never happen now due to validation, but keeping for safety)
+            form_data['program'] = None if program_value == "Not Yet Assigned" else program_value
+            form_data['section'] = None if section_value in ["Not Yet Assigned", "Select Program First"] else section_value
             
-            # Show confirmation with special handling for unassigned values
+            # Check if face image is actually being changed
+            face_image_changed = False
+            if hasattr(self, 'face_image_data') and self.face_image_data:
+                # Compare with existing face image data
+                existing_face_data = self.user_data.get('face_image')
+                if existing_face_data != self.face_image_data:
+                    # Face image is different, include it in update
+                    form_data['face_image'] = self.face_image_data
+                    face_image_changed = True
+            
+            # Show confirmation dialog
             program_display = form_data['program'] or "Not Yet Assigned"
             section_display = form_data['section'] or "Not Yet Assigned"
             
             confirmation_msg = f"Save changes for {form_data['first_name']} {form_data['last_name']}?\n\n"
+            confirmation_msg += f"Email: {form_data['email']}\n"
             confirmation_msg += f"Program: {program_display}\n"
             confirmation_msg += f"Section: {section_display}\n"
             confirmation_msg += f"Status: {form_data['status']}"
             
-            if messagebox.askyesno("Confirm Changes", confirmation_msg):
-                # TODO: Call the database update method when ready
-                # success, message = self.update_user_in_database(form_data)
-                
-                # For now, just show success message
-                messagebox.showinfo("Success", "User data saved successfully!\n\n(Database update will be implemented next)")
+            # Only show password update message if password is being changed
+            if form_data.get('password'):
+                confirmation_msg += f"\n\nPassword will be updated."
+            
+            # Only show face image update message if face image is actually being changed
+            if face_image_changed:
+                confirmation_msg += f"\nFace image will be updated."
+            
+            if not messagebox.askyesno("Confirm Changes", confirmation_msg):
+                return
+            
+            # Show loading indicator
+            self.show_loading_state(True)
+            
+            # Update user in database
+            success, result = self.db_manager.update_user(self.user_data['id'], form_data)
+            
+            # Hide loading indicator
+            self.show_loading_state(False)
+            
+            if success:
+                messagebox.showinfo("Success", f"User '{result['name']}' updated successfully!")
                 
                 # Refresh the parent view if possible
                 if hasattr(self.master, 'load_filtered_data'):
                     self.master.load_filtered_data()
                 
                 self.destroy()
+            else:
+                messagebox.showerror("Update Failed", f"Failed to update user:\n\n{result}")
                 
         except Exception as e:
+            # Hide loading indicator on error
+            self.show_loading_state(False)
             print(f"Error saving changes: {e}")
-            messagebox.showerror("Error", f"An error occurred while saving: {str(e)}")
+            messagebox.showerror("Error", f"An unexpected error occurred:\n\n{str(e)}")
+
+    def show_loading_state(self, is_loading):
+        """Show/hide loading state during save operation"""
+        try:
+            if is_loading:
+                # Disable all form fields and buttons
+                for field in self.form_fields.values():
+                    if hasattr(field, 'configure'):
+                        field.configure(state="disabled")
+                
+                # Update save button
+                save_btn = None
+                for widget in self.winfo_children():
+                    if isinstance(widget, ctk.CTkFrame):
+                        for child in widget.winfo_children():
+                            if isinstance(child, ctk.CTkFrame):
+                                for grandchild in child.winfo_children():
+                                    if isinstance(grandchild, ctk.CTkButton) and "Save" in grandchild.cget("text"):
+                                        save_btn = grandchild
+                                        break
+                
+                if save_btn:
+                    save_btn.configure(text="Saving...", state="disabled")
+                
+                # Update window title
+                self.title(f"Edit {self.user_type.title()} - Saving...")
+                
+            else:
+                # Re-enable all form fields and buttons
+                for field in self.form_fields.values():
+                    if hasattr(field, 'configure'):
+                        field.configure(state="normal")
+                
+                # Re-enable section dropdown based on program selection
+                if self.form_fields['program'].get() == "Not Yet Assigned":
+                    self.form_fields['section'].configure(state="disabled")
+                
+                # Reset save button
+                save_btn = None
+                for widget in self.winfo_children():
+                    if isinstance(widget, ctk.CTkFrame):
+                        for child in widget.winfo_children():
+                            if isinstance(child, ctk.CTkFrame):
+                                for grandchild in child.winfo_children():
+                                    if isinstance(grandchild, ctk.CTkButton) and "Saving" in grandchild.cget("text"):
+                                        save_btn = grandchild
+                                        break
+                
+                if save_btn:
+                    save_btn.configure(text="Save Changes", state="normal")
+                
+                # Reset window title
+                self.title(f"Edit {self.user_type.title()}")
+                
+        except Exception as e:
+            print(f"Error updating loading state: {e}")
 
 class IndependentFacialRecognitionWindow:
     """Facial recognition window using CustomTkinter to match register.py exactly"""

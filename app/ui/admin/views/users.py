@@ -524,7 +524,7 @@ class UsersView(ctk.CTkFrame):
         current_search = self.current_search.get('student', "")
         if current_search:
             self.student_search_entry.insert(0, current_search)
-            self.student_clear_search_btn.pack(side="left", padx=(2, 8), pady=4)
+            self.student_clear_search_btn.pack(side="right", padx=(0, 8), pady=4)
         
         # Bind search functionality to Enter key and text changes
         self.student_search_entry.bind('<Return>', lambda e: self.on_search_change('student', self.student_search_entry.get()))
@@ -558,20 +558,20 @@ class UsersView(ctk.CTkFrame):
         
         # Clear filters button (x icon) - show if filters are active OR search is active
         if is_active:
-            clear_filter_btn = ctk.CTkButton(
+            clear_filters_btn = ctk.CTkButton(
                 filter_container,
                 text="✕",
                 width=24,
                 height=36,
-                font=ctk.CTkFont(size=12),
-                fg_color="#EF4444",
+                fg_color="#dc2626",
                 text_color="#fff",
-                hover_color="#DC2626",
+                hover_color="#b91c1c",
                 border_width=0,
                 corner_radius=0,
-                command=lambda: self.clear_filters('student')
+                font=ctk.CTkFont(size=12),
+                command=lambda: self.reset_filters('student')
             )
-            clear_filter_btn.pack(side="left")
+            clear_filters_btn.pack(side="left")
 
         # Table
         table_frame = ctk.CTkFrame(parent, fg_color="#fff", corner_radius=8, border_width=1, border_color="#E5E7EB")
@@ -585,112 +585,93 @@ class UsersView(ctk.CTkFrame):
 
         # Header row
         for i, col in enumerate(columns):
-            ctk.CTkLabel(
+            header_label = ctk.CTkLabel(
                 table_frame,
                 text=col,
-                font=ctk.CTkFont(size=14, weight="bold"),
-                text_color="#6B7280",
-                anchor="w"
-            ).grid(row=0, column=i, padx=10, pady=6, sticky="w")
+                font=ctk.CTkFont(size=12, weight="bold"),
+                text_color="#374151",
+                fg_color="#F9FAFB",
+                corner_radius=0
+            )
+            header_label.grid(row=0, column=i, sticky="ew", padx=0, pady=0, ipady=12)
 
         # Use simplified data processing
         data_to_display = []
         
         if self.students_data:
-            # Get data for current page
-            paginated_students = self.get_students_for_page(self.current_students_page)
+            current_page_data = self.get_students_for_page(self.current_students_page)
             
-            for student in paginated_students:
-                # Extract year from section name - handle None/empty values
-                section_name = student.get('section_name') or ''
-                year_level = "N/A"
-                
-                if section_name and section_name != '' and '-' in section_name:
-                    try:
-                        year_number = section_name.split('-')[0]
-                        year_mapping = {'1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year'}
-                        year_level = year_mapping.get(year_number, "N/A")
-                    except (IndexError, AttributeError):
-                        year_level = "N/A"
-                
-                # Handle None/empty values for all fields
-                student_name = f"{student.get('first_name', '')} {student.get('last_name', '')}".strip() or "N/A"
-                section_display = section_name if section_name else "N/A"
+            for i, student in enumerate(current_page_data):
+                # Handle program display - show "N/A" only if program is null
                 program_display = student.get('program_name', '') or "N/A"
-                status_display = student.get('status_name', '') or "N/A"
                 
-                data_to_display.append((student_name, year_level, section_display, program_display, status_display, student))
+                # Handle section display - show actual section or "N/A" independently
+                section_display = student.get('section_name', '') or "N/A"
+                
+                # Handle year display - extract from section if available, otherwise "N/A"
+                year_display = "N/A"
+                if student.get('section_name'):
+                    section_name = student['section_name']
+                    if '-' in section_name:
+                        year_num = section_name.split('-')[0]
+                        year_mapping = {'1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year'}
+                        year_display = year_mapping.get(year_num, "N/A")
+                
+                data_to_display.append({
+                    'name': f"{student.get('first_name', '')} {student.get('last_name', '')}",
+                    'year': year_display,
+                    'section': section_display,
+                    'program': program_display,
+                    'status': student.get('status_name', 'No Status'),
+                    'data': student
+                })
 
         # Display message if no data
         if not data_to_display:
             no_data_label = ctk.CTkLabel(
                 table_frame,
-                text="No students found.",
+                text="No students found matching your criteria",
                 font=ctk.CTkFont(size=14),
                 text_color="#6B7280"
             )
-            no_data_label.grid(row=1, column=0, columnspan=6, pady=20)
+            no_data_label.grid(row=1, column=0, columnspan=len(columns), pady=40)
         else:
-            for idx, (name, year, section, program, status, student_data) in enumerate(data_to_display, start=1):
+            # Display student data
+            for i, student_data in enumerate(data_to_display):
+                row = i + 1
+                
                 # Student Name
-                ctk.CTkLabel(
-                    table_frame,
-                    text=name,
-                    font=ctk.CTkFont(size=12),
-                    text_color="#000",
-                    anchor="w"
-                ).grid(row=idx, column=0, sticky="w", padx=10, pady=3)
+                name_label = ctk.CTkLabel(table_frame, text=student_data['name'], anchor="w", font=ctk.CTkFont(size=12), text_color="#111827")
+                name_label.grid(row=row, column=0, sticky="w", padx=10, pady=3)
                 
                 # Year
-                ctk.CTkLabel(
-                    table_frame,
-                    text=year,
-                    font=ctk.CTkFont(size=12),
-                    text_color="#000",
-                    anchor="w"
-                ).grid(row=idx, column=1, sticky="w", padx=10, pady=3)
+                year_label = ctk.CTkLabel(table_frame, text=student_data['year'], anchor="w", font=ctk.CTkFont(size=12), text_color="#111827")
+                year_label.grid(row=row, column=1, sticky="w", padx=10, pady=3)
                 
                 # Section
-                ctk.CTkLabel(
-                    table_frame,
-                    text=section,
-                    font=ctk.CTkFont(size=12),
-                    text_color="#000",
-                    anchor="w"
-                ).grid(row=idx, column=2, sticky="w", padx=10, pady=3)
+                section_label = ctk.CTkLabel(table_frame, text=student_data['section'], anchor="w", font=ctk.CTkFont(size=12), text_color="#111827")
+                section_label.grid(row=row, column=2, sticky="w", padx=10, pady=3)
                 
                 # Program
-                ctk.CTkLabel(
-                    table_frame,
-                    text=program,
-                    font=ctk.CTkFont(size=12),
-                    text_color="#000",
-                    anchor="w"
-                ).grid(row=idx, column=3, sticky="w", padx=10, pady=3)
+                program_label = ctk.CTkLabel(table_frame, text=student_data['program'], anchor="w", font=ctk.CTkFont(size=12), text_color="#111827")
+                program_label.grid(row=row, column=3, sticky="w", padx=10, pady=3)
                 
                 # Status with color
-                self.create_status_badge(table_frame, status, idx, 4)
+                self.create_status_badge(table_frame, student_data['status'], row, 4)
                 
-                # Actions dropdown
-                actions = ["View", "Edit", "Delete"]
-                action_var = tk.StringVar(value="Actions")
-                action_menu = ctk.CTkOptionMenu(
+                # Actions dropdown - keep existing design unchanged
+                actions_var = ctk.StringVar(value="Actions")
+                actions_menu = ctk.CTkOptionMenu(
                     table_frame,
-                    values=actions,
-                    variable=action_var,
+                    values=["View", "Edit", "Delete"],
+                    variable=actions_var,
                     width=80,
                     height=28,
                     font=ctk.CTkFont(size=11),
-                    fg_color="#F3F4F6",
-                    text_color="#222",
-                    button_color="#E5E7EB",
-                    button_hover_color="#D1D5DB",
-                    dropdown_fg_color="#fff",
-                    dropdown_hover_color="#E5E7EB",
-                    dropdown_text_color="#222",
-                    command=lambda action, data=student_data: self.handle_action(action, data)
+                    dropdown_font=ctk.CTkFont(size=11),
+                    command=lambda choice, data=student_data['data']: self.handle_action(choice, data)
                 )
-                action_menu.grid(row=idx, column=5, padx=10, pady=3)
+                actions_menu.grid(row=row, column=5, padx=10, pady=2)
 
         # Add pagination controls
         self.add_students_pagination(parent)
@@ -729,7 +710,7 @@ class UsersView(ctk.CTkFrame):
         current_search = self.current_search.get('faculty', "")
         if current_search:
             self.faculty_search_entry.insert(0, current_search)
-            self.faculty_clear_search_btn.pack(side="left", padx=(2, 8), pady=4)
+            self.faculty_clear_search_btn.pack(side="right", padx=(0, 8), pady=4)
         
         # Bind search functionality to Enter key and text changes
         self.faculty_search_entry.bind('<Return>', lambda e: self.on_search_change('faculty', self.faculty_search_entry.get()))
