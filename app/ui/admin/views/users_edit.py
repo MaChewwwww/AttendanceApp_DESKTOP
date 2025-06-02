@@ -63,45 +63,196 @@ class UsersEditModal(ctk.CTkToplevel):
         form_frame = ctk.CTkFrame(self, fg_color="#fff")
         form_frame.pack(fill="both", expand=True, padx=30, pady=(0, 10))
         
-        # Two columns for entries
-        left_col = ctk.CTkFrame(form_frame, fg_color="#fff")
-        left_col.grid(row=0, column=0, sticky="nsew", padx=(0, 10), pady=0)
-        right_col = ctk.CTkFrame(form_frame, fg_color="#fff")
-        right_col.grid(row=0, column=1, sticky="nsew", padx=(10, 0), pady=0)
-        form_frame.grid_columnconfigure(0, weight=1)
-        form_frame.grid_columnconfigure(1, weight=1)
+        # Row 1: First Name - Last Name
+        fname_lname_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
+        fname_lname_frame.pack(fill="x", pady=(20, 15))
+        fname_lname_frame.grid_columnconfigure(0, weight=1)
+        fname_lname_frame.grid_columnconfigure(1, weight=1)
         
-        # Left column entries
-        self.form_fields['first_name'] = self.create_form_field(left_col, "First Name")
-        self.form_fields['last_name'] = self.create_form_field(left_col, "Last Name")
-        self.form_fields['email'] = self.create_form_field(left_col, "Email")
-        self.form_fields['password'] = self.create_form_field(left_col, "Password", show="*")
+        # First Name (left side)
+        fname_container = ctk.CTkFrame(fname_lname_frame, fg_color="transparent")
+        fname_container.grid(row=0, column=0, sticky="ew", padx=(0, 10))
+        ctk.CTkLabel(fname_container, text="First Name", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
+        self.form_fields['first_name'] = ctk.CTkEntry(fname_container, width=220, fg_color="#fff", text_color="#000")
+        self.form_fields['first_name'].pack(fill="x", pady=(0, 10))
         
-        # Right column entries
+        # Last Name (right side)
+        lname_container = ctk.CTkFrame(fname_lname_frame, fg_color="transparent")
+        lname_container.grid(row=0, column=1, sticky="ew", padx=(10, 0))
+        ctk.CTkLabel(lname_container, text="Last Name", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
+        self.form_fields['last_name'] = ctk.CTkEntry(lname_container, width=220, fg_color="#fff", text_color="#000")
+        self.form_fields['last_name'].pack(fill="x", pady=(0, 10))
+        
+        # Row 2: Email - Contact Number
+        email_contact_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
+        email_contact_frame.pack(fill="x", pady=(0, 15))
+        email_contact_frame.grid_columnconfigure(0, weight=1)
+        email_contact_frame.grid_columnconfigure(1, weight=1)
+        
+        # Email (left side)
+        email_container = ctk.CTkFrame(email_contact_frame, fg_color="transparent")
+        email_container.grid(row=0, column=0, sticky="ew", padx=(0, 10))
+        ctk.CTkLabel(email_container, text="Email", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
+        self.form_fields['email'] = ctk.CTkEntry(email_container, width=220, fg_color="#fff", text_color="#000")
+        self.form_fields['email'].pack(fill="x", pady=(0, 10))
+        
+        # Contact Number (right side)
+        contact_container = ctk.CTkFrame(email_contact_frame, fg_color="transparent")
+        contact_container.grid(row=0, column=1, sticky="ew", padx=(10, 0))
+        ctk.CTkLabel(contact_container, text="Contact Number", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
+        self.form_fields['contact_number'] = ctk.CTkEntry(contact_container, width=220, fg_color="#fff", text_color="#000")
+        self.form_fields['contact_number'].pack(fill="x", pady=(0, 10))
+        
+        # Row 3: Program - Section
+        program_section_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
+        program_section_frame.pack(fill="x", pady=(0, 15))
+        program_section_frame.grid_columnconfigure(0, weight=1)
+        program_section_frame.grid_columnconfigure(1, weight=1)
+        
+        # Program (left side)
+        program_container = ctk.CTkFrame(program_section_frame, fg_color="transparent")
+        program_container.grid(row=0, column=0, sticky="ew", padx=(0, 10))
+        ctk.CTkLabel(program_container, text="Program", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
+        
+        # Program dropdown - wrapped in container for border
+        program_dropdown_container = ctk.CTkFrame(
+            program_container,
+            fg_color="#fff",
+            border_width=2,
+            border_color="#565b5e",
+            corner_radius=6,
+            height=32
+        )
+        program_dropdown_container.pack(fill="x", pady=(0, 10))
+        program_dropdown_container.pack_propagate(False)
+        
+        program_options = ["BSIT", "BSCS", "BSIS"]
+        self.form_fields['program'] = ctk.CTkOptionMenu(
+            program_dropdown_container,
+            fg_color="#fff",
+            text_color="#000",
+            button_color="#fff",
+            button_hover_color="#f0f0f0",
+            dropdown_fg_color="#fff",
+            dropdown_hover_color="#f0f0f0",
+            dropdown_text_color="#000",
+            values=program_options,
+            font=ctk.CTkFont(size=13),
+            corner_radius=0,
+            anchor="w"
+        )
+        self.form_fields['program'].pack(fill="both", expand=True, padx=2, pady=2)
+        self.form_fields['program'].set(program_options[0])
+        
+        # Section (right side)
+        section_container = ctk.CTkFrame(program_section_frame, fg_color="transparent")
+        section_container.grid(row=0, column=1, sticky="ew", padx=(10, 0))
+        ctk.CTkLabel(section_container, text="Section", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
+        
+        # Section dropdown - wrapped in container for border
+        section_dropdown_container = ctk.CTkFrame(
+            section_container,
+            fg_color="#fff",
+            border_width=2,
+            border_color="#565b5e",
+            corner_radius=6,
+            height=32
+        )
+        section_dropdown_container.pack(fill="x", pady=(0, 10))
+        section_dropdown_container.pack_propagate(False)
+        
+        section_options = ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1"]
+        self.form_fields['section'] = ctk.CTkOptionMenu(
+            section_dropdown_container,
+            fg_color="#fff",
+            text_color="#000",
+            button_color="#fff",
+            button_hover_color="#f0f0f0",
+            dropdown_fg_color="#fff",
+            dropdown_hover_color="#f0f0f0",
+            dropdown_text_color="#000",
+            values=section_options,
+            font=ctk.CTkFont(size=13),
+            corner_radius=0,
+            anchor="w"
+        )
+        self.form_fields['section'].pack(fill="both", expand=True, padx=2, pady=2)
+        self.form_fields['section'].set(section_options[0])
+        
+        # Row 4: New Password - Status
+        password_status_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
+        password_status_frame.pack(fill="x", pady=(0, 15))
+        password_status_frame.grid_columnconfigure(0, weight=1)
+        password_status_frame.grid_columnconfigure(1, weight=1)
+        
+        # New Password (left side)
+        password_container = ctk.CTkFrame(password_status_frame, fg_color="transparent")
+        password_container.grid(row=0, column=0, sticky="ew", padx=(0, 10))
+        ctk.CTkLabel(password_container, text="New Password (Optional)", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
+        self.form_fields['password'] = ctk.CTkEntry(password_container, width=200, fg_color="#fff", text_color="#000", show="*", placeholder_text="Leave blank to keep current")
+        self.form_fields['password'].pack(fill="x", pady=(0, 10))
+        
+        # Status (right side)
+        status_container = ctk.CTkFrame(password_status_frame, fg_color="transparent")
+        status_container.grid(row=0, column=1, sticky="ew", padx=(10, 0))
+        ctk.CTkLabel(status_container, text="Status", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
+        
+        # Status dropdown - wrapped in container for border
+        status_dropdown_container = ctk.CTkFrame(
+            status_container,
+            fg_color="#fff",
+            border_width=2,
+            border_color="#565b5e",
+            corner_radius=6,
+            height=32
+        )
+        status_dropdown_container.pack(fill="x", pady=(0, 10))
+        status_dropdown_container.pack_propagate(False)
+        
+        # Status dropdown - placeholder options for now
         if self.user_type == "student":
-            self.form_fields['section'] = self.create_form_field(right_col, "Section")
+            status_options = ["Enrolled", "Graduated", "Dropout", "On Leave", "Suspended"]
         else:
-            self.form_fields['employee_number'] = self.create_form_field(right_col, "Employee Number")
+            status_options = ["Active", "Inactive", "Retired", "Probationary", "Tenure Track", "Tenured"]
         
-        # Contact Number field
-        self.form_fields['contact_number'] = self.create_form_field(right_col, "Contact Number")
+        self.form_fields['status'] = ctk.CTkOptionMenu(
+            status_dropdown_container,
+            fg_color="#fff",
+            text_color="#000",
+            button_color="#fff",
+            button_hover_color="#f0f0f0",
+            dropdown_fg_color="#fff",
+            dropdown_hover_color="#f0f0f0",
+            dropdown_text_color="#000",
+            values=status_options,
+            font=ctk.CTkFont(size=13),
+            corner_radius=0,
+            anchor="w"
+        )
+        self.form_fields['status'].pack(fill="both", expand=True, padx=2, pady=2)
+        self.form_fields['status'].set(status_options[0])
         
-        # Facial recognition button
+        # Row 5: Face Recognition Button (Centered)
+        fr_button_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
+        fr_button_frame.pack(fill="x", pady=(0, 25))
+        
+        # Face Recognition Button
         fr_btn = ctk.CTkButton(
-            right_col, 
-            text="Take Facial Recognition", 
+            fr_button_frame, 
+            text="📷 Take Photo", 
             fg_color="#1E3A8A", 
-            hover_color="#1E3A8A", 
+            hover_color="#1D4ED8", 
             text_color="#fff", 
-            width=220, 
-            height=32, 
-            corner_radius=8, 
+            height=40, 
+            width=200,
+            corner_radius=10, 
+            font=ctk.CTkFont(size=13, weight="normal"),
             command=self.open_facial_recognition
         )
-        fr_btn.pack(fill="x", pady=(10, 8))
+        fr_btn.pack(anchor="center")
         
-        # Face data status (text only - no image preview)
-        self.face_status_frame = ctk.CTkFrame(right_col, fg_color="#fff", height=50)
+        # Face data status (centered)
+        self.face_status_frame = ctk.CTkFrame(form_frame, fg_color="#fff", height=50)
         self.face_status_frame.pack(fill="x", pady=(0, 10))
         self.face_status_frame.pack_propagate(False)
         
@@ -110,13 +261,15 @@ class UsersEditModal(ctk.CTkToplevel):
             text="No Face Data", 
             font=ctk.CTkFont(size=13, weight="bold"), 
             text_color="#757575",
-            anchor="w"
+            anchor="center"
         )
-        self.face_status_label.pack(anchor="w", padx=10, pady=15)
+        self.face_status_label.pack(expand=True, fill="both")
         
-        # Bottom buttons
+        # Bottom buttons in same row
         btns_frame = ctk.CTkFrame(self, fg_color="#fff")
         btns_frame.pack(fill="x", padx=30, pady=(10, 20))
+        btns_frame.grid_columnconfigure(0, weight=1)
+        btns_frame.grid_columnconfigure(1, weight=1)
         
         ctk.CTkButton(
             btns_frame, 
@@ -124,11 +277,11 @@ class UsersEditModal(ctk.CTkToplevel):
             fg_color="#E5E7EB", 
             text_color="#000", 
             hover_color="#D1D5DB", 
-            width=600, 
+            width=285, 
             height=36, 
             corner_radius=8, 
             command=self.destroy
-        ).pack(fill="x", pady=(0, 8))
+        ).grid(row=0, column=0, sticky="ew", padx=(0, 5))
         
         ctk.CTkButton(
             btns_frame, 
@@ -136,11 +289,11 @@ class UsersEditModal(ctk.CTkToplevel):
             fg_color="#1E3A8A", 
             hover_color="#1E3A8A", 
             text_color="#fff", 
-            width=600, 
+            width=285, 
             height=36, 
             corner_radius=8, 
-            command=self.show_caution_modal
-        ).pack(fill="x")
+            command=self.save_changes
+        ).grid(row=0, column=1, sticky="ew", padx=(5, 0))
 
     def create_form_field(self, parent, label_text, show=None):
         """Create a form field with label and entry"""
@@ -166,13 +319,34 @@ class UsersEditModal(ctk.CTkToplevel):
             
         if 'contact_number' in self.form_fields and self.user_data.get('contact_number'):
             self.form_fields['contact_number'].insert(0, self.user_data['contact_number'])
+        
+        # Set dropdown values based on user data
+        if 'program' in self.form_fields and self.user_data.get('program_name'):
+            program_name = self.user_data['program_name']
+            # Convert full program names to abbreviations for dropdown
+            if "Information Technology" in program_name:
+                self.form_fields['program'].set("BSIT")
+            elif "Computer Science" in program_name:
+                self.form_fields['program'].set("BSCS")
+            elif "Information Systems" in program_name:
+                self.form_fields['program'].set("BSIS")
+        
+        if 'section' in self.form_fields and self.user_data.get('section_name'):
+            section_name = self.user_data['section_name']
+            # Check if section exists in dropdown options
+            if section_name in ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1"]:
+                self.form_fields['section'].set(section_name)
+        
+        if 'status' in self.form_fields and self.user_data.get('status_name'):
+            status_name = self.user_data['status_name']
+            # Check if status exists in dropdown options
+            if self.user_type == "student":
+                status_options = ["Enrolled", "Graduated", "Dropout", "On Leave", "Suspended"]
+            else:
+                status_options = ["Active", "Inactive", "Retired", "Probationary", "Tenure Track", "Tenured"]
             
-        if self.user_type == "student":
-            if 'section' in self.form_fields and self.user_data.get('section_name'):
-                self.form_fields['section'].insert(0, self.user_data['section_name'])
-        else:
-            if 'employee_number' in self.form_fields and self.user_data.get('employee_number'):
-                self.form_fields['employee_number'].insert(0, self.user_data['employee_number'])
+            if status_name in status_options:
+                self.form_fields['status'].set(status_name)
         
         # Load existing face image if available
         self.load_existing_face_image()
@@ -255,6 +429,54 @@ class UsersEditModal(ctk.CTkToplevel):
         
         from .users_modals import CautionModal
         CautionModal(self, on_continue=on_continue)
+
+    def save_changes(self):
+        """Save the edited user data"""
+        try:
+            # Collect form data
+            form_data = {}
+            
+            # Get basic fields
+            form_data['first_name'] = self.form_fields['first_name'].get().strip()
+            form_data['last_name'] = self.form_fields['last_name'].get().strip()
+            form_data['email'] = self.form_fields['email'].get().strip()
+            form_data['contact_number'] = self.form_fields['contact_number'].get().strip()
+            
+            # Get password (optional)
+            new_password = self.form_fields['password'].get().strip()
+            if new_password:
+                form_data['password'] = new_password
+            
+            # Get dropdown values
+            form_data['program'] = self.form_fields['program'].get()
+            form_data['section'] = self.form_fields['section'].get()
+            form_data['status'] = self.form_fields['status'].get()
+            
+            # Add face image data if available
+            if hasattr(self, 'face_image_data') and self.face_image_data:
+                form_data['face_image'] = self.face_image_data
+            
+            # Validate required fields
+            if not form_data['first_name'] or not form_data['last_name'] or not form_data['email']:
+                messagebox.showerror("Error", "First name, last name, and email are required.")
+                return
+            
+            # TODO: Call the database update method when ready
+            # success, message = self.update_user_in_database(form_data)
+            
+            # For now, just show success message
+            messagebox.showinfo("Success", "User data saved successfully!\n\n(Database update will be implemented next)")
+            print(f"Form data to save: {form_data}")
+            
+            # Refresh the parent view if possible
+            if hasattr(self.master, 'load_filtered_data'):
+                self.master.load_filtered_data()
+            
+            self.destroy()
+                
+        except Exception as e:
+            print(f"Error saving changes: {e}")
+            messagebox.showerror("Error", f"An error occurred while saving: {str(e)}")
 
 class IndependentFacialRecognitionWindow:
     """Facial recognition window using CustomTkinter to match register.py exactly"""
