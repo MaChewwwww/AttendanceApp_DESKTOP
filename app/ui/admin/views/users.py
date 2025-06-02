@@ -1173,11 +1173,16 @@ class UsersView(ctk.CTkFrame):
             import os
             from datetime import datetime
             
+            # Check if we have data to export
+            if not self.students_data:
+                messagebox.showwarning("No Data", "No student data available to export.")
+                return
+            
             # Ask user where to save the file
             filename = filedialog.asksaveasfilename(
                 defaultextension=".csv",
                 filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
-                initialname=f"students_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+                initialfile=f"students_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
             )
             
             if not filename:
@@ -1192,36 +1197,57 @@ class UsersView(ctk.CTkFrame):
                 
                 # Write data
                 for student in self.students_data:
-                    # Handle section display
-                    section_display = student.get('section_name', '') or "N/A"
-                    
-                    # Handle year display
-                    year_display = "N/A"
-                    if student.get('section_name'):
-                        section_name = student['section_name']
-                        if '-' in section_name:
-                            year_num = section_name.split('-')[0]
-                            year_mapping = {'1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year'}
-                            year_display = year_mapping.get(year_num, "N/A")
-                    
-                    writer.writerow([
-                        f"{student.get('first_name', '')} {student.get('last_name', '')}",
-                        student.get('student_number', ''),
-                        student.get('email', ''),
-                        year_display,
-                        section_display,
-                        student.get('program_name', '') or "N/A",
-                        student.get('status_name', 'No Status'),
-                        student.get('contact_number', ''),
-                        student.get('date_of_birth', '')
-                    ])
+                    try:
+                        # Handle section display
+                        section_display = student.get('section_name', '') or "N/A"
+                        
+                        # Handle year display
+                        year_display = "N/A"
+                        if student.get('section_name'):
+                            section_name = student['section_name']
+                            if '-' in section_name:
+                                year_num = section_name.split('-')[0]
+                                year_mapping = {'1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year'}
+                                year_display = year_mapping.get(year_num, "N/A")
+                        
+                        # Handle date of birth formatting - use 'birthday' field from database
+                        dob_value = student.get('birthday', '')
+                        if dob_value:
+                            # If it's already a string in YYYY-MM-DD format, use it directly
+                            if isinstance(dob_value, str):
+                                dob_display = dob_value
+                            else:
+                                # If it's a date object, convert to string
+                                dob_display = str(dob_value)
+                        else:
+                            dob_display = ''
+                        
+                        # Safely get all values with defaults
+                        row_data = [
+                            f"{student.get('first_name', '')} {student.get('last_name', '')}".strip(),
+                            student.get('student_number', ''),
+                            student.get('email', ''),
+                            year_display,
+                            section_display,
+                            student.get('program_name', '') or "N/A",
+                            student.get('status_name', 'No Status'),
+                            student.get('contact_number', ''),
+                            dob_display
+                        ]
+                        
+                        writer.writerow(row_data)
+                        
+                    except Exception as row_error:
+                        print(f"Error processing student row: {row_error}")
+                        continue
             
             # Show success message
-            from tkinter import messagebox
             messagebox.showinfo("Export Successful", f"Students data exported successfully to:\n{filename}")
             
         except Exception as e:
-            from tkinter import messagebox
+            print(f"Export error: {e}")
+            import traceback
+            traceback.print_exc()
             messagebox.showerror("Export Error", f"Failed to export students data:\n{str(e)}")
 
     def export_faculty(self):
@@ -1232,11 +1258,16 @@ class UsersView(ctk.CTkFrame):
             import os
             from datetime import datetime
             
+            # Check if we have data to export
+            if not self.faculty_data:
+                messagebox.showwarning("No Data", "No faculty data available to export.")
+                return
+            
             # Ask user where to save the file
             filename = filedialog.asksaveasfilename(
                 defaultextension=".csv",
                 filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
-                initialname=f"faculty_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+                initialfile=f"faculty_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
             )
             
             if not filename:
@@ -1251,20 +1282,41 @@ class UsersView(ctk.CTkFrame):
                 
                 # Write data
                 for faculty in self.faculty_data:
-                    writer.writerow([
-                        f"{faculty.get('first_name', '')} {faculty.get('last_name', '')}",
-                        faculty.get('employee_number', 'N/A'),
-                        faculty.get('email', ''),
-                        faculty.get('role', 'Faculty'),
-                        faculty.get('status_name', 'No Status'),
-                        faculty.get('contact_number', ''),
-                        faculty.get('date_of_birth', '')
-                    ])
+                    try:
+                        # Handle date of birth formatting - use 'birthday' field from database
+                        dob_value = faculty.get('birthday', '')
+                        if dob_value:
+                            # If it's already a string in YYYY-MM-DD format, use it directly
+                            if isinstance(dob_value, str):
+                                dob_display = dob_value
+                            else:
+                                # If it's a date object, convert to string
+                                dob_display = str(dob_value)
+                        else:
+                            dob_display = ''
+                        
+                        # Safely get all values with defaults
+                        row_data = [
+                            f"{faculty.get('first_name', '')} {faculty.get('last_name', '')}".strip(),
+                            faculty.get('employee_number', 'N/A'),
+                            faculty.get('email', ''),
+                            faculty.get('role', 'Faculty'),
+                            faculty.get('status_name', 'No Status'),
+                            faculty.get('contact_number', ''),
+                            dob_display
+                        ]
+                        
+                        writer.writerow(row_data)
+                        
+                    except Exception as row_error:
+                        print(f"Error processing faculty row: {row_error}")
+                        continue
             
             # Show success message
-            from tkinter import messagebox
             messagebox.showinfo("Export Successful", f"Faculty data exported successfully to:\n{filename}")
             
         except Exception as e:
-            from tkinter import messagebox
+            print(f"Export error: {e}")
+            import traceback
+            traceback.print_exc()
             messagebox.showerror("Export Error", f"Failed to export faculty data:\n{str(e)}")

@@ -64,6 +64,9 @@ class UsersAddModal(ctk.CTkToplevel):
         self.password_var = tk.StringVar()
         self.confirm_password_var = tk.StringVar()
         
+        # Load dropdown options from backend
+        self.load_dropdown_options()
+        
         # Header
         header_container = ctk.CTkFrame(self, fg_color="transparent")
         header_container.place(x=40, y=15)
@@ -351,9 +354,26 @@ class UsersAddModal(ctk.CTkToplevel):
             text_color="#707070"
         ).pack(anchor="w")
         
-        self.program_dropdown = ctk.CTkOptionMenu(
+        # Program dropdown - wrapped in container for border
+        program_dropdown_container = ctk.CTkFrame(
             program_left,
-            width=190,
+            fg_color="#ffffff",
+            border_width=1,
+            border_color="#d1d1d1",
+            corner_radius=5,
+            height=28
+        )
+        program_dropdown_container.pack(pady=(2, 0))
+        program_dropdown_container.pack_propagate(False)
+        
+        # Use backend data for program options
+        program_options = [p['abbreviation'] for p in self.dropdown_data.get('programs', [])]
+        if not program_options:
+            program_options = ["BSIT", "BSCS", "BSIS"]  # Fallback
+        
+        self.program_dropdown = ctk.CTkOptionMenu(
+            program_dropdown_container,
+            width=188,
             height=26,
             corner_radius=5,
             font=ctk.CTkFont("Inter", 11),
@@ -364,10 +384,11 @@ class UsersAddModal(ctk.CTkToplevel):
             dropdown_fg_color="#ffffff",
             dropdown_text_color="#000000",
             dropdown_hover_color="#f5f5f5",
-            values=["BSIT", "BSCS", "BSIS"]
+            values=program_options,
+            command=self.on_program_change
         )
-        self.program_dropdown.pack(pady=(2, 0))
-        self.program_dropdown.set("BSIT")
+        self.program_dropdown.pack(fill="both", expand=True, padx=1, pady=1)
+        self.program_dropdown.set(program_options[0] if program_options else "BSIT")
         
         # Section (Right)
         section_right = ctk.CTkFrame(program_section_container, fg_color="transparent")
@@ -380,9 +401,22 @@ class UsersAddModal(ctk.CTkToplevel):
             text_color="#707070"
         ).pack(anchor="w")
         
-        self.section_dropdown = ctk.CTkOptionMenu(
+        # Section dropdown - wrapped in container for border
+        section_dropdown_container = ctk.CTkFrame(
             section_right,
-            width=190,
+            fg_color="#ffffff",
+            border_width=1,
+            border_color="#d1d1d1",
+            corner_radius=5,
+            height=28
+        )
+        section_dropdown_container.pack(pady=(2, 0))
+        section_dropdown_container.pack_propagate(False)
+        
+        # Initially load sections for the first program
+        self.section_dropdown = ctk.CTkOptionMenu(
+            section_dropdown_container,
+            width=188,
             height=26,
             corner_radius=5,
             font=ctk.CTkFont("Inter", 11),
@@ -393,10 +427,13 @@ class UsersAddModal(ctk.CTkToplevel):
             dropdown_fg_color="#ffffff",
             dropdown_text_color="#000000",
             dropdown_hover_color="#f5f5f5",
-            values=["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"]
+            values=["Loading..."]
         )
-        self.section_dropdown.pack(pady=(2, 0))
-        self.section_dropdown.set("1-1")
+        self.section_dropdown.pack(fill="both", expand=True, padx=1, pady=1)
+        self.section_dropdown.set("Loading...")
+        
+        # Load sections for the default program
+        self.after(100, self.initialize_sections)
 
         # Webmail Address
         webmail_container = ctk.CTkFrame(self.card_frame, fg_color="transparent")
@@ -553,6 +590,87 @@ class UsersAddModal(ctk.CTkToplevel):
             command=self.destroy
         ).pack(pady=20)
 
+    def load_dropdown_options(self):
+        """Load dropdown options from backend"""
+        try:
+            # Get dropdown options for student type
+            success, dropdown_data = self.db_manager.get_user_update_dropdown_data("student")
+            
+            if success:
+                self.dropdown_data = dropdown_data
+                print(f"Loaded dropdown options: {len(dropdown_data.get('programs', []))} programs, {len(dropdown_data.get('sections', []))} sections")
+            else:
+                print(f"Error loading dropdown options: {dropdown_data}")
+                self.dropdown_data = {'programs': [], 'sections': []}
+                
+        except Exception as e:
+            print(f"Error in load_dropdown_options: {e}")
+            self.dropdown_data = {'programs': [], 'sections': []}
+
+    def on_program_change(self, selected_program):
+        """Handle program selection change to filter sections"""
+        try:
+            # Find the program ID for the selected abbreviation
+            selected_program_id = None
+            for program in self.dropdown_data.get('programs', []):
+                if program.get('abbreviation') == selected_program:
+                    selected_program_id = program.get('id')
+                    break
+            
+            if selected_program_id:
+                # Filter sections for this program
+                program_sections = []
+                for section in self.dropdown_data.get('sections', []):
+                    if section.get('program_id') == selected_program_id:
+                        program_sections.append(section.get('name', ''))
+                
+                if program_sections:
+                    # Update section dropdown with filtered sections
+                    self.section_dropdown.configure(
+                        values=program_sections,
+                        fg_color="#ffffff",
+                        text_color="#000000",
+                        state="normal"
+                    )
+                    self.section_dropdown.set(program_sections[0])
+                else:
+                    # No sections available for this program
+                    self.section_dropdown.configure(
+                        values=["No sections available"],
+                        fg_color="#f5f5f5",
+                        text_color="#999999",
+                        state="disabled"
+                    )
+                    self.section_dropdown.set("No sections available")
+            else:
+                # Program not found, show fallback
+                fallback_sections = ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"]
+                self.section_dropdown.configure(
+                    values=fallback_sections,
+                    fg_color="#ffffff",
+                    text_color="#000000",
+                    state="normal"
+                )
+                self.section_dropdown.set(fallback_sections[0])
+            
+        except Exception as e:
+            print(f"Error handling program change: {e}")
+            # Fallback to default sections on error
+            fallback_sections = ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"]
+            self.section_dropdown.configure(
+                values=fallback_sections,
+                fg_color="#ffffff",
+                text_color="#000000",
+                state="normal"
+            )
+            self.section_dropdown.set(fallback_sections[0])
+
+    def initialize_sections(self):
+        """Initialize sections based on the default program selection"""
+        if hasattr(self, 'program_dropdown'):
+            default_program = self.program_dropdown.get()
+            self.on_program_change(default_program)
+
     # ...existing date handling methods from register.py...
     def _on_month_year_change(self, value=None):
         """Called when month or year changes to update available days"""
@@ -677,16 +795,28 @@ class UsersAddModal(ctk.CTkToplevel):
             # Hide any previous validation errors
             self.hide_validation_error()
             
-            # Get values from form fields
-            first_name = self.first_name_var.get().strip()
-            last_name = self.last_name_var.get().strip()
-            email = self.email_var.get().strip()
-            contact_number = self.contact_number_var.get().strip()
-            student_number = self.student_number_var.get().strip()
-            password = self.password_var.get().strip()
-            confirm_password = self.confirm_password_var.get().strip()
+            # Get values from form fields directly from the entry widgets
+            first_name = self.first_name_entry.get().strip()
+            last_name = self.last_name_entry.get().strip()
+            email = self.webmail_entry.get().strip()
+            contact_number = self.contact_entry.get().strip()
+            student_number = self.student_entry.get().strip()
+            password = self.password_entry.get().strip()
+            confirm_password = self.confirm_entry.get().strip()
+            
+            # Get dropdown values directly
             program = self.program_dropdown.get()
             section = self.section_dropdown.get()
+            month_name = self.month_dropdown.get()
+            day = self.day_dropdown.get()
+            year = self.year_dropdown.get()
+
+            # Debug print to see what values we're getting
+            print(f"Form values - First: '{first_name}', Last: '{last_name}', Email: '{email}'")
+            print(f"Contact: '{contact_number}', Student#: '{student_number}'")
+            print(f"Program: '{program}', Section: '{section}'")
+            print(f"Date: '{month_name}' '{day}' '{year}'")
+            print(f"Password length: {len(password)}, Confirm length: {len(confirm_password)}")
 
             # Collect all validation errors
             errors = []
@@ -704,17 +834,57 @@ class UsersAddModal(ctk.CTkToplevel):
                 errors.append("• Student number is required")
             if not password:
                 errors.append("• Password is required")
+            if not confirm_password:
+                errors.append("• Confirm password is required")
+
+            # Validate dropdown selections - improved validation
+            if not program or program in ["Select Program", "", "Loading..."]:
+                errors.append("• Program is required")
+            if not section or section in ["Select Section", "", "Loading...", "No sections available"]:
+                errors.append("• Section is required")
+
+            # Validate date of birth
+            if not month_name or month_name in ["Select Month", ""]:
+                errors.append("• Month is required")
+            if not day or day in ["Select Day", ""]:
+                errors.append("• Day is required")
+            if not year or year in ["Select Year", ""]:
+                errors.append("• Year is required")
+
+            # Validate program and section consistency
+            if program and section and not any("required" in error for error in errors if "Program" in error or "Section" in error):
+                # Check if section belongs to selected program
+                program_id = None
+                for prog in self.dropdown_data.get('programs', []):
+                    if prog.get('abbreviation') == program:
+                        program_id = prog.get('id')
+                        break
+                
+                if program_id:
+                    # Check if section belongs to this program
+                    section_valid = False
+                    for sect in self.dropdown_data.get('sections', []):
+                        if sect.get('name') == section and sect.get('program_id') == program_id:
+                            section_valid = True
+                            break
+                    
+                    if not section_valid:
+                        errors.append("• Selected section does not belong to the selected program")
+                else:
+                    errors.append("• Invalid program selection")
 
             # Validate email format
             if email and not email.endswith("@iskolarngbayan.pup.edu.ph"):
                 errors.append("• Email must be a valid PUP email ending with @iskolarngbayan.pup.edu.ph")
 
-            # Validate contact number (11 digits)
+            # Validate contact number (11 digits starting with 09)
             if contact_number:
                 if not contact_number.isdigit():
                     errors.append("• Contact number must contain only digits")
                 elif len(contact_number) != 11:
                     errors.append("• Contact number must be exactly 11 digits")
+                elif not contact_number.startswith('09'):
+                    errors.append("• Contact number must start with 09")
 
             # Validate password requirements
             if password:
@@ -731,28 +901,70 @@ class UsersAddModal(ctk.CTkToplevel):
             if password and confirm_password and password != confirm_password:
                 errors.append("• Passwords do not match")
 
-            # Validate email and student ID uniqueness
-            try:
-                # Check if email already exists
-                if email and hasattr(self.db_manager, 'check_email_exists'):
-                    email_exists, _ = self.db_manager.check_email_exists(email)
-                    if email_exists:
-                        errors.append("• An account with this email address already exists")
-                
-                # Check if student number already exists  
-                if student_number and hasattr(self.db_manager, 'check_student_id_exists'):
-                    student_exists, _ = self.db_manager.check_student_id_exists(student_number)
-                    if student_exists:
-                        errors.append("• An account with this student number already exists")
+            # Validate date of birth format and create date string
+            date_of_birth = None
+            if month_name and day and year and not any("required" in error for error in errors if "Month" in error or "Day" in error or "Year" in error):
+                try:
+                    # Convert month name to number
+                    month_names = [
+                        "January", "February", "March", "April", "May", "June",
+                        "July", "August", "September", "October", "November", "December"
+                    ]
+                    month_num = month_names.index(month_name) + 1
+                    
+                    # Create date object to validate
+                    birth_date = datetime(int(year), month_num, int(day))
+                    date_of_birth = birth_date.strftime('%Y-%m-%d')
+                    
+                    # Check if date is not in the future
+                    if birth_date.date() > datetime.now().date():
+                        errors.append("• Date of birth cannot be in the future")
+                    
+                    # Check minimum age (16 years)
+                    today = datetime.now().date()
+                    age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+                    if age < 16:
+                        errors.append("• Student must be at least 16 years old")
+                        
+                except (ValueError, IndexError) as e:
+                    errors.append("• Invalid date of birth")
 
-            except Exception as db_error:
-                print(f"Database validation error: {db_error}")
+            # Validate email and student ID uniqueness (only if basic validation passes)
+            if not errors:
+                try:
+                    # Check if email already exists
+                    if email and hasattr(self.db_manager, 'check_email_exists'):
+                        email_exists, _ = self.db_manager.check_email_exists(email)
+                        if email_exists:
+                            errors.append("• An account with this email address already exists")
+                    
+                    # Check if student number already exists  
+                    if student_number and hasattr(self.db_manager, 'check_student_id_exists'):
+                        student_exists, _ = self.db_manager.check_student_id_exists(student_number)
+                        if student_exists:
+                            errors.append("• An account with this student number already exists")
+
+                except Exception as db_error:
+                    print(f"Database validation error: {db_error}")
 
             # Show errors if any exist
             if errors:
                 error_message = "\n".join(errors)
                 self.show_validation_error(error_message)
                 return
+
+            # Store form data for later use
+            self.student_data = {
+                'first_name': first_name,
+                'last_name': last_name,
+                'email': email,
+                'contact_number': contact_number,
+                'student_number': student_number,
+                'password': password,
+                'program': program,
+                'section': section,
+                'date_of_birth': date_of_birth
+            }
 
             # Open face verification dialog
             self.open_face_verification_dialog()
@@ -764,5 +976,635 @@ class UsersAddModal(ctk.CTkToplevel):
 
     def open_face_verification_dialog(self):
         """Open the face verification dialog"""
-        from .users_modals import FacialRecognitionPopup
-        FacialRecognitionPopup(self)
+        self.verification_dialog = ctk.CTkToplevel(self)
+        self.verification_dialog.title("Face Verification")
+        self.verification_dialog.geometry("454x450")
+        self.verification_dialog.resizable(False, False)
+        self.verification_dialog.configure(fg_color="#222222")
+        
+        # Set minimum size to prevent shrinking
+        self.verification_dialog.minsize(454, 450)
+        self.verification_dialog.maxsize(454, 450)
+
+        # Make dialog modal
+        self.verification_dialog.grab_set()
+
+        # Center dialog with explicit positioning
+        self.verification_dialog.update_idletasks()
+        
+        # Force the geometry before centering
+        self.verification_dialog.geometry("454x450")
+        
+        # Calculate center position
+        screen_width = self.verification_dialog.winfo_screenwidth()
+        screen_height = self.verification_dialog.winfo_screenheight()
+        x = (screen_width - 454) // 2
+        y = (screen_height - 450) // 2
+        
+        # Set position explicitly
+        self.verification_dialog.geometry(f"454x450+{x}+{y}")
+        
+        # Force update to ensure size is applied
+        self.verification_dialog.update()
+
+        self._create_verification_dialog_content()
+        
+        # Bind dialog close to cleanup
+        self.verification_dialog.protocol("WM_DELETE_WINDOW", self.on_verification_dialog_closing)
+
+    def _create_verification_dialog_content(self):
+        """Create content for the face verification dialog"""
+        # Card Frame with explicit sizing
+        card = ctk.CTkFrame(
+            self.verification_dialog, 
+            width=454, 
+            height=450, 
+            corner_radius=12, 
+            fg_color="#ffffff", 
+            border_width=0
+        )
+        card.place(x=0, y=0)
+        card.pack_propagate(False)
+        
+        # Ensure card maintains its size
+        card.grid_propagate(False)
+
+        # Info icon (top right)
+        info_btn = ctk.CTkButton(
+            card, 
+            text="i", 
+            width=24, 
+            height=24, 
+            corner_radius=12, 
+            fg_color="#f5f5f5", 
+            text_color="#222", 
+            font=ctk.CTkFont("Inter", 14, "bold"), 
+            hover_color="#e0e0e0", 
+            command=lambda: messagebox.showinfo("Camera Info", "Please ensure you're in a well-lit environment before capturing your photo for the best image quality", parent=self.verification_dialog)
+        )
+        info_btn.place(x=420, y=10)
+
+        # Camera Preview Frame with explicit sizing
+        self.face_preview_frame = ctk.CTkFrame(
+            card, 
+            width=410, 
+            height=240, 
+            fg_color="#fafafa", 
+            border_width=1, 
+            border_color="#d1d1d1"
+        )
+        self.face_preview_frame.place(x=22, y=38)
+        self.face_preview_frame.pack_propagate(False)
+        self.face_preview_frame.grid_propagate(False)
+
+        # Default Preview Label (centered)
+        self.preview_label = ctk.CTkLabel(
+            self.face_preview_frame,
+            text="Camera will appear here\nClick 'Open Camera' to begin",
+            font=ctk.CTkFont("Inter", 12),
+            text_color="#a0a0a0"
+        )
+        self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
+
+        # Open Camera Button with explicit sizing
+        self.camera_button = ctk.CTkButton(
+            card,
+            text="Open Camera",
+            width=410,
+            height=32,
+            corner_radius=6,
+            font=ctk.CTkFont("Inter", 13, "bold"),
+            fg_color="#ffffff",
+            text_color="#222",
+            border_width=1,
+            border_color="#d1d1d1",
+            hover_color="#f5f5f5",
+            command=self.toggle_camera
+        )
+        self.camera_button.place(x=22, y=290)
+
+        # Retake and Capture Buttons with explicit sizing
+        self.retake_button = ctk.CTkButton(
+            card,
+            text="Retake",
+            width=200,
+            height=38,
+            corner_radius=8,
+            font=ctk.CTkFont("Inter", 13, "bold"),
+            fg_color="#e5e5e5",
+            text_color="#707070",
+            border_width=0,
+            hover_color="#cccccc",
+            state="disabled",
+            command=self.retake_photo
+        )
+        self.retake_button.place(x=22, y=335)
+
+        self.capture_button = ctk.CTkButton(
+            card,
+            text="Capture",
+            width=200,
+            height=38,
+            corner_radius=8,
+            font=ctk.CTkFont("Inter", 13, "bold"),
+            fg_color="#1E3A8A",
+            text_color="#fff",
+            border_width=0,
+            hover_color="#152a63",
+            state="disabled",
+            command=self.capture_face
+        )
+        self.capture_button.place(x=232, y=335)
+
+        # Add Student Button (renamed from register_button)
+        self.add_student_button = ctk.CTkButton(
+            card,
+            text="Add Student",
+            width=410,
+            height=38,
+            corner_radius=8,
+            font=ctk.CTkFont("Inter", 13, "bold"),
+            fg_color="#1E3A8A",
+            text_color="#fff",
+            border_width=0,
+            hover_color="#152a63",
+            command=self.complete_student_registration,
+            state="disabled"
+        )
+        self.add_student_button.place(x=22, y=385)
+
+    def toggle_camera(self):
+        """Toggle camera on/off"""
+        try:
+            if self.is_camera_active:
+                self.stop_camera()
+            else:
+                self.start_camera()
+        except Exception as e:
+            print(f"Error in toggle_camera: {e}")
+            messagebox.showerror("Camera Error", f"Error with camera: {str(e)}", parent=self.verification_dialog)
+
+    def start_camera(self):
+        """Start camera capture with embedded display"""
+        try:
+            self.camera = cv2.VideoCapture(0)
+            if not self.camera.isOpened():
+                messagebox.showerror("Camera Error", "Could not open camera. Please check your camera connection.", parent=self.verification_dialog)
+                return False
+
+            self.is_camera_active = True
+            self.camera_button.configure(text="Close Camera")
+            self.capture_button.configure(state="normal")
+            
+            # Hide the placeholder
+            self.preview_label.place_forget()
+            
+            # Create canvas for camera display with explicit sizing
+            self.camera_canvas = tk.Canvas(
+                self.face_preview_frame,
+                width=410,
+                height=240,
+                bg="#fafafa",
+                highlightthickness=0
+            )
+            self.camera_canvas.place(x=0, y=0, width=410, height=240)
+            
+            # Initialize photo reference
+            self.current_photo = None
+            
+            # Start video feed thread
+            self.camera_thread = threading.Thread(target=self._update_camera_display)
+            self.camera_thread.daemon = True
+            self.camera_thread.start()
+            
+            return True
+        except Exception as e:
+            messagebox.showerror("Camera Error", f"Error starting camera: {str(e)}", parent=self.verification_dialog)
+            return False
+
+    def stop_camera(self):
+        """Stop camera capture"""
+        try:
+            self.is_camera_active = False
+            
+            # Clean up camera display and resources
+            self._cleanup_camera_window()
+            self._update_ui_after_camera_close()
+                
+        except Exception as e:
+            print(f"Error in stop_camera: {e}")
+
+    def _update_camera_display(self):
+        """Update camera feed display using threading"""
+        while self.is_camera_active:
+            try:
+                ret, frame = self.camera.read()
+                if ret:
+                    # Store current frame for capture (use original resolution)
+                    self.current_frame = frame.copy()
+                    
+                    # Resize frame to fit preview area - 240px height
+                    frame_resized = cv2.resize(frame, (410, 240))
+                    
+                    # Convert BGR to RGB
+                    frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
+                    
+                    # Add overlay guide
+                    h, w = frame_rgb.shape[:2]
+                    center_x, center_y = w // 2, h // 2
+                    
+                    # Draw face positioning guide rectangle
+                    rect_w, rect_h = 160, 180
+                    cv2.rectangle(frame_rgb, 
+                                 (center_x - rect_w//2, center_y - rect_h//2),
+                                 (center_x + rect_w//2, center_y + rect_h//2),
+                                 (0, 255, 0), 2)
+                    
+                    # Convert to PIL Image
+                    try:
+                        pil_image = Image.fromarray(frame_rgb)
+                        
+                        # Schedule UI update on main thread
+                        if (hasattr(self, 'camera_canvas') and 
+                            self.camera_canvas and 
+                            self.verification_dialog and 
+                            self.verification_dialog.winfo_exists()):
+                            
+                            def update_canvas(img=pil_image):
+                                try:
+                                    if (hasattr(self, 'camera_canvas') and 
+                                        self.camera_canvas and 
+                                        self.camera_canvas.winfo_exists()):
+                                        
+                                        # Create PhotoImage on main thread
+                                        photo = ImageTk.PhotoImage(img)
+                                        
+                                        # Clear canvas and display image
+                                        self.camera_canvas.delete("all")
+                                        self.camera_canvas.create_image(205, 120, image=photo, anchor="center")
+                                        
+                                        # Keep reference to prevent garbage collection
+                                        self.current_photo = photo
+                                        
+                                except tk.TclError:
+                                    # Widget was destroyed, stop the camera feed
+                                    self.is_camera_active = False
+                                except Exception as e:
+                                    print(f"Canvas update error: {e}")
+                            
+                            # Schedule the update on main thread
+                            self.verification_dialog.after(0, update_canvas)
+                        else:
+                            # Canvas doesn't exist, stop the feed
+                            break
+                            
+                    except Exception as img_error:
+                        print(f"Image processing error: {img_error}")
+                        break
+                        
+            except Exception as e:
+                print(f"Camera display error: {e}")
+                break
+
+            time.sleep(0.03)  # ~30 FPS
+        
+        # Ensure camera is properly released when thread ends
+        self.is_camera_active = False
+
+    def _cleanup_camera_window(self):
+        """Clean up camera display and resources"""
+        # Signal thread to stop
+        self.is_camera_active = False
+        
+        # Wait for thread to finish
+        if hasattr(self, 'camera_thread') and self.camera_thread and self.camera_thread.is_alive():
+            try:
+                self.camera_thread.join(0.5)  # Wait up to 0.5 seconds
+            except Exception:
+                pass
+
+        # Release camera
+        if hasattr(self, 'camera') and self.camera and self.camera.isOpened():
+            try:
+                self.camera.release()
+            except Exception:
+                pass
+            finally:
+                self.camera = None
+
+        # Clear camera canvas safely
+        if hasattr(self, 'camera_canvas') and self.camera_canvas:
+            try:
+                if self.camera_canvas.winfo_exists():
+                    self.camera_canvas.destroy()
+            except Exception:
+                pass
+            finally:
+                self.camera_canvas = None
+        
+        # Clear photo reference
+        self.current_photo = None
+
+    def _update_ui_after_camera_close(self):
+        """Update UI after camera window is closed"""
+        # Only update camera button text if face hasn't been captured
+        if not self.face_image:
+            self.camera_button.configure(text="Open Camera")
+            self.capture_button.configure(state="disabled")
+            
+            # Show preview label if no face is captured
+            self.preview_label = ctk.CTkLabel(
+                self.face_preview_frame,
+                text="Camera will appear here\nClick 'Open Camera' to begin",
+                font=ctk.CTkFont("Inter", 12),
+                text_color="#a0a0a0"
+            )
+            self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
+
+    def capture_face(self):
+        """Capture current frame"""
+        if not self.is_camera_active:
+            messagebox.showwarning("Camera Error", "Camera is not active. Please open camera first.", parent=self.verification_dialog)
+            return
+        
+        if not hasattr(self, 'current_frame') or self.current_frame is None:
+            messagebox.showwarning("Camera Error", "No frame available. Please wait for camera to initialize.", parent=self.verification_dialog)
+            return
+        
+        try:
+            frame = self.current_frame.copy()
+            
+            # Validate face in the image
+            validation_result = self.validate_face_image(frame)
+            if not validation_result[0]:
+                messagebox.showwarning("Face Validation Failed", validation_result[1], parent=self.verification_dialog)
+                return
+
+            # Convert to RGB and store
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            self.face_image = Image.fromarray(frame_rgb)
+            
+            # Convert to bytes for database storage
+            img_byte_arr = io.BytesIO()
+            self.face_image.save(img_byte_arr, format='PNG')
+            self.face_image_data = img_byte_arr.getvalue()
+
+            # Check image size
+            if len(self.face_image_data) > 5 * 1024 * 1024:
+                messagebox.showwarning(
+                    "Image Too Large",
+                    "The captured image exceeds the 5MB limit. Please try again.",
+                    parent=self.verification_dialog
+                )
+                self.face_image = None
+                self.face_image_data = None
+                return
+
+            # Stop camera and show preview
+            self.stop_camera()
+            self.show_face_preview()
+            
+            # Update button states after successful capture
+            self._update_buttons_after_capture()
+            
+            messagebox.showinfo("Success", "Face image captured successfully! You can now add the student.", parent=self.verification_dialog)
+            
+        except Exception as e:
+            print(f"Capture error: {e}")
+            messagebox.showerror("Error", f"Failed to capture image: {str(e)}", parent=self.verification_dialog)
+
+    def show_face_preview(self):
+        """Show face image preview"""
+        try:
+            # Clear existing widgets in preview frame
+            for widget in self.face_preview_frame.winfo_children():
+                widget.destroy()
+            
+            if self.face_image:
+                # Create canvas for displaying captured image
+                preview_canvas = tk.Canvas(
+                    self.face_preview_frame,
+                    width=410,
+                    height=240,
+                    bg="#fafafa",
+                    highlightthickness=0
+                )
+                preview_canvas.place(x=0, y=0, width=410, height=240)
+                
+                # Convert image to PhotoImage and display
+                preview_img = self.face_image.copy()
+                preview_img.thumbnail((410, 240), Image.LANCZOS)
+                photo = ImageTk.PhotoImage(preview_img)
+                
+                preview_canvas.create_image(205, 120, image=photo, anchor="center")
+                
+                # Keep reference to prevent garbage collection
+                preview_canvas.image = photo
+            else:
+                # Show success message
+                preview_text = ctk.CTkLabel(
+                    self.face_preview_frame,
+                    text="✓ Photo Captured Successfully!\nReady for registration",
+                    font=ctk.CTkFont("Inter", 14, "bold"),
+                    text_color="#4CAF50"
+                )
+                preview_text.place(relx=0.5, rely=0.5, anchor="center")
+            
+        except Exception as e:
+            print(f"Error showing face preview: {e}")
+
+    def validate_face_image(self, image):
+        """Validate that the image contains a properly visible face"""
+        try:
+            face_cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+            eye_cascade_path = cv2.data.haarcascades + 'haarcascade_eye.xml'
+
+            if not os.path.exists(face_cascade_path) or not os.path.exists(eye_cascade_path):
+                print("Warning: Face detection cascades not found. Skipping face validation.")
+                return (True, "Face validation skipped")
+
+            face_cascade = cv2.CascadeClassifier(face_cascade_path)
+            eye_cascade = cv2.CascadeClassifier(eye_cascade_path)
+
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            faces = face_cascade.detectMultiScale(
+                gray,
+                scaleFactor=1.1,
+                minNeighbors=5,
+                minSize=(30, 30)
+            )
+
+            if len(faces) == 0:
+                return (False, "No face detected. Please ensure your face is clearly visible.")
+            if len(faces) > 1:
+                return (False, "Multiple faces detected. Please ensure only your face is in the image.")
+
+            (x, y, w, h) = faces[0]
+            roi_gray = gray[y:y+h, x:x+w]
+            eyes = eye_cascade.detectMultiScale(
+                roi_gray,
+                scaleFactor=1.1,
+                minNeighbors=5,
+                minSize=(30, 30)
+            )
+
+            if len(eyes) < 2:
+                return (False, "Eyes not clearly visible. Please remove sunglasses or any accessories covering your face.")
+
+            return (True, "Face validation successful")
+        except Exception as e:
+            print(f"Face validation error: {str(e)}")
+            return (True, "Face validation skipped due to an error")
+
+    def _update_buttons_after_capture(self):
+        """Update button states after successful face capture"""
+        # Disable camera button and capture button since face is already captured
+        self.camera_button.configure(
+            state="disabled",
+            text="Photo Captured",
+            fg_color="#e5e5e5",
+            text_color="#707070",
+            hover_color="#e5e5e5"
+        )
+        
+        self.capture_button.configure(state="disabled", fg_color="#cccccc", text_color="#999999")
+        
+        # Enable add student button
+        self.add_student_button.configure(state="normal")
+        
+        # Enable and style retake button
+        self.retake_button.configure(
+            state="normal",
+            fg_color="#dc2626",
+            text_color="#ffffff",
+            hover_color="#b91c1c"
+        )
+
+    def retake_photo(self):
+        """Retake photo - restart camera"""
+        self.face_image = None
+        self.face_image_data = None
+        
+        # Reset button states for retaking
+        self._reset_buttons_for_retake()
+        
+        # Clear preview
+        for widget in self.face_preview_frame.winfo_children():
+            widget.destroy()
+        
+        self.preview_label = ctk.CTkLabel(
+            self.face_preview_frame,
+            text="Camera will appear here\nClick 'Open Camera' to begin",
+            font=ctk.CTkFont("Inter", 12),
+            text_color="#a0a0a0"
+        )
+        self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
+        
+        self.start_camera()
+
+    def _reset_buttons_for_retake(self):
+        """Reset button states when retaking photo"""
+        # Re-enable camera button
+        self.camera_button.configure(
+            state="normal",
+            text="Close Camera",
+            fg_color="#ffffff",
+            text_color="#222",
+            hover_color="#f5f5f5"
+        )
+        
+        # Disable add student button since no face is captured
+        self.add_student_button.configure(state="disabled")
+        
+        # Disable and reset retake button
+        self.retake_button.configure(
+            state="disabled",
+            fg_color="#e5e5e5",
+            text_color="#707070",
+            hover_color="#cccccc"
+        )
+
+    def complete_student_registration(self):
+        """Complete the student registration process"""
+        try:
+            if not self.face_image_data or len(self.face_image_data) == 0:
+                messagebox.showwarning(
+                    "Face Image Required", 
+                    "A face image is required for registration. Please capture your face using the camera.",
+                    parent=self.verification_dialog
+                )
+                return
+            
+            # Show loading cursor
+            self.verification_dialog.configure(cursor="wait")
+            self.verification_dialog.update_idletasks()
+            
+            # Prepare registration data
+            registration_data = self.student_data.copy()
+            registration_data['face_image'] = self.face_image_data
+            registration_data['verified'] = 1  # Auto-verify for admin-created accounts
+            
+            # Reset cursor
+            self.verification_dialog.configure(cursor="")
+            
+            # Clean up camera
+            if self.is_camera_active:
+                self.stop_camera()
+            
+            # Register the student directly (skip OTP verification)
+            success, result = self.db_manager.register_user(registration_data)
+            
+            if success:
+                # Close verification dialog
+                self.verification_dialog.destroy()
+                
+                # Show success message
+                messagebox.showinfo(
+                    "Success", 
+                    f"Student {registration_data['first_name']} {registration_data['last_name']} has been successfully added to the system!",
+                    parent=self
+                )
+                
+                # Close the add user modal
+                self.destroy()
+                
+                # Refresh the parent view if it has a refresh method
+                if hasattr(self.parent_view, 'refresh_users') and callable(self.parent_view.refresh_users):
+                    self.parent_view.refresh_users()
+                elif hasattr(self.parent_view, 'load_users') and callable(self.parent_view.load_users):
+                    self.parent_view.load_users()
+                    
+            else:
+                messagebox.showerror(
+                    "Registration Error", 
+                    f"Failed to register student:\n{result}",
+                    parent=self.verification_dialog
+                )
+                
+        except Exception as e:
+            self.verification_dialog.configure(cursor="")
+            messagebox.showerror(
+                "Registration Error", 
+                f"An unexpected error occurred during registration:\n{str(e)}",
+                parent=self.verification_dialog
+            )
+            import traceback
+            traceback.print_exc()
+
+    def on_verification_dialog_closing(self):
+        """Handle verification dialog closing"""
+        try:
+            # Stop camera and clean up
+            if self.is_camera_active:
+                self.stop_camera()
+            
+            # Reset face capture state
+            self.face_image = None
+            self.face_image_data = None
+            
+            # Destroy dialog
+            if self.verification_dialog:
+                self.verification_dialog.destroy()
+                
+        except Exception as e:
+            print(f"Error while closing verification dialog: {str(e)}")

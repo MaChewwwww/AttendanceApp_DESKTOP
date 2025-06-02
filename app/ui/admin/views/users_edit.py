@@ -120,11 +120,12 @@ class UsersEditModal(ctk.CTkToplevel):
         # Program dropdown - wrapped in container for border
         program_dropdown_container = ctk.CTkFrame(
             program_container,
-            fg_color="#fff",
-            border_width=2,
-            border_color="#d1d1d1",
+            width=180,
+            height=30,
             corner_radius=6,
-            height=36
+            fg_color="#ffffff",
+            border_width=2,
+            border_color="#242323"
         )
         program_dropdown_container.pack(fill="x", pady=(0, 10))
         program_dropdown_container.pack_propagate(False)
@@ -149,12 +150,12 @@ class UsersEditModal(ctk.CTkToplevel):
             dropdown_text_color="#000",
             values=program_options,
             font=ctk.CTkFont(size=13),
-            corner_radius=4,
+            corner_radius=6,
             anchor="w",
-            height=32,
+            height=26,
             command=self.on_program_change
         )
-        self.form_fields['program'].pack(fill="both", expand=True, padx=1, pady=1)
+        self.form_fields['program'].pack(fill="both", expand=True, padx=2, pady=2)
         self.form_fields['program'].set("Not Yet Assigned")  # Default to not assigned
         
         # Section (right side)
@@ -165,11 +166,12 @@ class UsersEditModal(ctk.CTkToplevel):
         # Section dropdown - wrapped in container for border
         section_dropdown_container = ctk.CTkFrame(
             section_container,
-            fg_color="#fff",
-            border_width=2,
-            border_color="#d1d1d1",
+            width=180,
+            height=30,
             corner_radius=6,
-            height=36
+            fg_color="#f5f5f5",  # Disabled appearance initially
+            border_width=2,
+            border_color="#242323"
         )
         section_dropdown_container.pack(fill="x", pady=(0, 10))
         section_dropdown_container.pack_propagate(False)
@@ -186,12 +188,12 @@ class UsersEditModal(ctk.CTkToplevel):
             dropdown_text_color="#000",
             values=["Select Program First"],  # Placeholder message
             font=ctk.CTkFont(size=13),
-            corner_radius=4,
+            corner_radius=6,
             anchor="w",
-            height=32,
+            height=26,
             state="disabled"  # Initially disabled
         )
-        self.form_fields['section'].pack(fill="both", expand=True, padx=1, pady=1)
+        self.form_fields['section'].pack(fill="both", expand=True, padx=2, pady=2)
         self.form_fields['section'].set("Select Program First")
 
         # Row 4: New Password - Status
@@ -204,7 +206,7 @@ class UsersEditModal(ctk.CTkToplevel):
         password_container = ctk.CTkFrame(password_status_frame, fg_color="transparent")
         password_container.grid(row=0, column=0, sticky="ew", padx=(0, 10))
         ctk.CTkLabel(password_container, text="New Password (Optional)", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
-        self.form_fields['password'] = ctk.CTkEntry(password_container, width=200, fg_color="#fff", text_color="#000", show="*", placeholder_text="Leave blank to keep current")
+        self.form_fields['password'] = ctk.CTkEntry(password_container, width=180, fg_color="#fff", text_color="#000", show="*", placeholder_text="Leave blank to keep current")
         self.form_fields['password'].pack(fill="x", pady=(0, 10))
         
         # Status (right side)
@@ -215,16 +217,17 @@ class UsersEditModal(ctk.CTkToplevel):
         # Status dropdown - wrapped in container for border
         status_dropdown_container = ctk.CTkFrame(
             status_container,
-            fg_color="#fff",
-            border_width=2,
-            border_color="#d1d1d1",
+            width=180,
+            height=30,
             corner_radius=6,
-            height=36
+            fg_color="#ffffff",
+            border_width=2,
+            border_color="#242323"
         )
         status_dropdown_container.pack(fill="x", pady=(0, 10))
         status_dropdown_container.pack_propagate(False)
         
-        # Status dropdown - placeholder options for now
+        # Status dropdown
         if self.user_type == "student":
             status_options = [s['name'] for s in self.dropdown_data.get('statuses', []) if s.get('name')]
             if not status_options:
@@ -245,11 +248,11 @@ class UsersEditModal(ctk.CTkToplevel):
             dropdown_text_color="#000",
             values=status_options,
             font=ctk.CTkFont(size=13),
-            corner_radius=4,
+            corner_radius=6,
             anchor="w",
-            height=32
+            height=26
         )
-        self.form_fields['status'].pack(fill="both", expand=True, padx=1, pady=1)
+        self.form_fields['status'].pack(fill="both", expand=True, padx=2, pady=2)
         self.form_fields['status'].set(status_options[0])
         
         # Row 5: Face Recognition Button (Centered)
@@ -452,6 +455,10 @@ class UsersEditModal(ctk.CTkToplevel):
         """Handle program selection change to filter sections"""
         try:
             if selected_program == "Not Yet Assigned":
+                # Update section container to disabled appearance
+                section_dropdown_container = self.form_fields['section'].master
+                section_dropdown_container.configure(fg_color="#f5f5f5")
+                
                 # Lock section dropdown when no program is selected
                 self.form_fields['section'].configure(
                     values=["Select Program First"],
@@ -472,6 +479,10 @@ class UsersEditModal(ctk.CTkToplevel):
                     break
             
             if selected_program_id:
+                # Update section container to enabled appearance
+                section_dropdown_container = self.form_fields['section'].master
+                section_dropdown_container.configure(fg_color="#ffffff")
+                
                 # Filter sections by program
                 filtered_sections = [
                     s['name'] for s in self.dropdown_data.get('sections', [])
@@ -506,6 +517,10 @@ class UsersEditModal(ctk.CTkToplevel):
                     )
                     self.form_fields['section'].set("Not Yet Assigned")
             else:
+                # Update section container to disabled appearance
+                section_dropdown_container = self.form_fields['section'].master
+                section_dropdown_container.configure(fg_color="#f5f5f5")
+                
                 # If no valid program selected, lock section dropdown
                 self.form_fields['section'].configure(
                     values=["Select Program First"],
@@ -520,6 +535,9 @@ class UsersEditModal(ctk.CTkToplevel):
         except Exception as e:
             print(f"Error handling program change: {e}")
             # Fallback to locked state on error
+            section_dropdown_container = self.form_fields['section'].master
+            section_dropdown_container.configure(fg_color="#f5f5f5")
+            
             self.form_fields['section'].configure(
                 values=["Select Program First"],
                 fg_color="#f5f5f5",
