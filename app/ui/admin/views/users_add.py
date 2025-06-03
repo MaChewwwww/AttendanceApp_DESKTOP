@@ -1462,24 +1462,43 @@ class UsersAddModal(ctk.CTkToplevel):
             self.face_image = face_image
             self.face_image_data = face_image_data
             
-            # Restore grab to parent modal FIRST
-            try:
-                self.grab_set()
-                self.focus_force()
-                self.lift()
-                self.update()  # Force update
-            except Exception as e:
-                print(f"Could not restore grab: {e}")
+            # Restore grab to parent modal with retry logic
+            self._restore_modal_grab()
             
             # Wait a moment for grab to take effect
             if self.user_type == "student":
-                self.after(100, self._show_confirmation_dialog)
+                self.after(200, self._show_confirmation_dialog)
             else:
-                self.after(100, self._show_faculty_confirmation_dialog)
+                self.after(200, self._show_faculty_confirmation_dialog)
                 
         except Exception as e:
             print(f"Error in face capture complete: {e}")
             messagebox.showerror("Error", f"An unexpected error occurred:\n\n{str(e)}")
+
+    def _restore_modal_grab(self):
+        """Restore modal grab with retry logic"""
+        def attempt_grab(attempt=0, max_attempts=5):
+            try:
+                self.grab_set()
+                self.focus_force()
+                self.lift()
+                self.update()
+                print("Modal grab restored successfully")
+                return True
+            except Exception as e:
+                if attempt < max_attempts:
+                    print(f"Grab attempt {attempt + 1} failed, retrying in 100ms...")
+                    self.after(100, lambda: attempt_grab(attempt + 1, max_attempts))
+                    return False
+                else:
+                    print(f"Failed to restore grab after {max_attempts} attempts: {e}")
+                    # Continue without grab - the modal will still work
+                    self.focus_force()
+                    self.lift()
+                    return False
+        
+        # Start the grab restoration process
+        attempt_grab()
 
     def _show_confirmation_dialog(self):
         """Show confirmation dialog after student face capture"""
