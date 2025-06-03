@@ -1,4 +1,4 @@
-# 📋 AttendanceApp Desktop - Update Log v2.0.0
+# 📋 AttendanceApp Desktop - Update Log v1.1.0
 
 ## 🗓️ Update: May 31, 2025
 **Module**: Authentication System Overhaul  
@@ -134,4 +134,4 @@ The authentication system is now **production-ready** with:
 - ✅ **Comprehensive error handling** and user feedback
 - ✅ **Scalable architecture** ready for future enhancements
 
-**Latest Update**: May 31, 2025 | **Version**: 2.0.0 - Streamlined Registration
+**Latest Update**: May 31, 2025 | **Version**: 1.1.0 - Streamlined Registration
