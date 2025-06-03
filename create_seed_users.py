@@ -637,7 +637,7 @@ def seed_users():
             {
                 'first_name': 'Dr. Maria',
                 'last_name': 'Santos',
-                'email': 'maria.santos@school.edu',
+                'email': 'maria.santos@pup.edu.ph',
                 'birthday': '1985-03-15',
                 'password': 'faculty123',
                 'contact_number': '09123456789',
@@ -650,7 +650,7 @@ def seed_users():
             {
                 'first_name': 'Prof. John',
                 'last_name': 'Doe',
-                'email': 'john.doe@school.edu',
+                'email': 'john.doe@pup.edu.ph',
                 'birthday': '1980-07-22',
                 'password': 'faculty123',
                 'contact_number': '09234567890',
@@ -663,7 +663,7 @@ def seed_users():
             {
                 'first_name': 'Jane',
                 'last_name': 'Smith',
-                'email': 'jane.smith@school.edu',
+                'email': 'jane.smith@pup.edu.ph',
                 'birthday': '1988-11-30',
                 'password': 'faculty123',
                 'contact_number': '09345678901',
@@ -676,7 +676,7 @@ def seed_users():
             {
                 'first_name': 'Shadrack',
                 'last_name': 'Castro',
-                'email': 'shadrack.castro@student.edu',
+                'email': 'shadrack.castro@iskolarngbayan.pup.edu.ph',
                 'birthday': '2002-05-10',
                 'password': 'student123',
                 'contact_number': '09456789012',
@@ -692,7 +692,7 @@ def seed_users():
             {
                 'first_name': 'Jerlee',
                 'last_name': 'Alipio',
-                'email': 'jerlee.alipio@student.edu',
+                'email': 'jerlee.alipio@iskolarngbayan.pup.edu.ph',
                 'birthday': '2001-09-18',
                 'password': 'student123',
                 'contact_number': '09567890123',
@@ -708,7 +708,7 @@ def seed_users():
             {
                 'first_name': 'Steven',
                 'last_name': 'Masangcay',
-                'email': 'steven.masangcay@student.edu',
+                'email': 'steven.masangcay@iskolarngbayan.pup.edu.ph',
                 'birthday': '2000-12-25',
                 'password': 'student123',
                 'contact_number': '09678901234',
@@ -724,7 +724,7 @@ def seed_users():
             {
                 'first_name': 'John Mathew',
                 'last_name': 'Parocha',
-                'email': 'john.parocha@student.edu',
+                'email': 'john.parocha@iskolarngbayan.pup.edu.ph',
                 'birthday': '1999-08-14',
                 'password': 'student123',
                 'contact_number': '09789012345',
@@ -740,7 +740,7 @@ def seed_users():
             {
                 'first_name': 'Maria',
                 'last_name': 'Garcia',
-                'email': 'maria.garcia@student.edu',
+                'email': 'maria.garcia@iskolarngbayan.pup.edu.ph',
                 'birthday': '2001-03-12',
                 'password': 'student123',
                 'contact_number': '09890123456',
@@ -756,7 +756,7 @@ def seed_users():
             {
                 'first_name': 'Carlos',
                 'last_name': 'Rodriguez',
-                'email': 'carlos.rodriguez@student.edu',
+                'email': 'carlos.rodriguez@iskolarngbayan.pup.edu.ph',
                 'birthday': '2002-07-20',
                 'password': 'student123',
                 'contact_number': '09901234567',
@@ -772,7 +772,7 @@ def seed_users():
             {
                 'first_name': 'Anna',
                 'last_name': 'Cruz',
-                'email': 'anna.cruz@student.edu',
+                'email': 'anna.cruz@iskolarngbayan.pup.edu.ph',
                 'birthday': '2000-11-08',
                 'password': 'student123',
                 'contact_number': '09947561810',  # Example format
@@ -788,7 +788,7 @@ def seed_users():
             {
                 'first_name': 'Roberto',
                 'last_name': 'Fernandez',
-                'email': 'roberto.fernandez@student.edu',
+                'email': 'roberto.fernandez@iskolarngbayan.pup.edu.ph',
                 'birthday': '2001-04-15',
                 'password': 'student123',
                 'contact_number': '09123456780',
@@ -804,7 +804,7 @@ def seed_users():
             {
                 'first_name': 'Lisa',
                 'last_name': 'Mendoza',
-                'email': 'lisa.mendoza@student.edu',
+                'email': 'lisa.mendoza@iskolarngbayan.pup.edu.ph',
                 'birthday': '1999-06-03',
                 'password': 'student123',
                 'contact_number': '09234567891',
@@ -820,7 +820,7 @@ def seed_users():
             {
                 'first_name': 'Dr. Patricia',
                 'last_name': 'Reyes',
-                'email': 'patricia.reyes@school.edu',
+                'email': 'patricia.reyes@pup.edu.ph',
                 'birthday': '1975-09-12',
                 'password': 'faculty123',
                 'contact_number': '09345678902',
@@ -833,7 +833,7 @@ def seed_users():
             {
                 'first_name': 'Prof. Michael',
                 'last_name': 'Torres',
-                'email': 'michael.torres@school.edu',
+                'email': 'michael.torres@pup.edu.ph',
                 'birthday': '1982-01-28',
                 'password': 'faculty123',
                 'contact_number': '09456789013',
@@ -846,7 +846,7 @@ def seed_users():
             {
                 'first_name': 'Dr. Sarah',
                 'last_name': 'Villanueva',
-                'email': 'sarah.villanueva@school.edu',
+                'email': 'sarah.villanueva@pup.edu.ph',
                 'birthday': '1987-12-05',
                 'password': 'faculty123',
                 'contact_number': '09567890124',
