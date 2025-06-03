@@ -1326,7 +1326,7 @@ class DatabaseManager:
             results = cursor.fetchall()
             
             logs = [dict(row) for row in results]
-            conn.close()
+            conn.close();
             
             return True, logs
             
@@ -1882,3 +1882,18 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error getting update dropdown data: {e}")
             return False, str(e)
+
+    def check_employee_number_exists(self, employee_number):
+        """Check if employee number already exists in faculties table"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT COUNT(*) FROM faculties WHERE employee_number = ?", (employee_number,))
+            count = cursor.fetchone()[0]
+            
+            return (count > 0, None)
+            
+        except Exception as e:
+            print(f"Error checking employee number existence: {e}")
+            return (False, str(e))

@@ -539,34 +539,396 @@ class UsersAddModal(ctk.CTkToplevel):
         self.add_button.pack(side="left")
 
     def create_faculty_form(self):
-        """Create form for adding faculty - placeholder for now"""
+        """Create form for adding faculty"""
         # Header
+        header_container = ctk.CTkFrame(self, fg_color="transparent")
+        header_container.place(x=40, y=15)
+        
+        # Title
+        title_frame = ctk.CTkFrame(header_container, fg_color="transparent")
+        title_frame.pack(anchor="w")
+        
         ctk.CTkLabel(
-            self,
-            text="Add Faculty Feature",
+            title_frame,
+            text="Add New ",
+            font=ctk.CTkFont("Inter", 20, "bold"),
+            text_color="#000000"
+        ).pack(side="left")
+        
+        ctk.CTkLabel(
+            title_frame,
+            text="Faculty",
             font=ctk.CTkFont("Inter", 20, "bold"),
             text_color="#1E3A8A"
-        ).pack(pady=50)
+        ).pack(side="left")
+        
+        # Divider
+        divider = ctk.CTkFrame(
+            header_container,
+            fg_color="#1E3A8A",
+            width=180,
+            height=2
+        )
+        divider.pack(anchor="w", pady=(5, 0))
+        
+        # Card Frame
+        self.card_frame = ctk.CTkFrame(
+            self,
+            width=440,
+            height=620,
+            corner_radius=12,
+            fg_color="#ffffff",
+            border_width=1,
+            border_color="#d1d1d1"
+        )
+        self.card_frame.place(x=40, y=70)
+        self.card_frame.pack_propagate(False)
+        
+        # Store original position for shake animation
+        self.original_card_x = 40
+
+        # Create two columns
+        left_column = ctk.CTkFrame(self.card_frame, fg_color="transparent")
+        left_column.place(x=15, y=15)
+        
+        right_column = ctk.CTkFrame(self.card_frame, fg_color="transparent")
+        right_column.place(x=225, y=15)
+        
+        # First Name (Left Column)
+        ctk.CTkLabel(
+            left_column,
+            text="First Name",
+            font=ctk.CTkFont("Inter", 11),
+            text_color="#707070"
+        ).pack(anchor="w")
+        
+        self.first_name_entry = ctk.CTkEntry(
+            left_column,
+            width=190,
+            height=26,
+            corner_radius=5,
+            border_width=1,
+            font=ctk.CTkFont("Inter", 11),
+            fg_color="#ffffff",
+            border_color="#d1d1d1",
+            text_color="#000000"
+        )
+        self.first_name_entry.pack(pady=(2, 10))
+        
+        # Last Name (Right Column)
+        ctk.CTkLabel(
+            right_column,
+            text="Last Name",
+            font=ctk.CTkFont("Inter", 11),
+            text_color="#707070"
+        ).pack(anchor="w")
+        
+        self.last_name_entry = ctk.CTkEntry(
+            right_column,
+            width=190,
+            height=26,
+            corner_radius=5,
+            border_width=1,
+            font=ctk.CTkFont("Inter", 11),
+            fg_color="#ffffff",
+            border_color="#d1d1d1",
+            text_color="#000000"
+        )
+        self.last_name_entry.pack(pady=(2, 10))
+        
+        # Date of Birth Row
+        dob_container = ctk.CTkFrame(self.card_frame, fg_color="transparent")
+        dob_container.place(x=15, y=75)
         
         ctk.CTkLabel(
-            self,
-            text="Faculty addition form will be implemented here",
-            font=ctk.CTkFont("Inter", 14),
-            text_color="#666666"
-        ).pack(pady=20)
+            dob_container,
+            text="Date of Birth",
+            font=ctk.CTkFont("Inter", 11),
+            text_color="#707070"
+        ).pack(anchor="w")
         
-        # Close button
-        ctk.CTkButton(
-            self,
-            text="Close",
+        # Date Input Fields Container
+        date_fields = ctk.CTkFrame(dob_container, fg_color="transparent")
+        date_fields.pack(pady=(2, 0))
+        
+        # Month Dropdown
+        month_container = ctk.CTkFrame(
+            date_fields,
+            width=130,
+            height=28,
+            corner_radius=5,
+            fg_color="#ffffff",
+            border_width=1,
+            border_color="#d1d1d1"
+        )
+        month_container.pack(side="left", padx=(0, 8))
+        month_container.pack_propagate(False)
+        
+        month_names = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ]
+        self.month_dropdown = ctk.CTkOptionMenu(
+            month_container,
+            width=128,
+            height=26,
+            corner_radius=5,
+            font=ctk.CTkFont("Inter", 10),
+            fg_color="#ffffff",
+            button_color="#ffffff",
+            button_hover_color="#f5f5f5",
+            text_color="#000000",
+            dropdown_fg_color="#ffffff",
+            dropdown_text_color="#000000",
+            dropdown_hover_color="#f5f5f5",
+            values=month_names,
+            command=self._on_month_year_change
+        )
+        self.month_dropdown.place(x=1, y=1)
+        self.month_dropdown.set("January")
+        
+        # Day Dropdown
+        day_container = ctk.CTkFrame(
+            date_fields,
+            width=80,
+            height=28,
+            corner_radius=5,
+            fg_color="#ffffff",
+            border_width=1,
+            border_color="#d1d1d1"
+        )
+        day_container.pack(side="left", padx=(0, 8))
+        day_container.pack_propagate(False)
+        
+        self.day_dropdown = ctk.CTkOptionMenu(
+            day_container,
+            width=78,
+            height=26,
+            corner_radius=5,
+            font=ctk.CTkFont("Inter", 10),
+            fg_color="#ffffff",
+            button_color="#ffffff",
+            button_hover_color="#f5f5f5",
+            text_color="#000000",
+            dropdown_fg_color="#ffffff",
+            dropdown_text_color="#000000",
+            dropdown_hover_color="#f5f5f5",
+            values=["01"]
+        )
+        self.day_dropdown.place(x=1, y=1)
+        
+        # Year Dropdown
+        year_container = ctk.CTkFrame(
+            date_fields,
+            width=100,
+            height=28,
+            corner_radius=5,
+            fg_color="#ffffff",
+            border_width=1,
+            border_color="#d1d1d1"
+        )
+        year_container.pack(side="left")
+        year_container.pack_propagate(False)
+        
+        current_year = datetime.now().year
+        min_age = 22  # Minimum age for faculty
+        max_birth_year = current_year - min_age
+        min_birth_year = current_year - 65  # Maximum age
+        
+        year_values = [str(i) for i in range(min_birth_year, max_birth_year + 1)]
+        
+        self.year_dropdown = ctk.CTkOptionMenu(
+            year_container,
+            width=98,
+            height=26,
+            corner_radius=5,
+            font=ctk.CTkFont("Inter", 10),
+            fg_color="#ffffff",
+            button_color="#ffffff",
+            button_hover_color="#f5f5f5",
+            text_color="#000000",
+            dropdown_fg_color="#ffffff",
+            dropdown_text_color="#000000",
+            dropdown_hover_color="#f5f5f5",
+            values=year_values,
+            command=self._on_month_year_change,
+            dynamic_resizing=False
+        )
+        self.year_dropdown.place(x=1, y=1)
+        self.year_dropdown.set("1980")
+        
+        # Initialize days
+        self._update_days()
+
+        # Contact Number
+        contact_container = ctk.CTkFrame(self.card_frame, fg_color="transparent")
+        contact_container.place(x=15, y=135)
+        
+        ctk.CTkLabel(
+            contact_container,
+            text="Contact Number",
+            font=ctk.CTkFont("Inter", 11),
+            text_color="#707070"
+        ).pack(anchor="w")
+        
+        self.contact_entry = ctk.CTkEntry(
+            contact_container,
+            width=190,
+            height=26,
+            corner_radius=5,
+            border_width=1,
+            font=ctk.CTkFont("Inter", 11),
+            fg_color="#ffffff",
+            border_color="#d1d1d1",
+            text_color="#000000"
+        )
+        self.contact_entry.pack(pady=(2, 0))
+
+        # Employee Number
+        employee_container = ctk.CTkFrame(self.card_frame, fg_color="transparent")
+        employee_container.place(x=15, y=185)
+        
+        ctk.CTkLabel(
+            employee_container,
+            text="Employee Number",
+            font=ctk.CTkFont("Inter", 11),
+            text_color="#707070"
+        ).pack(anchor="w")
+        
+        self.employee_entry = ctk.CTkEntry(
+            employee_container,
+            width=405,
+            height=26,
+            corner_radius=5,
+            border_width=1,
+            font=ctk.CTkFont("Inter", 11),
+            fg_color="#ffffff",
+            border_color="#d1d1d1",
+            text_color="#000000"
+        )
+        self.employee_entry.pack(pady=(2, 0))
+
+        # Webmail Address
+        webmail_container = ctk.CTkFrame(self.card_frame, fg_color="transparent")
+        webmail_container.place(x=15, y=235)
+        
+        ctk.CTkLabel(
+            webmail_container,
+            text="Webmail Address",
+            font=ctk.CTkFont("Inter", 11),
+            text_color="#707070"
+        ).pack(anchor="w")
+        
+        self.webmail_entry = ctk.CTkEntry(
+            webmail_container,
+            width=405,
+            height=26,
+            corner_radius=5,
+            border_width=1,
+            font=ctk.CTkFont("Inter", 11),
+            fg_color="#ffffff",
+            border_color="#d1d1d1",
+            text_color="#000000"
+        )
+        self.webmail_entry.pack(pady=(2, 0))
+
+        # Password
+        password_container = ctk.CTkFrame(self.card_frame, fg_color="transparent")
+        password_container.place(x=15, y=285)
+        
+        ctk.CTkLabel(
+            password_container,
+            text="Password",
+            font=ctk.CTkFont("Inter", 11),
+            text_color="#707070"
+        ).pack(anchor="w")
+        
+        self.password_entry = ctk.CTkEntry(
+            password_container,
+            width=405,
+            height=26,
+            corner_radius=5,
+            border_width=1,
+            font=ctk.CTkFont("Inter", 11),
+            fg_color="#ffffff",
+            border_color="#d1d1d1",
+            text_color="#000000",
+            show="•"
+        )
+        self.password_entry.pack(pady=(2, 0))
+
+        # Confirm Password
+        confirm_container = ctk.CTkFrame(self.card_frame, fg_color="transparent")
+        confirm_container.place(x=15, y=335)
+        
+        ctk.CTkLabel(
+            confirm_container,
+            text="Confirm Password",
+            font=ctk.CTkFont("Inter", 11),
+            text_color="#707070"
+        ).pack(anchor="w")
+        
+        self.confirm_entry = ctk.CTkEntry(
+            confirm_container,
+            width=405,
+            height=26,
+            corner_radius=5,
+            border_width=1,
+            font=ctk.CTkFont("Inter", 11),
+            fg_color="#ffffff",
+            border_color="#d1d1d1",
+            text_color="#000000",
+            show="•"
+        )
+        self.confirm_entry.pack(pady=(2, 0))
+
+        # Validation Label (initially hidden)
+        self.validation_label = ctk.CTkLabel(
+            self.card_frame,
+            text="",
+            font=ctk.CTkFont("Inter", 10),
+            text_color="#dc2626",
+            wraplength=400,
+            justify="left"
+        )
+        self.validation_label.place(x=15, y=390)
+        self.validation_label.place_forget()
+
+        # Buttons
+        button_frame = ctk.CTkFrame(self.card_frame, fg_color="transparent")
+        button_frame.place(x=15, y=570)
+        
+        # Cancel Button
+        cancel_button = ctk.CTkButton(
+            button_frame,
+            text="Cancel",
             width=120,
             height=34,
             corner_radius=8,
+            border_width=1,
+            font=ctk.CTkFont("Inter", 11, "bold"),
+            fg_color="transparent",
+            text_color="#666666",
+            border_color="#d1d1d1",
+            hover_color="#f5f5f5",
+            command=self.destroy
+        )
+        cancel_button.pack(side="left", padx=(0, 10))
+
+        # Add Faculty Button
+        self.add_button = ctk.CTkButton(
+            button_frame,
+            text="Add Faculty",
+            width=140,
+            height=34,
+            corner_radius=8,
+            border_width=1,
             font=ctk.CTkFont("Inter", 11, "bold"),
             fg_color="#1E3A8A",
             hover_color="#152a63",
-            command=self.destroy
-        ).pack(pady=20)
+            command=self.handle_submit_faculty
+        )
+        self.add_button.pack(side="left")
 
     def load_dropdown_options(self):
         """Load dropdown options from backend"""
@@ -860,6 +1222,65 @@ class UsersAddModal(ctk.CTkToplevel):
             print(f"Error in submit: {e}")
             messagebox.showerror("Error", f"An unexpected error occurred:\n\n{str(e)}")
 
+    def handle_submit_faculty(self):
+        """Handle submit button for faculty - validate form then open camera"""
+        try:
+            print("Faculty submit button clicked - starting validation")
+            
+            # Hide any previous validation errors
+            self.hide_validation_error()
+            
+            # Collect form data
+            form_data = {
+                'first_name': self.first_name_entry.get().strip(),
+                'last_name': self.last_name_entry.get().strip(),
+                'email': self.webmail_entry.get().strip(),
+                'contact_number': self.contact_entry.get().strip(),
+                'employee_number': self.employee_entry.get().strip(),
+                'password': self.password_entry.get().strip(),
+                'confirm_password': self.confirm_entry.get().strip()
+            }
+            
+            # Get date of birth
+            day = self.day_dropdown.get()
+            month_name = self.month_dropdown.get()
+            year = self.year_dropdown.get()
+            
+            # Convert month name to number
+            month_names = [
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+            ]
+            month = str(month_names.index(month_name) + 1).zfill(2)
+            form_data['birthday'] = f"{year}-{month}-{day.zfill(2)}"
+            
+            # Validate form data
+            validation_errors = self.validate_faculty_form_data(form_data)
+            
+            if validation_errors:
+                error_message = "Please fix the following errors:\n\n" + "\n".join(f"• {error}" for error in validation_errors)
+                self.show_validation_error(error_message)
+                return
+            
+            print("Faculty validation passed - opening camera")
+            
+            # Store form data for later use
+            self.pending_form_data = form_data
+            
+            # Release grab COMPLETELY before opening camera
+            try:
+                self.grab_release()
+                self.update()  # Force update to release grab
+            except Exception as e:
+                print(f"Could not release grab: {e}")
+            
+            # Open camera modal for face capture
+            self.open_face_verification_dialog()
+                
+        except Exception as e:
+            print(f"Error in faculty submit: {e}")
+            messagebox.showerror("Error", f"An unexpected error occurred:\n\n{str(e)}")
+
     def validate_form_data(self, form_data):
         """Validate form data before submission"""
         errors = []
@@ -945,6 +1366,91 @@ class UsersAddModal(ctk.CTkToplevel):
         
         return errors
 
+    def validate_faculty_form_data(self, form_data):
+        """Validate faculty form data before submission"""
+        errors = []
+        
+        # Validate required fields
+        if not form_data.get('first_name'):
+            errors.append("First name is required")
+        elif len(form_data['first_name']) < 2:
+            errors.append("First name must be at least 2 characters")
+        
+        if not form_data.get('last_name'):
+            errors.append("Last name is required")
+        elif len(form_data['last_name']) < 2:
+            errors.append("Last name must be at least 2 characters")
+        
+        if not form_data.get('email'):
+            errors.append("Email is required")
+        else:
+            # Email format validation for faculty
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@pup\.edu\.ph$'
+            if not re.match(email_pattern, form_data['email']):
+                errors.append("Email must use @pup.edu.ph domain")
+            else:
+                # Check if email already exists in database
+                try:
+                    email_exists, _ = self.db_manager.check_email_exists(form_data['email'])
+                    if email_exists:
+                        errors.append("Email address is already in use")
+                except Exception as e:
+                    print(f"Error checking email existence: {e}")
+                    errors.append("Unable to verify email availability")
+        
+        if not form_data.get('employee_number'):
+            errors.append("Employee number is required")
+        else:
+            # Check if employee number already exists in database
+            try:
+                employee_exists, _ = self.db_manager.check_employee_number_exists(form_data['employee_number'])
+                if employee_exists:
+                    errors.append("Employee number is already in use")
+            except Exception as e:
+                print(f"Error checking employee number existence: {e}")
+                errors.append("Unable to verify employee number availability")
+        
+        # Validate contact number
+        if form_data.get('contact_number'):
+            contact = form_data['contact_number'].strip()
+            if contact:
+                clean_contact = re.sub(r'[\s\-\(\)\+]', '', contact)
+                if not clean_contact.isdigit():
+                    errors.append("Contact number must contain only digits")
+                elif len(clean_contact) != 11:
+                    errors.append("Contact number must be exactly 11 digits")
+                elif not clean_contact.startswith('09'):
+                    errors.append("Contact number must start with 09")
+        
+        # Validate password
+        if not form_data.get('password'):
+            errors.append("Password is required")
+        else:
+            password = form_data['password']
+            if len(password) < 6:
+                errors.append("Password must be at least 6 characters long")
+            elif len(password) > 50:
+                errors.append("Password must be less than 50 characters")
+            else:
+                # Check for uppercase letter
+                if not any(c.isupper() for c in password):
+                    errors.append("Password must contain at least one uppercase letter")
+                
+                # Check for lowercase letter
+                if not any(c.islower() for c in password):
+                    errors.append("Password must contain at least one lowercase letter")
+                
+                # Check for special character
+                special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+                if not any(c in special_chars for c in password):
+                    errors.append("Password must contain at least one special character")
+        
+        # Validate password confirmation
+        if form_data.get('password') != form_data.get('confirm_password'):
+            errors.append("Passwords do not match")
+        
+        return errors
+
     def open_face_verification_dialog(self):
         """Open facial recognition popup using separate camera module"""
         # Create camera window with callback - NO GRAB SET HERE
@@ -966,14 +1472,17 @@ class UsersAddModal(ctk.CTkToplevel):
                 print(f"Could not restore grab: {e}")
             
             # Wait a moment for grab to take effect
-            self.after(100, self._show_confirmation_dialog)
+            if self.user_type == "student":
+                self.after(100, self._show_confirmation_dialog)
+            else:
+                self.after(100, self._show_faculty_confirmation_dialog)
                 
         except Exception as e:
             print(f"Error in face capture complete: {e}")
             messagebox.showerror("Error", f"An unexpected error occurred:\n\n{str(e)}")
 
     def _show_confirmation_dialog(self):
-        """Show confirmation dialog after face capture"""
+        """Show confirmation dialog after student face capture"""
         try:
             # Show confirmation dialog with topmost attribute
             confirmation_msg = f"Add new student '{self.pending_form_data['first_name']} {self.pending_form_data['last_name']}'?\n\n"
@@ -1047,6 +1556,80 @@ class UsersAddModal(ctk.CTkToplevel):
             print(f"Error in confirmation dialog: {e}")
             # Reset button
             self.add_button.configure(text="Add Student", state="normal")
+
+    def _show_faculty_confirmation_dialog(self):
+        """Show confirmation dialog after faculty face capture"""
+        try:
+            # Show confirmation dialog with topmost attribute
+            confirmation_msg = f"Add new faculty '{self.pending_form_data['first_name']} {self.pending_form_data['last_name']}'?\n\n"
+            confirmation_msg += f"Employee Number: {self.pending_form_data['employee_number']}\n"
+            confirmation_msg += f"Email: {self.pending_form_data['email']}\n\n"
+            confirmation_msg += "Faculty will be registered as VERIFIED with face authentication."
+            
+            # Create a temporary toplevel for the messagebox to ensure it appears on top
+            temp_parent = ctk.CTkToplevel(self)
+            temp_parent.withdraw()  # Hide the window
+            temp_parent.attributes('-topmost', True)
+            temp_parent.grab_set()  # Grab on temp window
+            
+            try:
+                result = messagebox.askyesno("Confirm Add Faculty", confirmation_msg, parent=temp_parent)
+            finally:
+                temp_parent.destroy()
+            
+            if not result:
+                return
+            
+            # Show loading state
+            self.add_button.configure(text="Adding...", state="disabled")
+            self.update_idletasks()
+            
+            # Save to database
+            success, message = self.save_faculty_to_database()
+            
+            if success:
+                # Show success with topmost
+                success_parent = ctk.CTkToplevel(self)
+                success_parent.withdraw()
+                success_parent.attributes('-topmost', True)
+                success_parent.grab_set()
+                
+                try:
+                    messagebox.showinfo(
+                        "Success", 
+                        f"Faculty '{self.pending_form_data['first_name']} {self.pending_form_data['last_name']}' "
+                        f"added successfully with face verification!\n\nStatus: VERIFIED ✓",
+                        parent=success_parent
+                    )
+                finally:
+                    success_parent.destroy()
+                
+                # Refresh the parent view if possible
+                if hasattr(self.parent_view, 'load_filtered_data'):
+                    self.parent_view.load_filtered_data()
+                elif hasattr(self.parent_view, 'refresh'):
+                    self.parent_view.refresh()
+                
+                self.destroy()
+            else:
+                # Show error with topmost
+                error_parent = ctk.CTkToplevel(self)
+                error_parent.withdraw()
+                error_parent.attributes('-topmost', True)
+                error_parent.grab_set()
+                
+                try:
+                    messagebox.showerror("Add Failed", f"Failed to add faculty:\n\n{message}", parent=error_parent)
+                finally:
+                    error_parent.destroy()
+                
+                # Reset button
+                self.add_button.configure(text="Add Faculty", state="normal")
+                
+        except Exception as e:
+            print(f"Error in faculty confirmation dialog: {e}")
+            # Reset button
+            self.add_button.configure(text="Add Faculty", state="normal")
 
     def save_student_to_database(self):
         """Save student to database with correct schema structure (users + students tables)"""
@@ -1152,3 +1735,89 @@ class UsersAddModal(ctk.CTkToplevel):
         except Exception as e:
             print(f"Error saving student to database: {e}")
             return (False, f"Failed to save student: {str(e)}")
+
+    def save_faculty_to_database(self):
+        """Save faculty to database with correct schema structure (users + faculties tables)"""
+        try:
+            # Get database connection
+            conn = self.db_manager.get_connection()
+            cursor = conn.cursor()
+            
+            # Hash password using bcrypt
+            password_bytes = self.pending_form_data['password'].encode('utf-8')
+            password_hash = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
+            password_hash_str = password_hash.decode('utf-8')
+            
+            # Convert face image to binary
+            face_image_data = None
+            if self.face_image_data:
+                face_image_data = self.face_image_data  # Store as binary (LargeBinary)
+            
+            # Get "Active" status ID (default for new faculty)
+            status_id = None
+            try:
+                cursor.execute("SELECT id FROM statuses WHERE name = 'Active' LIMIT 1")
+                result = cursor.fetchone()
+                if result:
+                    status_id = result[0]
+            except Exception as e:
+                print(f"Error getting status ID: {e}")
+            
+            # Start transaction
+            cursor.execute("BEGIN")
+            
+            try:
+                # First, insert into users table with status_id and isDeleted
+                cursor.execute("""
+                    INSERT INTO users (
+                        first_name, last_name, email, birthday, password_hash, 
+                        contact_number, role, status_id, face_image, verified, isDeleted, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, 'Faculty', ?, ?, 1, 0, ?)
+                """, (
+                    self.pending_form_data['first_name'],
+                    self.pending_form_data['last_name'],
+                    self.pending_form_data['email'],
+                    self.pending_form_data.get('birthday'),
+                    password_hash_str,
+                    self.pending_form_data.get('contact_number'),
+                    status_id,
+                    face_image_data,
+                    datetime.now()
+                ))
+                
+                # Get the user_id
+                user_id = cursor.lastrowid
+                
+                # Then, insert into faculties table
+                cursor.execute("""
+                    INSERT INTO faculties (
+                        user_id, employee_number
+                    ) VALUES (?, ?)
+                """, (
+                    user_id,
+                    self.pending_form_data['employee_number']
+                ))
+                
+                # Commit transaction
+                cursor.execute("COMMIT")
+                
+                faculty_id = cursor.lastrowid
+                
+                return (True, f"Faculty {self.pending_form_data['first_name']} {self.pending_form_data['last_name']} added successfully with User ID: {user_id}, Faculty ID: {faculty_id}")
+                
+            except Exception as e:
+                # Rollback transaction on error
+                cursor.execute("ROLLBACK")
+                raise e
+            
+        except sqlite3.IntegrityError as e:
+            error_message = str(e).lower()
+            if "email" in error_message:
+                return (False, "Email address is already in use")
+            elif "employee_number" in error_message:
+                return (False, "Employee number is already in use")
+            else:
+                return (False, f"Data integrity error: {str(e)}")
+        except Exception as e:
+            print(f"Error saving faculty to database: {e}")
+            return (False, f"Failed to save faculty: {str(e)}")
