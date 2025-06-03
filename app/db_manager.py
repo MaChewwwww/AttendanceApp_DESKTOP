@@ -69,11 +69,35 @@ class DatabaseManager:
             if count > 0:
                 return True, "Student ID already exists"
             else:
-                return False, "Student ID available"
+                return False, "Student ID is available"
                 
         except Exception as e:
             print(f"Database error checking student ID: {str(e)}")
             return False, f"Error checking student ID: {str(e)}"
+
+    def check_employee_number_exists(self, employee_number):
+        """Check if an employee number is already registered
+        
+        Returns:
+            tuple: (success, message) where success is True if employee number exists
+        """
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT COUNT(*) FROM faculties WHERE employee_number = ?", (employee_number,))
+            count = cursor.fetchone()[0]
+            
+            conn.close()
+            
+            if count > 0:
+                return True, "Employee number already exists"
+            else:
+                return False, "Employee number is available"
+                
+        except Exception as e:
+            print(f"Database error checking employee number: {str(e)}")
+            return False, f"Error checking employee number: {str(e)}"
     
     def register(self, first_name, last_name, email, student_number, password, face_image=None, contact_number=None, date_of_birth=None):
         """Register a new student with face image and additional details"""
@@ -1765,28 +1789,14 @@ class DatabaseManager:
                     
                     # Handle program and section assignment
                     if program_name and section_name:
-                        # Find program ID
-                        program_id = None
-                        for prog in self.dropdown_data.get('programs', []):
-                            if prog['abbreviation'] == program_name:
-                                program_id = prog['id']
-                                break
-                        
-                        if program_id:
-                            # Find section ID within the program
-                            cursor.execute("SELECT id FROM sections WHERE name = ? AND program_id = ?", 
-                                         (section_name, program_id))
-                            section_result = cursor.fetchone()
-                            if section_result:
-                                new_section_id = section_result['id']
-                            else:
-                                conn.rollback()
-                                conn.close()
-                                return False, f"Section '{section_name}' not found in program '{program_name}'"
+                        # Validate section assignment using database directly
+                        success, section_id_or_error = self._validate_section_assignment_direct(cursor, program_name, section_name)
+                        if success:
+                            new_section_id = section_id_or_error
                         else:
                             conn.rollback()
                             conn.close()
-                            return False, f"Program '{program_name}' not found"
+                            return False, section_id_or_error
                     
                     # Update student section (None if not assigned)
                     cursor.execute("UPDATE students SET section = ? WHERE user_id = ?", 
@@ -1797,13 +1807,30 @@ class DatabaseManager:
                     return False, "Student record not found"
             
             elif user_role in ['Faculty', 'Admin']:
-                # Handle faculty-specific updates if needed
+                # Handle faculty-specific updates
+                employee_number = user_data.get('employee_number')
+                if employee_number:
+                    # Check if employee number already exists for another user
+                    cursor.execute("SELECT user_id FROM faculties WHERE employee_number = ? AND user_id != ?", 
+                                 (employee_number, user_id))
+                    if cursor.fetchone():
+                        conn.rollback()
+                        conn.close()
+                        return False, "Employee number is already in use by another faculty member"
+                
+                # Check if faculty record exists
                 cursor.execute("SELECT user_id FROM faculties WHERE user_id = ?", (user_id,))
                 faculty_result = cursor.fetchone()
                 
-                if not faculty_result:
+                if faculty_result:
+                    # Update existing faculty record
+                    if employee_number:
+                        cursor.execute("UPDATE faculties SET employee_number = ? WHERE user_id = ?", 
+                                     (employee_number, user_id))
+                else:
                     # Create faculty record if it doesn't exist
-                    cursor.execute("INSERT INTO faculties (user_id) VALUES (?)", (user_id,))
+                    cursor.execute("INSERT INTO faculties (user_id, employee_number) VALUES (?, ?)", 
+                                 (user_id, employee_number))
             
             # Commit transaction
             conn.commit()
@@ -1831,33 +1858,39 @@ class DatabaseManager:
             print(f"Unexpected error during user update: {e}")
             return False, f"Update failed: {str(e)}"
 
-    def validate_section_assignment(self, program_abbreviation, section_name):
-        """Validate that a section belongs to the specified program"""
+    def _validate_section_assignment_direct(self, cursor, program_abbreviation, section_name):
+        """Validate section assignment using database cursor directly"""
         try:
-            conn = self.get_connection()
-            cursor = conn.cursor()
+            # Find program by abbreviation - check multiple ways
+            program_id = None
             
-            # Get program ID from abbreviation
-            cursor.execute("""
-                SELECT id FROM programs 
-                WHERE name LIKE ? OR description LIKE ?
-            """, (f"%{program_abbreviation}%", f"%{program_abbreviation}%"))
+            # Try direct name match first
+            cursor.execute("SELECT id FROM programs WHERE name = ?", (program_abbreviation,))
+            result = cursor.fetchone()
+            if result:
+                program_id = result['id']
+            else:
+                # Try partial match for common abbreviations
+                if program_abbreviation == 'BSIT':
+                    cursor.execute("SELECT id FROM programs WHERE name LIKE '%Information Technology%'")
+                elif program_abbreviation == 'BSCS':
+                    cursor.execute("SELECT id FROM programs WHERE name LIKE '%Computer Science%'")
+                elif program_abbreviation == 'BSIS':
+                    cursor.execute("SELECT id FROM programs WHERE name LIKE '%Information Systems%'")
+                else:
+                    cursor.execute("SELECT id FROM programs WHERE name LIKE ?", (f"%{program_abbreviation}%",))
+                
+                result = cursor.fetchone()
+                if result:
+                    program_id = result['id']
             
-            program_result = cursor.fetchone()
-            if not program_result:
-                conn.close()
+            if not program_id:
                 return False, f"Program '{program_abbreviation}' not found"
             
-            program_id = program_result['id']
-            
             # Check if section exists in this program
-            cursor.execute("""
-                SELECT id FROM sections 
-                WHERE name = ? AND program_id = ?
-            """, (section_name, program_id))
-            
+            cursor.execute("SELECT id FROM sections WHERE name = ? AND program_id = ?", 
+                         (section_name, program_id))
             section_result = cursor.fetchone()
-            conn.close()
             
             if section_result:
                 return True, section_result['id']
@@ -1865,35 +1898,19 @@ class DatabaseManager:
                 return False, f"Section '{section_name}' does not belong to program '{program_abbreviation}'"
                 
         except Exception as e:
-            print(f"Error validating section assignment: {e}")
-            return False, str(e)
+            return False, f"Error validating section assignment: {str(e)}"
 
-    def get_user_update_dropdown_data(self, user_type):
-        """Get dropdown data specifically for user updates with proper structure"""
-        try:
-            # Store dropdown data for validation in update method
-            success, dropdown_data = self.get_dropdown_options_for_user_type(user_type)
-            if success:
-                self.dropdown_data = dropdown_data
-                return True, dropdown_data
-            else:
-                return False, dropdown_data
-                
-        except Exception as e:
-            print(f"Error getting update dropdown data: {e}")
-            return False, str(e)
-
-    def check_employee_number_exists(self, employee_number):
-        """Check if employee number already exists in faculties table"""
+    def validate_section_assignment(self, program_abbreviation, section_name):
+        """Validate that a section belongs to the specified program"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
             
-            cursor.execute("SELECT COUNT(*) FROM faculties WHERE employee_number = ?", (employee_number,))
-            count = cursor.fetchone()[0]
+            success, result = self._validate_section_assignment_direct(cursor, program_abbreviation, section_name)
+            conn.close()
             
-            return (count > 0, None)
-            
+            return success, result
+                
         except Exception as e:
-            print(f"Error checking employee number existence: {e}")
-            return (False, str(e))
+            print(f"Error validating section assignment: {e}")
+            return False, str(e)

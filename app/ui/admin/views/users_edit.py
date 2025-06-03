@@ -106,108 +106,124 @@ class UsersEditModal(ctk.CTkToplevel):
         self.form_fields['contact_number'] = ctk.CTkEntry(contact_container, width=220, fg_color="#fff", text_color="#000")
         self.form_fields['contact_number'].pack(fill="x", pady=(0, 10))
         
-        # Row 3: Program - Section
-        program_section_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
-        program_section_frame.pack(fill="x", pady=(0, 15))
-        program_section_frame.grid_columnconfigure(0, weight=1)
-        program_section_frame.grid_columnconfigure(1, weight=1)
-        
-        # Program (left side)
-        program_container = ctk.CTkFrame(program_section_frame, fg_color="transparent")
-        program_container.grid(row=0, column=0, sticky="ew", padx=(0, 10))
-        ctk.CTkLabel(program_container, text="Program", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
-        
-        # Program dropdown - wrapped in container for border
-        program_dropdown_container = ctk.CTkFrame(
-            program_container,
-            width=180,
-            height=30,
-            corner_radius=6,
-            fg_color="#ffffff",
-            border_width=2,
-            border_color="#242323"
-        )
-        program_dropdown_container.pack(fill="x", pady=(0, 10))
-        program_dropdown_container.pack_propagate(False)
-        
-        # Use backend data for program options
-        program_options = [p['abbreviation'] for p in self.dropdown_data.get('programs', [])]
-        if not program_options:
-            program_options = ["BSIT", "BSCS", "BSIS"]  # Fallback
-        
-        # Always include "Not Yet Assigned" option for users without programs
-        if "Not Yet Assigned" not in program_options:
-            program_options.insert(0, "Not Yet Assigned")
-        
-        self.form_fields['program'] = ctk.CTkOptionMenu(
-            program_dropdown_container,
-            fg_color="#fff",
-            text_color="#000",
-            button_color="#fff",
-            button_hover_color="#f0f0f0",
-            dropdown_fg_color="#fff",
-            dropdown_hover_color="#f0f0f0",
-            dropdown_text_color="#000",
-            values=program_options,
-            font=ctk.CTkFont(size=13),
-            corner_radius=6,
-            anchor="w",
-            height=26,
-            command=self.on_program_change
-        )
-        self.form_fields['program'].pack(fill="both", expand=True, padx=2, pady=2)
-        self.form_fields['program'].set("Not Yet Assigned")  # Default to not assigned
-        
-        # Section (right side)
-        section_container = ctk.CTkFrame(program_section_frame, fg_color="transparent")
-        section_container.grid(row=0, column=1, sticky="ew", padx=(10, 0))
-        ctk.CTkLabel(section_container, text="Section", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
-        
-        # Section dropdown - wrapped in container for border
-        section_dropdown_container = ctk.CTkFrame(
-            section_container,
-            width=180,
-            height=30,
-            corner_radius=6,
-            fg_color="#f5f5f5",  # Disabled appearance initially
-            border_width=2,
-            border_color="#242323"
-        )
-        section_dropdown_container.pack(fill="x", pady=(0, 10))
-        section_dropdown_container.pack_propagate(False)
-        
-        # Initially, section should be locked until program is selected
-        self.form_fields['section'] = ctk.CTkOptionMenu(
-            section_dropdown_container,
-            fg_color="#f5f5f5",  # Disabled appearance
-            text_color="#999999",  # Grayed out text
-            button_color="#f5f5f5",
-            button_hover_color="#f5f5f5",
-            dropdown_fg_color="#fff",
-            dropdown_hover_color="#f0f0f0",
-            dropdown_text_color="#000",
-            values=["Select Program First"],  # Placeholder message
-            font=ctk.CTkFont(size=13),
-            corner_radius=6,
-            anchor="w",
-            height=26,
-            state="disabled"  # Initially disabled
-        )
-        self.form_fields['section'].pack(fill="both", expand=True, padx=2, pady=2)
-        self.form_fields['section'].set("Select Program First")
+        # Row 3: Program - Section (ONLY FOR STUDENTS)
+        if self.user_type == "student":
+            program_section_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
+            program_section_frame.pack(fill="x", pady=(0, 15))
+            program_section_frame.grid_columnconfigure(0, weight=1)
+            program_section_frame.grid_columnconfigure(1, weight=1)
+            
+            # Program (left side)
+            program_container = ctk.CTkFrame(program_section_frame, fg_color="transparent")
+            program_container.grid(row=0, column=0, sticky="ew", padx=(0, 10))
+            ctk.CTkLabel(program_container, text="Program", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
+            
+            # Program dropdown - wrapped in container for border
+            program_dropdown_container = ctk.CTkFrame(
+                program_container,
+                width=180,
+                height=30,
+                corner_radius=6,
+                fg_color="#ffffff",
+                border_width=2,
+                border_color="#242323"
+            )
+            program_dropdown_container.pack(fill="x", pady=(0, 10))
+            program_dropdown_container.pack_propagate(False)
+            
+            # Use backend data for program options
+            program_options = [p['abbreviation'] for p in self.dropdown_data.get('programs', [])]
+            if not program_options:
+                program_options = ["BSIT", "BSCS", "BSIS"]  # Fallback
+            
+            # Always include "Not Yet Assigned" option for users without programs
+            if "Not Yet Assigned" not in program_options:
+                program_options.insert(0, "Not Yet Assigned")
+            
+            self.form_fields['program'] = ctk.CTkOptionMenu(
+                program_dropdown_container,
+                fg_color="#fff",
+                text_color="#000",
+                button_color="#fff",
+                button_hover_color="#f0f0f0",
+                dropdown_fg_color="#fff",
+                dropdown_hover_color="#f0f0f0",
+                dropdown_text_color="#000",
+                values=program_options,
+                font=ctk.CTkFont(size=13),
+                corner_radius=6,
+                anchor="w",
+                height=26,
+                command=self.on_program_change
+            )
+            self.form_fields['program'].pack(fill="both", expand=True, padx=2, pady=2)
+            self.form_fields['program'].set("Not Yet Assigned")  # Default to not assigned
+            
+            # Section (right side)
+            section_container = ctk.CTkFrame(program_section_frame, fg_color="transparent")
+            section_container.grid(row=0, column=1, sticky="ew", padx=(10, 0))
+            ctk.CTkLabel(section_container, text="Section", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
+            
+            # Section dropdown - wrapped in container for border
+            section_dropdown_container = ctk.CTkFrame(
+                section_container,
+                width=180,
+                height=30,
+                corner_radius=6,
+                fg_color="#f5f5f5",  # Disabled appearance initially
+                border_width=2,
+                border_color="#242323"
+            )
+            section_dropdown_container.pack(fill="x", pady=(0, 10))
+            section_dropdown_container.pack_propagate(False)
+            
+            # Initially, section should be locked until program is selected
+            self.form_fields['section'] = ctk.CTkOptionMenu(
+                section_dropdown_container,
+                fg_color="#f5f5f5",  # Disabled appearance
+                text_color="#999999",  # Grayed out text
+                button_color="#f5f5f5",
+                button_hover_color="#f5f5f5",
+                dropdown_fg_color="#fff",
+                dropdown_hover_color="#f0f0f0",
+                dropdown_text_color="#000",
+                values=["Select Program First"],  # Placeholder message
+                font=ctk.CTkFont(size=13),
+                corner_radius=6,
+                anchor="w",
+                height=26,
+                state="disabled"  # Initially disabled
+            )
+            self.form_fields['section'].pack(fill="both", expand=True, padx=2, pady=2)
+            self.form_fields['section'].set("Select Program First")
 
-        # Row 4: New Password - Status
+        # Row 4: New Password - Status (For students) OR Employee Number - Status (For faculty)
         password_status_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
         password_status_frame.pack(fill="x", pady=(0, 15))
         password_status_frame.grid_columnconfigure(0, weight=1)
         password_status_frame.grid_columnconfigure(1, weight=1)
         
-        # New Password (left side)
-        password_container = ctk.CTkFrame(password_status_frame, fg_color="transparent")
-        password_container.grid(row=0, column=0, sticky="ew", padx=(0, 10))
-        ctk.CTkLabel(password_container, text="New Password (Optional)", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
-        self.form_fields['password'] = ctk.CTkEntry(password_container, width=180, fg_color="#fff", text_color="#000", show="*", placeholder_text="Leave blank to keep current")
-        self.form_fields['password'].pack(fill="x", pady=(0, 10))
+        if self.user_type == "student":
+            # New Password (left side) for students
+            password_container = ctk.CTkFrame(password_status_frame, fg_color="transparent")
+            password_container.grid(row=0, column=0, sticky="ew", padx=(0, 10))
+            ctk.CTkLabel(password_container, text="New Password (Optional)", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
+            self.form_fields['password'] = ctk.CTkEntry(password_container, width=180, fg_color="#fff", text_color="#000", show="*", placeholder_text="Leave blank to keep current")
+            self.form_fields['password'].pack(fill="x", pady=(0, 10))
+        else:
+            # Employee Number (left side) for faculty
+            employee_container = ctk.CTkFrame(password_status_frame, fg_color="transparent")
+            employee_container.grid(row=0, column=0, sticky="ew", padx=(0, 10))
+            ctk.CTkLabel(employee_container, text="Employee Number", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
+            self.form_fields['employee_number'] = ctk.CTkEntry(employee_container, width=180, fg_color="#fff", text_color="#000")
+            self.form_fields['employee_number'].pack(fill="x", pady=(0, 10))
+            
+            # Also add password field for faculty below
+            password_container = ctk.CTkFrame(form_frame, fg_color="transparent")
+            password_container.pack(fill="x", pady=(0, 15))
+            ctk.CTkLabel(password_container, text="New Password (Optional)", anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
+            self.form_fields['password'] = ctk.CTkEntry(password_container, width=400, fg_color="#fff", text_color="#000", show="*", placeholder_text="Leave blank to keep current")
+            self.form_fields['password'].pack(fill="x", pady=(0, 10))
         
         # Status (right side)
         status_container = ctk.CTkFrame(password_status_frame, fg_color="transparent")
@@ -360,11 +376,16 @@ class UsersEditModal(ctk.CTkToplevel):
         if not form_data.get('email'):
             errors.append("Email is required")
         else:
-            # Email format validation
+            # Email format validation - different patterns for different user types
             import re
-            email_pattern = r'^[a-zA-Z0-9._%+-]+@iskolarngbayan\.pup\.edu\.ph$'
-            if not re.match(email_pattern, form_data['email']):
-                errors.append("Email must use @iskolarngbayan.pup.edu.ph domain")
+            if self.user_type == "student":
+                email_pattern = r'^[a-zA-Z0-9._%+-]+@iskolarngbayan\.pup\.edu\.ph$'
+                if not re.match(email_pattern, form_data['email']):
+                    errors.append("Email must use @iskolarngbayan.pup.edu.ph domain")
+            else:  # faculty/admin
+                email_pattern = r'^[a-zA-Z0-9._%+-]+@pup\.edu\.ph$'
+                if not re.match(email_pattern, form_data['email']):
+                    errors.append("Email must use @pup.edu.ph domain")
             
             # Check if email is already used by another user
             try:
@@ -382,6 +403,7 @@ class UsersEditModal(ctk.CTkToplevel):
             contact = form_data['contact_number'].strip()
             if contact:
                 # Remove common formatting characters for validation
+                import re
                 clean_contact = re.sub(r'[\s\-\(\)\+]', '', contact)
                 if not clean_contact.isdigit():
                     errors.append("Contact number must contain only digits")
@@ -411,38 +433,51 @@ class UsersEditModal(ctk.CTkToplevel):
                 if not any(c in special_chars for c in password):
                     errors.append("Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)")
         
-        # Validate program and section - BOTH are required and cannot be "Not Yet Assigned"
-        program_value = self.form_fields['program'].get()
-        section_value = self.form_fields['section'].get()
-        
-        if program_value == "Not Yet Assigned":
-            errors.append("Program selection is required")
-        
-        if section_value in ["Not Yet Assigned", "Select Program First"]:
-            errors.append("Section selection is required")
-        
-        # Validate program and section consistency (only if both are selected)
-        if (program_value and program_value != "Not Yet Assigned" and 
-            section_value and section_value not in ["Not Yet Assigned", "Select Program First"]):
+        # Validate program and section - ONLY FOR STUDENTS
+        if self.user_type == "student":
+            program_value = form_data.get('program')
+            section_value = form_data.get('section')
             
-            # Check if section belongs to selected program
-            program_id = None
-            for prog in self.dropdown_data.get('programs', []):
-                if prog['abbreviation'] == program_value:
-                    program_id = prog['id']
-                    break
+            if program_value == "Not Yet Assigned":
+                errors.append("Program selection is required")
             
-            if program_id:
-                section_valid = False
-                for section in self.dropdown_data.get('sections', []):
-                    if section['name'] == section_value and section.get('program_id') == program_id:
-                        section_valid = True
-                        break
+            if section_value in ["Not Yet Assigned", "Select Program First"]:
+                errors.append("Section selection is required")
+            
+            # Validate program and section consistency (only if both are selected and dropdown data is available)
+            if (program_value and program_value != "Not Yet Assigned" and 
+                section_value and section_value not in ["Not Yet Assigned", "Select Program First"]):
                 
-                if not section_valid:
-                    errors.append(f"Section '{section_value}' does not belong to program '{program_value}'")
-            else:
-                errors.append(f"Invalid program selection: {program_value}")
+                # Only perform consistency check if we have dropdown data available
+                if hasattr(self, 'dropdown_data') and self.dropdown_data:
+                    # Check if section belongs to selected program
+                    program_id = None
+                    for prog in self.dropdown_data.get('programs', []):
+                        if prog['abbreviation'] == program_value:
+                            program_id = prog['id']
+                            break
+                    
+                    if program_id:
+                        section_valid = False
+                        for section in self.dropdown_data.get('sections', []):
+                            if section['name'] == section_value and section.get('program_id') == program_id:
+                                section_valid = True
+                                break
+                        
+                        if not section_valid:
+                            errors.append(f"Section '{section_value}' does not belong to program '{program_value}'")
+                    else:
+                        errors.append(f"Invalid program selection: {program_value}")
+                # If no dropdown data, skip consistency check but still validate that values are selected
+                else:
+                    print("Warning: Dropdown data not available for program/section consistency check")
+
+        # Validate employee number for faculty
+        elif self.user_type == "faculty":
+            if 'employee_number' in form_data:
+                employee_number = form_data.get('employee_number', '').strip()
+                if employee_number and len(employee_number) < 3:
+                    errors.append("Employee number must be at least 3 characters")
         
         # Validate face image size if provided
         if form_data.get('face_image'):
@@ -452,7 +487,10 @@ class UsersEditModal(ctk.CTkToplevel):
         return errors
 
     def on_program_change(self, selected_program):
-        """Handle program selection change to filter sections"""
+        """Handle program selection change to filter sections (ONLY FOR STUDENTS)"""
+        if self.user_type != "student":
+            return
+            
         try:
             if selected_program == "Not Yet Assigned":
                 # Update section container to disabled appearance
@@ -564,41 +602,369 @@ class UsersEditModal(ctk.CTkToplevel):
         if 'contact_number' in self.form_fields and self.user_data.get('contact_number'):
             self.form_fields['contact_number'].insert(0, self.user_data['contact_number'])
         
-        # Set program dropdown based on user data
-        program_set = False
-        if 'program' in self.form_fields:
-            program_name = self.user_data.get('program_name')
-            
-            if program_name and program_name.strip():
-                # User has a program - find matching abbreviation
-                for program in self.dropdown_data.get('programs', []):
-                    if program['name'] == program_name or program['abbreviation'] in program_name:
-                        self.form_fields['program'].set(program['abbreviation'])
-                        # Trigger section filtering for this program
-                        self.on_program_change(program['abbreviation'])
-                        program_set = True
-                        break
-            
-            if not program_set:
-                # User has no program or program not found - set to "Not Yet Assigned"
-                self.form_fields['program'].set("Not Yet Assigned")
-                # This will trigger the program change handler to lock sections
-                self.on_program_change("Not Yet Assigned")
+        # Faculty-specific fields
+        if self.user_type == "faculty" and 'employee_number' in self.form_fields:
+            employee_number = self.user_data.get('employee_number') or self.user_data.get('student_number')  # Fallback
+            if employee_number:
+                self.form_fields['employee_number'].insert(0, employee_number)
         
-        # Set section after program filtering is applied
-        if 'section' in self.form_fields and program_set:
-            section_name = self.user_data.get('section_name')
-            if section_name and section_name.strip():
-                # Check if section exists in current dropdown options
-                current_sections = self.form_fields['section'].cget("values")
-                if section_name in current_sections:
-                    self.form_fields['section'].set(section_name)
+        # Set program and section dropdown based on user data (ONLY FOR STUDENTS)
+        if self.user_type == "student":
+            program_set = False
+            if 'program' in self.form_fields:
+                program_name = self.user_data.get('program_name')
+                
+                if program_name and program_name.strip():
+                    # User has a program - find matching abbreviation
+                    for program in self.dropdown_data.get('programs', []):
+                        if program['name'] == program_name or program['abbreviation'] in program_name:
+                            self.form_fields['program'].set(program['abbreviation'])
+                            # Trigger section filtering for this program
+                            self.on_program_change(program['abbreviation'])
+                            program_set = True
+                            break
+                
+                if not program_set:
+                    # User has no program or program not found - set to "Not Yet Assigned"
+                    self.form_fields['program'].set("Not Yet Assigned")
+                    # This will trigger the program change handler to lock sections
+                    self.on_program_change("Not Yet Assigned")
+            
+            # Set section after program filtering is applied
+            if 'section' in self.form_fields and program_set:
+                section_name = self.user_data.get('section_name')
+                if section_name and section_name.strip():
+                    # Check if section exists in current dropdown options
+                    current_sections = self.form_fields['section'].cget("values")
+                    if section_name in current_sections:
+                        self.form_fields['section'].set(section_name)
+                    else:
+                        # Section not available for selected program, set to "Not Yet Assigned"
+                        self.form_fields['section'].set("Not Yet Assigned")
                 else:
-                    # Section not available for selected program, set to "Not Yet Assigned"
+                    # User has no section, set to "Not Yet Assigned"
+                    self.form_fields['section'].set("Not Yet Assigned")
+        
+        if 'status' in self.form_fields and self.user_data.get('status_name'):
+            status_name = self.user_data['status_name']
+            # Check if status exists in dropdown options
+            current_statuses = self.form_fields['status'].cget("values")
+            if status_name in current_statuses:
+                self.form_fields['status'].set(status_name)
+        
+        # Load existing face image if available
+        self.load_existing_face_image()
+
+    def create_form_field(self, parent, label_text, show=None):
+        """Create a form field with label and entry"""
+        ctk.CTkLabel(parent, text=label_text, anchor="w", font=ctk.CTkFont(size=13), text_color="#000").pack(anchor="w", pady=(0, 2))
+        entry = ctk.CTkEntry(parent, width=220, fg_color="#fff", text_color="#000", show=show)
+        entry.pack(fill="x", pady=(0, 10))
+        return entry
+
+    def load_dropdown_options(self):
+        """Load dropdown options from backend"""
+        try:
+            # Get dropdown options for this user type using existing method
+            success, dropdown_data = self.db_manager.get_dropdown_options_for_user_type(self.user_type)
+            
+            if success:
+                self.dropdown_data = dropdown_data
+                print(f"Loaded dropdown options: {len(dropdown_data.get('programs', []))} programs, {len(dropdown_data.get('sections', []))} sections, {len(dropdown_data.get('statuses', []))} statuses")
+            else:
+                print(f"Error loading dropdown options: {dropdown_data}")
+                self.dropdown_data = {'programs': [], 'sections': [], 'statuses': []}
+                
+        except Exception as e:
+            print(f"Error in load_dropdown_options: {e}")
+            self.dropdown_data = {'programs': [], 'sections': [], 'statuses': []}
+
+    def validate_form_data(self, form_data):
+        """Validate form data before submission"""
+        errors = []
+        
+        # Validate required fields
+        if not form_data.get('first_name'):
+            errors.append("First name is required")
+        elif len(form_data['first_name']) < 2:
+            errors.append("First name must be at least 2 characters")
+        
+        if not form_data.get('last_name'):
+            errors.append("Last name is required")
+        elif len(form_data['last_name']) < 2:
+            errors.append("Last name must be at least 2 characters")
+        
+        if not form_data.get('email'):
+            errors.append("Email is required")
+        else:
+            # Email format validation - different patterns for different user types
+            import re
+            if self.user_type == "student":
+                email_pattern = r'^[a-zA-Z0-9._%+-]+@iskolarngbayan\.pup\.edu\.ph$'
+                if not re.match(email_pattern, form_data['email']):
+                    errors.append("Email must use @iskolarngbayan.pup.edu.ph domain")
+            else:  # faculty/admin
+                email_pattern = r'^[a-zA-Z0-9._%+-]+@pup\.edu\.ph$'
+                if not re.match(email_pattern, form_data['email']):
+                    errors.append("Email must use @pup.edu.ph domain")
+            
+            # Check if email is already used by another user
+            try:
+                email_exists, message = self.db_manager.check_email_exists(form_data['email'])
+                if email_exists:
+                    # Check if this is the same user's current email
+                    if form_data['email'] != self.user_data.get('email'):
+                        errors.append("Email is already in use by another user")
+            except Exception as e:
+                print(f"Error checking email existence: {e}")
+                errors.append("Unable to verify email availability")
+        
+        # Validate contact number - must be exactly 11 digits
+        if form_data.get('contact_number'):
+            contact = form_data['contact_number'].strip()
+            if contact:
+                # Remove common formatting characters for validation
+                import re
+                clean_contact = re.sub(r'[\s\-\(\)\+]', '', contact)
+                if not clean_contact.isdigit():
+                    errors.append("Contact number must contain only digits")
+                elif len(clean_contact) != 11:
+                    errors.append("Contact number must be exactly 11 digits")
+                elif not clean_contact.startswith('09'):
+                    errors.append("Contact number must start with 09")
+        
+        # Validate password if provided - enhanced requirements
+        if form_data.get('password'):
+            password = form_data['password']
+            if len(password) < 6:
+                errors.append("Password must be at least 6 characters long")
+            elif len(password) > 50:
+                errors.append("Password must be less than 50 characters")
+            else:
+                # Check for uppercase letter
+                if not any(c.isupper() for c in password):
+                    errors.append("Password must contain at least one uppercase letter")
+                
+                # Check for lowercase letter
+                if not any(c.islower() for c in password):
+                    errors.append("Password must contain at least one lowercase letter")
+                
+                # Check for special character
+                special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+                if not any(c in special_chars for c in password):
+                    errors.append("Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)")
+        
+        # Validate program and section - ONLY FOR STUDENTS
+        if self.user_type == "student":
+            program_value = form_data.get('program')
+            section_value = form_data.get('section')
+            
+            if program_value == "Not Yet Assigned":
+                errors.append("Program selection is required")
+            
+            if section_value in ["Not Yet Assigned", "Select Program First"]:
+                errors.append("Section selection is required")
+            
+            # Validate program and section consistency (only if both are selected and dropdown data is available)
+            if (program_value and program_value != "Not Yet Assigned" and 
+                section_value and section_value not in ["Not Yet Assigned", "Select Program First"]):
+                
+                # Only perform consistency check if we have dropdown data available
+                if hasattr(self, 'dropdown_data') and self.dropdown_data:
+                    # Check if section belongs to selected program
+                    program_id = None
+                    for prog in self.dropdown_data.get('programs', []):
+                        if prog['abbreviation'] == program_value:
+                            program_id = prog['id']
+                            break
+                    
+                    if program_id:
+                        section_valid = False
+                        for section in self.dropdown_data.get('sections', []):
+                            if section['name'] == section_value and section.get('program_id') == program_id:
+                                section_valid = True
+                                break
+                        
+                        if not section_valid:
+                            errors.append(f"Section '{section_value}' does not belong to program '{program_value}'")
+                    else:
+                        errors.append(f"Invalid program selection: {program_value}")
+                # If no dropdown data, skip consistency check but still validate that values are selected
+                else:
+                    print("Warning: Dropdown data not available for program/section consistency check")
+
+        # Validate employee number for faculty
+        elif self.user_type == "faculty":
+            if 'employee_number' in form_data:
+                employee_number = form_data.get('employee_number', '').strip()
+                if employee_number and len(employee_number) < 3:
+                    errors.append("Employee number must be at least 3 characters")
+        
+        # Validate face image size if provided
+        if form_data.get('face_image'):
+            if len(form_data['face_image']) > 5 * 1024 * 1024:  # 5MB limit
+                errors.append("Face image size exceeds 5MB limit")
+        
+        return errors
+
+    def on_program_change(self, selected_program):
+        """Handle program selection change to filter sections (ONLY FOR STUDENTS)"""
+        if self.user_type != "student":
+            return
+            
+        try:
+            if selected_program == "Not Yet Assigned":
+                # Update section container to disabled appearance
+                section_dropdown_container = self.form_fields['section'].master
+                section_dropdown_container.configure(fg_color="#f5f5f5")
+                
+                # Lock section dropdown when no program is selected
+                self.form_fields['section'].configure(
+                    values=["Select Program First"],
+                    fg_color="#f5f5f5",
+                    text_color="#999999",
+                    button_color="#f5f5f5",
+                    button_hover_color="#f5f5f5",
+                    state="disabled"
+                )
+                self.form_fields['section'].set("Select Program First")
+                return
+            
+            # Find the program ID for the selected abbreviation
+            selected_program_id = None
+            for program in self.dropdown_data.get('programs', []):
+                if program['abbreviation'] == selected_program:
+                    selected_program_id = program['id']
+                    break
+            
+            if selected_program_id:
+                # Update section container to enabled appearance
+                section_dropdown_container = self.form_fields['section'].master
+                section_dropdown_container.configure(fg_color="#ffffff")
+                
+                # Filter sections by program
+                filtered_sections = [
+                    s['name'] for s in self.dropdown_data.get('sections', [])
+                    if s.get('program_id') == selected_program_id
+                ]
+                
+                # Always include "Not Yet Assigned" option
+                if "Not Yet Assigned" not in filtered_sections:
+                    filtered_sections.insert(0, "Not Yet Assigned")
+                
+                if filtered_sections:
+                    # Enable and update section dropdown with filtered options
+                    self.form_fields['section'].configure(
+                        values=filtered_sections,
+                        fg_color="#fff",
+                        text_color="#000",
+                        button_color="#fff",
+                        button_hover_color="#f0f0f0",
+                        state="normal"
+                    )
+                    # Set to "Not Yet Assigned" by default when program changes
+                    self.form_fields['section'].set("Not Yet Assigned")
+                else:
+                    # No sections found for this program, show only "Not Yet Assigned"
+                    self.form_fields['section'].configure(
+                        values=["Not Yet Assigned"],
+                        fg_color="#fff",
+                        text_color="#000",
+                        button_color="#fff",
+                        button_hover_color="#f0f0f0",
+                        state="normal"
+                    )
                     self.form_fields['section'].set("Not Yet Assigned")
             else:
-                # User has no section, set to "Not Yet Assigned"
-                self.form_fields['section'].set("Not Yet Assigned")
+                # Update section container to disabled appearance
+                section_dropdown_container = self.form_fields['section'].master
+                section_dropdown_container.configure(fg_color="#f5f5f5")
+                
+                # If no valid program selected, lock section dropdown
+                self.form_fields['section'].configure(
+                    values=["Select Program First"],
+                    fg_color="#f5f5f5",
+                    text_color="#999999",
+                    button_color="#f5f5f5",
+                    button_hover_color="#f5f5f5",
+                    state="disabled"
+                )
+                self.form_fields['section'].set("Select Program First")
+            
+        except Exception as e:
+            print(f"Error handling program change: {e}")
+            # Fallback to locked state on error
+            section_dropdown_container = self.form_fields['section'].master
+            section_dropdown_container.configure(fg_color="#f5f5f5")
+            
+            self.form_fields['section'].configure(
+                values=["Select Program First"],
+                fg_color="#f5f5f5",
+                text_color="#999999",
+                state="disabled"
+            )
+            self.form_fields['section'].set("Select Program First")
+
+    def populate_form_data(self):
+        """Populate form fields with user data"""
+        if not self.user_data:
+            return
+        
+        # Populate form fields
+        if 'first_name' in self.form_fields and self.user_data.get('first_name'):
+            self.form_fields['first_name'].insert(0, self.user_data['first_name'])
+            
+        if 'last_name' in self.form_fields and self.user_data.get('last_name'):
+            self.form_fields['last_name'].insert(0, self.user_data['last_name'])
+            
+        if 'email' in self.form_fields and self.user_data.get('email'):
+            self.form_fields['email'].insert(0, self.user_data['email'])
+            
+        if 'contact_number' in self.form_fields and self.user_data.get('contact_number'):
+            self.form_fields['contact_number'].insert(0, self.user_data['contact_number'])
+        
+        # Faculty-specific fields
+        if self.user_type == "faculty" and 'employee_number' in self.form_fields:
+            employee_number = self.user_data.get('employee_number') or self.user_data.get('student_number')  # Fallback
+            if employee_number:
+                self.form_fields['employee_number'].insert(0, employee_number)
+        
+        # Set program and section dropdown based on user data (ONLY FOR STUDENTS)
+        if self.user_type == "student":
+            program_set = False
+            if 'program' in self.form_fields:
+                program_name = self.user_data.get('program_name')
+                
+                if program_name and program_name.strip():
+                    # User has a program - find matching abbreviation
+                    for program in self.dropdown_data.get('programs', []):
+                        if program['name'] == program_name or program['abbreviation'] in program_name:
+                            self.form_fields['program'].set(program['abbreviation'])
+                            # Trigger section filtering for this program
+                            self.on_program_change(program['abbreviation'])
+                            program_set = True
+                            break
+                
+                if not program_set:
+                    # User has no program or program not found - set to "Not Yet Assigned"
+                    self.form_fields['program'].set("Not Yet Assigned")
+                    # This will trigger the program change handler to lock sections
+                    self.on_program_change("Not Yet Assigned")
+            
+            # Set section after program filtering is applied
+            if 'section' in self.form_fields and program_set:
+                section_name = self.user_data.get('section_name')
+                if section_name and section_name.strip():
+                    # Check if section exists in current dropdown options
+                    current_sections = self.form_fields['section'].cget("values")
+                    if section_name in current_sections:
+                        self.form_fields['section'].set(section_name)
+                    else:
+                        # Section not available for selected program, set to "Not Yet Assigned"
+                        self.form_fields['section'].set("Not Yet Assigned")
+                else:
+                    # User has no section, set to "Not Yet Assigned"
+                    self.form_fields['section'].set("Not Yet Assigned")
         
         if 'status' in self.form_fields and self.user_data.get('status_name'):
             status_name = self.user_data['status_name']
@@ -710,13 +1076,20 @@ class UsersEditModal(ctk.CTkToplevel):
             if new_password:
                 form_data['password'] = new_password
             
-            # Get dropdown values - do NOT convert to None, keep actual values for validation
-            program_value = self.form_fields['program'].get()
-            section_value = self.form_fields['section'].get()
+            # Handle user type specific fields
+            if self.user_type == "student":
+                # Get dropdown values for students - do NOT convert to None, keep actual values for validation
+                program_value = self.form_fields['program'].get()
+                section_value = self.form_fields['section'].get()
+                
+                # Store raw values for validation first
+                form_data['program'] = program_value
+                form_data['section'] = section_value
+            else:
+                # Faculty - get employee number
+                if 'employee_number' in self.form_fields:
+                    form_data['employee_number'] = self.form_fields['employee_number'].get().strip()
             
-            # Store raw values for validation first
-            form_data['program'] = program_value
-            form_data['section'] = section_value
             form_data['status'] = self.form_fields['status'].get()
             
             # Validate form data BEFORE processing
@@ -726,10 +1099,10 @@ class UsersEditModal(ctk.CTkToplevel):
                 messagebox.showerror("Validation Error", error_message)
                 return
             
-            # After validation passes, convert "Not Yet Assigned" to None for database storage
-            # (This should never happen now due to validation, but keeping for safety)
-            form_data['program'] = None if program_value == "Not Yet Assigned" else program_value
-            form_data['section'] = None if section_value in ["Not Yet Assigned", "Select Program First"] else section_value
+            # After validation passes, convert "Not Yet Assigned" to None for database storage (students only)
+            if self.user_type == "student":
+                form_data['program'] = None if form_data.get('program') == "Not Yet Assigned" else form_data.get('program')
+                form_data['section'] = None if form_data.get('section') in ["Not Yet Assigned", "Select Program First"] else form_data.get('section')
             
             # Check if face image is actually being changed
             face_image_changed = False
@@ -742,13 +1115,18 @@ class UsersEditModal(ctk.CTkToplevel):
                     face_image_changed = True
             
             # Show confirmation dialog
-            program_display = form_data['program'] or "Not Yet Assigned"
-            section_display = form_data['section'] or "Not Yet Assigned"
-            
             confirmation_msg = f"Save changes for {form_data['first_name']} {form_data['last_name']}?\n\n"
             confirmation_msg += f"Email: {form_data['email']}\n"
-            confirmation_msg += f"Program: {program_display}\n"
-            confirmation_msg += f"Section: {section_display}\n"
+            
+            if self.user_type == "student":
+                program_display = form_data.get('program') or "Not Yet Assigned"
+                section_display = form_data.get('section') or "Not Yet Assigned"
+                confirmation_msg += f"Program: {program_display}\n"
+                confirmation_msg += f"Section: {section_display}\n"
+            else:
+                if form_data.get('employee_number'):
+                    confirmation_msg += f"Employee Number: {form_data['employee_number']}\n"
+            
             confirmation_msg += f"Status: {form_data['status']}"
             
             # Only show password update message if password is being changed
@@ -820,9 +1198,10 @@ class UsersEditModal(ctk.CTkToplevel):
                     if hasattr(field, 'configure'):
                         field.configure(state="normal")
                 
-                # Re-enable section dropdown based on program selection
-                if self.form_fields['program'].get() == "Not Yet Assigned":
-                    self.form_fields['section'].configure(state="disabled")
+                # Re-enable section dropdown based on program selection (students only)
+                if self.user_type == "student" and 'program' in self.form_fields and 'section' in self.form_fields:
+                    if self.form_fields['program'].get() == "Not Yet Assigned":
+                        self.form_fields['section'].configure(state="disabled")
                 
                 # Reset save button
                 save_btn = None
@@ -1213,7 +1592,7 @@ class IndependentFacialRecognitionWindow:
             self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
 
     def capture_face(self):
-        """Capture current frame"""
+        """Capture current frame with face validation"""
         if not self.is_camera_active:
             messagebox.showwarning("Warning", "Camera is not active. Please open camera first.", parent=self.verification_dialog)
             return
@@ -1224,6 +1603,12 @@ class IndependentFacialRecognitionWindow:
         
         try:
             frame = self.current_frame.copy()
+            
+            # Validate face image before capturing
+            is_valid, message = self.validate_face_image(frame)
+            if not is_valid:
+                messagebox.showwarning("Face Validation Failed", message, parent=self.verification_dialog)
+                return
             
             # Convert to RGB and store
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -1248,7 +1633,7 @@ class IndependentFacialRecognitionWindow:
             # Update button states after successful capture
             self._update_buttons_after_capture()
             
-            messagebox.showinfo("Success", "Face image captured successfully!", parent=self.verification_dialog)
+            messagebox.showinfo("Success", "Face image captured and validated successfully!", parent=self.verification_dialog)
             
         except Exception as e:
             print(f"Capture error: {e}")
@@ -1422,3 +1807,47 @@ class IndependentFacialRecognitionWindow:
                 self.verification_dialog.destroy()
             except:
                 pass
+
+    def validate_face_image(self, image):
+        """Validate that the image contains a properly visible face"""
+        try:
+            face_cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+            eye_cascade_path = cv2.data.haarcascades + 'haarcascade_eye.xml'
+
+            if not os.path.exists(face_cascade_path) or not os.path.exists(eye_cascade_path):
+                print("Warning: Face detection cascades not found. Skipping face validation.")
+
+                return (True, "Face validation skipped")
+
+            face_cascade = cv2.CascadeClassifier(face_cascade_path)
+            eye_cascade = cv2.CascadeClassifier(eye_cascade_path)
+
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            faces = face_cascade.detectMultiScale(
+                gray,
+                scaleFactor=1.1,
+                minNeighbors=5,
+                minSize=(30, 30)
+            )
+
+            if len(faces) == 0:
+                return (False, "No face detected. Please ensure your face is clearly visible.")
+            if len(faces) > 1:
+                return (False, "Multiple faces detected. Please ensure only your face is in the image.")
+
+            (x, y, w, h) = faces[0]
+            roi_gray = gray[y:y+h, x:x+w]
+            eyes = eye_cascade.detectMultiScale(
+                roi_gray,
+                scaleFactor=1.1,
+                minNeighbors=5,
+                minSize=(30, 30)
+            )
+
+            if len(eyes) < 2:
+                return (False, "Eyes not clearly visible. Please remove sunglasses or any accessories covering your face.")
+
+            return (True, "Face validation successful")
+        except Exception as e:
+            print(f"Face validation error: {str(e)}")
+            return (True, "Face validation skipped due to an error")
