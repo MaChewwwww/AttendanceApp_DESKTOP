@@ -6,6 +6,8 @@ import threading
 import time
 import io
 from PIL import Image, ImageTk
+import os
+import numpy as np
 
 class IndependentFacialRecognitionWindow:
     """Completely independent facial recognition window"""
@@ -366,6 +368,15 @@ class IndependentFacialRecognitionWindow:
                 self.face_image_data = None
                 return
 
+            # Validate face image
+            is_valid, message = self.validate_face_image(frame)
+            
+            if not is_valid:
+                messagebox.showwarning("Face Validation Failed", message, parent=self.verification_dialog)
+                self.face_image = None
+                self.face_image_data = None
+                return
+            
             self.stop_camera()
             self.show_face_preview()
             self._update_buttons_after_capture()
@@ -507,3 +518,46 @@ class IndependentFacialRecognitionWindow:
                 self.verification_dialog.destroy()
             except:
                 pass
+
+    def validate_face_image(self, image):
+        """Validate that the image contains a properly visible face"""
+        try:
+            face_cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+            eye_cascade_path = cv2.data.haarcascades + 'haarcascade_eye.xml'
+
+            if not os.path.exists(face_cascade_path) or not os.path.exists(eye_cascade_path):
+                print("Warning: Face detection cascades not found. Skipping face validation.")
+                return (True, "Face validation skipped")
+
+            face_cascade = cv2.CascadeClassifier(face_cascade_path)
+            eye_cascade = cv2.CascadeClassifier(eye_cascade_path)
+
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            faces = face_cascade.detectMultiScale(
+                gray,
+                scaleFactor=1.1,
+                minNeighbors=5,
+                minSize=(30, 30)
+            )
+
+            if len(faces) == 0:
+                return (False, "No face detected. Please ensure your face is clearly visible.")
+            if len(faces) > 1:
+                return (False, "Multiple faces detected. Please ensure only your face is in the image.")
+
+            (x, y, w, h) = faces[0]
+            roi_gray = gray[y:y+h, x:x+w]
+            eyes = eye_cascade.detectMultiScale(
+                roi_gray,
+                scaleFactor=1.1,
+                minNeighbors=5,
+                minSize=(30, 30)
+            )
+
+            if len(eyes) < 2:
+                return (False, "Eyes not clearly visible. Please remove sunglasses or any accessories covering your face.")
+
+            return (True, "Face validation successful")
+        except Exception as e:
+            print(f"Face validation error: {str(e)}")
+            return (True, "Face validation skipped due to an error")
