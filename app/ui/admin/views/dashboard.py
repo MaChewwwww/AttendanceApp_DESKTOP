@@ -16,8 +16,43 @@ class DashboardView(ctk.CTkFrame):
 
         label = ctk.CTkLabel(
             self,
-            text="Dashboard Content",
-            font=ctk.CTkFont(family="Inter", size=20, weight="bold"),
-            text_color="black"
+            text="Admin\nDashboard",
+            font=ctk.CTkFont(family="Inter", size=18, weight="bold"),
+            text_color="black",
+            anchor="w",
+            justify="left"
         )
-        label.pack(pady=20) 
+        label.pack(anchor="w", padx=20, pady=(10, 10))
+
+        # Card grid for dashboard metrics (3+1 layout)
+        card_grid = ctk.CTkFrame(self, fg_color="transparent")
+        card_grid.pack(anchor="nw", padx=20, pady=0)
+        cols = 3
+        for c in range(cols):
+            card_grid.grid_columnconfigure(c, weight=0)
+        metrics = [
+            ("20", "Students"),
+            ("20", "Courses"),
+            ("20", "Programs"),
+            ("20", "Programs")
+        ]
+        # First row: 3 cards
+        for idx in range(3):
+            value, label_text = metrics[idx]
+            card = ctk.CTkFrame(card_grid, fg_color="#fff", width=310, height=190, corner_radius=12)
+            card.grid(row=0, column=idx, padx=16, pady=16)
+            card.pack_propagate(False)
+            # Bottom-left container for text
+            text_frame = ctk.CTkFrame(card, fg_color="#fff")
+            text_frame.pack(side="bottom", anchor="w", fill="x", padx=0, pady=0)
+            ctk.CTkLabel(text_frame, text=value, font=ctk.CTkFont(size=32, weight="bold"), text_color="#222").pack(anchor="w", padx=24, pady=(0, 0))
+            ctk.CTkLabel(text_frame, text=label_text, font=ctk.CTkFont(size=14), text_color="#757575").pack(anchor="w", padx=24, pady=(0, 24))
+        # Second row: 1 card bottom-left
+        value, label_text = metrics[3]
+        card = ctk.CTkFrame(card_grid, fg_color="#fff", width=310, height=190, corner_radius=12)
+        card.grid(row=1, column=0, padx=16, pady=16)
+        card.pack_propagate(False)
+        text_frame = ctk.CTkFrame(card, fg_color="#fff")
+        text_frame.pack(side="bottom", anchor="w", fill="x", padx=0, pady=0)
+        ctk.CTkLabel(text_frame, text=value, font=ctk.CTkFont(size=32, weight="bold"), text_color="#222").pack(anchor="w", padx=24, pady=(0, 0))
+        ctk.CTkLabel(text_frame, text=label_text, font=ctk.CTkFont(size=14), text_color="#757575").pack(anchor="w", padx=24, pady=(0, 24)) 
