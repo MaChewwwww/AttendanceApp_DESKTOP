@@ -362,9 +362,16 @@ class SectionViewPopup(ctk.CTkToplevel):
                 dropdown_fg_color="#fff",
                 dropdown_hover_color="#E5E7EB",
                 dropdown_text_color="#222",
-                command=lambda choice, data=("Ethics 101", "90%"): print(f"{choice} {data}")
+                command=lambda choice, data=("Ethics 101", "90%"): self.handle_course_action(choice, data)
             )
-            action_menu.grid(row=idx+1, column=2, sticky="w", padx=10, pady=6) 
+            action_menu.grid(row=idx+1, column=2, sticky="w", padx=10, pady=6)
+
+    def handle_course_action(self, action, data):
+        if action == "View":
+            course_subject, attendance_rate = data
+            CourseSubjectViewPopup(self, course_subject, attendance_rate)
+        else:
+            print(f"{action} {data}")
 
 class SectionCreatePopup(ctk.CTkToplevel):
     def __init__(self, parent):
@@ -571,3 +578,208 @@ class SectionEditPopup(ctk.CTkToplevel):
     def update_section(self):
         # TODO: Implement update logic
         self.destroy() 
+
+class CourseSubjectViewPopup(ctk.CTkToplevel):
+    def __init__(self, parent, course_subject, attendance_rate=None):
+        super().__init__(parent)
+        self.title(f"{course_subject} Details")
+        self.geometry("640x720")
+        self.resizable(False, False)
+        self.configure(fg_color="#F5F5F5")
+        self.transient(parent)
+        self.grab_set()
+        self.setup_ui(course_subject)
+
+    def setup_ui(self, course_subject):
+        # Header row with title and export button
+        header_frame = ctk.CTkFrame(self, fg_color="#F5F5F5")
+        header_frame.pack(fill="x", padx=20, pady=(20, 0))
+        ctk.CTkLabel(
+            header_frame,
+            text=course_subject,
+            font=ctk.CTkFont(family="Inter", size=20, weight="bold"),
+            text_color="#111"
+        ).pack(side="left", anchor="n")
+        ctk.CTkButton(
+            header_frame,
+            text="Export",
+            fg_color="#1E3A8A",
+            hover_color="#1D4ED8",
+            text_color="#fff",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            width=80,
+            height=32,
+            corner_radius=8,
+            command=self.destroy  # Placeholder for export
+        ).pack(side="right", anchor="n")
+
+        # Subheader
+        ctk.CTkLabel(
+            self,
+            text="BSIT 2 - 1   S.Y 2025 - 2026",
+            font=ctk.CTkFont(size=13),
+            text_color="#222"
+        ).pack(anchor="w", padx=20, pady=(0, 10))
+
+        # Scrollable main content
+        scrollable = ctk.CTkScrollableFrame(self, fg_color="#F5F5F5")
+        scrollable.pack(fill="both", expand=True)
+
+        # Search and filter bar
+        search_bar_container = ctk.CTkFrame(scrollable, fg_color="#F5F5F5")
+        search_bar_container.pack(fill="x", padx=0, pady=(0, 0))
+        search_entry_frame = ctk.CTkFrame(search_bar_container, fg_color="#fff", border_color="#BDBDBD", border_width=1, corner_radius=0, height=36)
+        search_entry_frame.pack(side="left", pady=0, padx=0)
+        search_entry_frame.pack_propagate(False)
+        search_icon = ctk.CTkLabel(search_entry_frame, text="\U0001F50D", font=ctk.CTkFont(size=16), text_color="#757575", fg_color="#fff", width=28, height=28)
+        search_icon.pack(side="left", padx=(8, 0), pady=4)
+        search_entry = ctk.CTkEntry(search_entry_frame, placeholder_text="", width=160, fg_color="#fff",
+                                    border_color="#fff", border_width=0, text_color="#222", font=ctk.CTkFont(size=15), height=28)
+        search_entry.pack(side="left", padx=(2, 8), pady=4)
+        filter_btn = ctk.CTkButton(
+            search_bar_container,
+            text="Filters",
+            width=80,
+            height=36,
+            fg_color="#fff",
+            text_color="#757575",
+            hover_color="#F3F4F6",
+            border_width=1,
+            border_color="#BDBDBD",
+            corner_radius=0,
+            font=ctk.CTkFont(size=13),
+            command=self.show_filter_popup
+        )
+        filter_btn.pack(side="left", padx=0, pady=0)
+
+        # Table
+        table_frame = ctk.CTkFrame(scrollable, fg_color="#fff", border_color="#E5E7EB", border_width=1, corner_radius=8)
+        table_frame.pack(fill="both", expand=True, padx=0, pady=20)
+        columns = ["Student Name", "Attendance", "Absent", "Rating"]
+        col_widths = [6, 2, 2, 2]
+        for i, weight in enumerate(col_widths):
+            table_frame.grid_columnconfigure(i, weight=weight)
+        for i, col in enumerate(columns):
+            ctk.CTkLabel(
+                table_frame,
+                text=col,
+                font=ctk.CTkFont(size=13, weight="bold"),
+                text_color="#6B7280",
+                anchor="w"
+            ).grid(row=0, column=i, padx=10, pady=8, sticky="w")
+        # Placeholder data
+        for idx in range(14):
+            ctk.CTkLabel(table_frame, text="John F. Doe", font=ctk.CTkFont(size=13), text_color="#222", fg_color="#fff", anchor="w").grid(row=idx+1, column=0, sticky="nsew", padx=10, pady=6)
+            ctk.CTkLabel(table_frame, text="1", font=ctk.CTkFont(size=13), text_color="#222", fg_color="#fff", anchor="w").grid(row=idx+1, column=1, sticky="nsew", padx=10, pady=6)
+            ctk.CTkLabel(table_frame, text="1", font=ctk.CTkFont(size=13), text_color="#222", fg_color="#fff", anchor="w").grid(row=idx+1, column=2, sticky="nsew", padx=10, pady=6)
+            ctk.CTkLabel(table_frame, text="90%", font=ctk.CTkFont(size=13), text_color="#222", fg_color="#fff", anchor="w").grid(row=idx+1, column=3, sticky="nsew", padx=10, pady=6)
+
+    def show_filter_popup(self):
+        CourseSubjectFilterPopup(self)
+
+class CourseSubjectFilterPopup(ctk.CTkToplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title("Filter Students")
+        self.geometry("400x500")
+        self.resizable(False, False)
+        self.configure(fg_color="#fff")
+        self.transient(parent)
+        self.grab_set()
+        # Center the window
+        self.update_idletasks()
+        width = self.winfo_width()
+        height = self.winfo_height()
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry(f'{width}x{height}+{x}+{y}')
+        self.setup_ui()
+
+    def setup_ui(self):
+        # Header
+        ctk.CTkLabel(
+            self,
+            text="Filter Students",
+            font=ctk.CTkFont(family="Inter", size=20, weight="bold"),
+            text_color="black"
+        ).pack(anchor="w", padx=20, pady=(20, 10))
+
+        # Filter options
+        filter_frame = ctk.CTkFrame(self, fg_color="transparent")
+        filter_frame.pack(fill="both", expand=True, padx=20, pady=10)
+
+        # Attendance Status filter
+        ctk.CTkLabel(filter_frame, text="Attendance Status", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
+        attendance_var = tk.StringVar(value="All")
+        attendance_options = ["All", "Present", "Absent"]
+        attendance_menu = ctk.CTkOptionMenu(
+            filter_frame,
+            values=attendance_options,
+            variable=attendance_var,
+            fg_color="#F3F4F6",
+            text_color="#222",
+            button_color="#E5E7EB",
+            button_hover_color="#D1D5DB",
+            dropdown_fg_color="#fff",
+            dropdown_hover_color="#E5E7EB",
+            dropdown_text_color="#222"
+        )
+        attendance_menu.pack(fill="x", pady=(0, 15))
+
+        # Year filter
+        ctk.CTkLabel(filter_frame, text="Year", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
+        year_var = tk.StringVar(value="All")
+        year_options = ["All", "1st Year", "2nd Year", "3rd Year", "4th Year"]
+        year_menu = ctk.CTkOptionMenu(
+            filter_frame,
+            values=year_options,
+            variable=year_var,
+            fg_color="#F3F4F6",
+            text_color="#222",
+            button_color="#E5E7EB",
+            button_hover_color="#D1D5DB",
+            dropdown_fg_color="#fff",
+            dropdown_hover_color="#E5E7EB",
+            dropdown_text_color="#222"
+        )
+        year_menu.pack(fill="x", pady=(0, 15))
+
+        # Section filter
+        ctk.CTkLabel(filter_frame, text="Section", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
+        section_var = tk.StringVar(value="All")
+        section_options = ["All", "1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"]
+        section_menu = ctk.CTkOptionMenu(
+            filter_frame,
+            values=section_options,
+            variable=section_var,
+            fg_color="#F3F4F6",
+            text_color="#222",
+            button_color="#E5E7EB",
+            button_hover_color="#D1D5DB",
+            dropdown_fg_color="#fff",
+            dropdown_hover_color="#E5E7EB",
+            dropdown_text_color="#222"
+        )
+        section_menu.pack(fill="x", pady=(0, 15))
+
+        # Buttons
+        button_frame = ctk.CTkFrame(self, fg_color="transparent")
+        button_frame.pack(fill="x", padx=20, pady=20)
+
+        ctk.CTkButton(
+            button_frame,
+            text="Apply Filters",
+            command=self.destroy,
+            fg_color="#1E3A8A",
+            hover_color="#1D4ED8",
+            text_color="white"
+        ).pack(side="right", padx=(10, 0))
+
+        ctk.CTkButton(
+            button_frame,
+            text="Reset",
+            command=self.destroy,
+            fg_color="#F3F4F6",
+            text_color="#222",
+            hover_color="#E5E7EB"
+        ).pack(side="right") 
