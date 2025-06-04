@@ -244,13 +244,26 @@ class SectionsView(ctk.CTkFrame):
         FilterPopup(self)
 
     def handle_action(self, action, data):
-        if action == "View":
+        if action == "Delete":
+            def on_delete():
+                try:
+                    root = self.winfo_toplevel()  # Get root window
+                    SuccessModal(root)  # Show success modal
+                except Exception as e:
+                    print(f"Error showing success modal: {e}")
+            try:
+                DeleteModal(self, on_delete=on_delete)
+            except Exception as e:
+                print(f"Error showing delete modal: {e}")
+        elif action == "View":
             SectionViewPopup(self, data)
+        elif action == "Edit":
+            SectionEditPopup(self, data)
         else:
             print(f"{action} {data}")
 
     def create_section(self):
-        print("Create section clicked!")
+        SectionCreatePopup(self)
 
 class SectionViewPopup(ctk.CTkToplevel):
     def __init__(self, parent, section_data):
@@ -262,18 +275,23 @@ class SectionViewPopup(ctk.CTkToplevel):
         self.transient(parent)
         self.grab_set()
         self.section_data = section_data
+        
+        # Create main scrollable frame
+        self.main_frame = ctk.CTkScrollableFrame(self, fg_color="#F5F5F5")
+        self.main_frame.pack(fill="both", expand=True)
+        
         self.setup_ui()
 
     def setup_ui(self):
         section, program, year = self.section_data
         # Header
-        top_frame = ctk.CTkFrame(self, fg_color="#F5F5F5")
+        top_frame = ctk.CTkFrame(self.main_frame, fg_color="#F5F5F5")
         top_frame.pack(fill="x", padx=20, pady=(20, 10))
         ctk.CTkLabel(top_frame, text=f"{program} {section}", font=ctk.CTkFont(size=18, weight="bold"), text_color="#000").pack(anchor="w")
         ctk.CTkLabel(top_frame, text=f"S.Y 2025 - 2026", font=ctk.CTkFont(size=13), text_color="#222").pack(anchor="w")
 
         # Search and filter bar (copied from users.py ActionPopup)
-        search_bar_container = ctk.CTkFrame(self, fg_color="#F5F5F5")
+        search_bar_container = ctk.CTkFrame(self.main_frame, fg_color="#F5F5F5")
         search_bar_container.pack(pady=(0, 10), padx=20, anchor="w")
         search_entry_frame = ctk.CTkFrame(search_bar_container, fg_color="#fff", border_color="#BDBDBD", border_width=1, corner_radius=0, height=36)
         search_entry_frame.pack(side="left", pady=0, padx=0)
@@ -300,7 +318,7 @@ class SectionViewPopup(ctk.CTkToplevel):
         filter_btn.pack(side="left", padx=0, pady=0)
 
         # Graphs row (placeholders)
-        graphs_frame = ctk.CTkFrame(self, fg_color="#F5F5F5")
+        graphs_frame = ctk.CTkFrame(self.main_frame, fg_color="#F5F5F5")
         graphs_frame.pack(fill="x", padx=20, pady=(10, 0))
         graphs_frame.grid_columnconfigure(0, weight=1)
         graphs_frame.grid_columnconfigure(1, weight=1)
@@ -316,11 +334,12 @@ class SectionViewPopup(ctk.CTkToplevel):
         ctk.CTkLabel(bar_card, text="Graph here", font=ctk.CTkFont(size=14, weight="bold"), text_color="#222").pack(expand=True, fill="both", padx=10, pady=10)
 
         # Table
-        table_frame = ctk.CTkFrame(self, fg_color="#fff", border_color="#E5E7EB", border_width=1, corner_radius=8)
+        table_frame = ctk.CTkFrame(self.main_frame, fg_color="#fff", border_color="#E5E7EB", border_width=1, corner_radius=8)
         table_frame.pack(fill="both", expand=True, padx=20, pady=10)
         columns = ["Course Subject", "Attendance Rate", "Actions"]
-        for i in range(3):
-            table_frame.grid_columnconfigure(i, weight=1)
+        col_widths = [70, 15, 15]  # Course Subject takes 70%, Attendance Rate and Actions each take 15%
+        for i, weight in enumerate(col_widths):
+            table_frame.grid_columnconfigure(i, weight=weight)
         ctk.CTkLabel(table_frame, text="Course Subject", font=ctk.CTkFont(size=13, weight="bold"), text_color="#000", anchor="w").grid(row=0, column=0, padx=10, pady=8, sticky="w")
         ctk.CTkLabel(table_frame, text="Attendance Rate", font=ctk.CTkFont(size=13, weight="bold"), text_color="#000", anchor="w").grid(row=0, column=1, padx=10, pady=8, sticky="w")
         ctk.CTkLabel(table_frame, text="Actions", font=ctk.CTkFont(size=13, weight="bold"), text_color="#000", anchor="w").grid(row=0, column=2, padx=10, pady=8, sticky="w")
@@ -346,3 +365,209 @@ class SectionViewPopup(ctk.CTkToplevel):
                 command=lambda choice, data=("Ethics 101", "90%"): print(f"{choice} {data}")
             )
             action_menu.grid(row=idx+1, column=2, sticky="w", padx=10, pady=6) 
+
+class SectionCreatePopup(ctk.CTkToplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title("Create Section")
+        self.geometry("320x320")
+        self.resizable(False, False)
+        self.configure(fg_color="#FAFAFA")
+        self.transient(parent)
+        self.grab_set()
+        self.setup_ui()
+
+    def setup_ui(self):
+        # Title
+        ctk.CTkLabel(
+            self,
+            text="Create Section",
+            font=ctk.CTkFont(family="Inter", size=18, weight="bold"),
+            text_color="#111",
+        ).pack(anchor="w", padx=20, pady=(20, 10))
+
+        # Program label and dropdown
+        ctk.CTkLabel(
+            self,
+            text="Program",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            text_color="#222"
+        ).pack(anchor="w", padx=20, pady=(0, 4))
+        self.program_var = ctk.StringVar(value="Choose a program")
+        ctk.CTkOptionMenu(
+            self,
+            variable=self.program_var,
+            values=[
+                "Bachelor of Science in Information Technology",
+                "Bachelor of Science in Computer Science",
+                "Bachelor of Science in Information Systems"
+            ],
+            fg_color="#fff",
+            text_color="#222",
+            button_color="#E5E7EB",
+            button_hover_color="#D1D5DB",
+            dropdown_fg_color="#fff",
+            dropdown_hover_color="#E5E7EB",
+            dropdown_text_color="#222",
+            width=260,
+            height=38,
+            font=ctk.CTkFont(size=13),
+        ).pack(anchor="w", padx=20, pady=(0, 16))
+
+        # Year label and dropdown (like filter popup)
+        ctk.CTkLabel(
+            self,
+            text="Year",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            text_color="#222"
+        ).pack(anchor="w", padx=20, pady=(0, 4))
+        self.year_var = ctk.StringVar(value="Enter Select/Year")
+        ctk.CTkOptionMenu(
+            self,
+            variable=self.year_var,
+            values=["1st Year", "2nd Year", "3rd Year", "4th Year"],
+            fg_color="#fff",
+            text_color="#222",
+            button_color="#E5E7EB",
+            button_hover_color="#D1D5DB",
+            dropdown_fg_color="#fff",
+            dropdown_hover_color="#E5E7EB",
+            dropdown_text_color="#222",
+            width=260,
+            height=38,
+            font=ctk.CTkFont(size=13),
+        ).pack(anchor="w", padx=20, pady=(0, 24))
+
+        # Buttons
+        button_frame = ctk.CTkFrame(self, fg_color="#FAFAFA")
+        button_frame.pack(side="bottom", fill="x", padx=16, pady=(10, 16))
+        cancel_btn = ctk.CTkButton(
+            button_frame,
+            text="Cancel",
+            fg_color="#E5E7EB",
+            text_color="#222",
+            hover_color="#D1D5DB",
+            width=120,
+            height=36,
+            command=self.destroy
+        )
+        cancel_btn.pack(side="left", padx=(0, 8))
+        create_btn = ctk.CTkButton(
+            button_frame,
+            text="Create",
+            fg_color="#1E3A8A",
+            hover_color="#1D4ED8",
+            text_color="#fff",
+            width=120,
+            height=36,
+            command=self.create_section
+        )
+        create_btn.pack(side="right", padx=(8, 0))
+
+    def create_section(self):
+        # TODO: Implement creation logic
+        self.destroy() 
+
+class SectionEditPopup(ctk.CTkToplevel):
+    def __init__(self, parent, section_data):
+        super().__init__(parent)
+        self.title("Update Section")
+        self.geometry("320x320")
+        self.resizable(False, False)
+        self.configure(fg_color="#FAFAFA")
+        self.transient(parent)
+        self.grab_set()
+        self.section_data = section_data
+        self.setup_ui()
+
+    def setup_ui(self):
+        section, program, year = self.section_data
+        # Title
+        ctk.CTkLabel(
+            self,
+            text="Update Section",
+            font=ctk.CTkFont(family="Inter", size=18, weight="bold"),
+            text_color="#111",
+        ).pack(anchor="w", padx=20, pady=(20, 10))
+
+        # Program label and dropdown
+        ctk.CTkLabel(
+            self,
+            text="Program",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            text_color="#222"
+        ).pack(anchor="w", padx=20, pady=(0, 4))
+        self.program_var = ctk.StringVar(value=program)
+        ctk.CTkOptionMenu(
+            self,
+            variable=self.program_var,
+            values=[
+                "Bachelor of Science in Information Technology",
+                "Bachelor of Science in Computer Science",
+                "Bachelor of Science in Information Systems"
+            ],
+            fg_color="#fff",
+            text_color="#222",
+            button_color="#E5E7EB",
+            button_hover_color="#D1D5DB",
+            dropdown_fg_color="#fff",
+            dropdown_hover_color="#E5E7EB",
+            dropdown_text_color="#222",
+            width=260,
+            height=38,
+            font=ctk.CTkFont(size=13),
+        ).pack(anchor="w", padx=20, pady=(0, 16))
+
+        # Year label and dropdown
+        ctk.CTkLabel(
+            self,
+            text="Year",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            text_color="#222"
+        ).pack(anchor="w", padx=20, pady=(0, 4))
+        self.year_var = ctk.StringVar(value=year)
+        ctk.CTkOptionMenu(
+            self,
+            variable=self.year_var,
+            values=["1st Year", "2nd Year", "3rd Year", "4th Year"],
+            fg_color="#fff",
+            text_color="#222",
+            button_color="#E5E7EB",
+            button_hover_color="#D1D5DB",
+            dropdown_fg_color="#fff",
+            dropdown_hover_color="#E5E7EB",
+            dropdown_text_color="#222",
+            width=260,
+            height=38,
+            font=ctk.CTkFont(size=13),
+        ).pack(anchor="w", padx=20, pady=(0, 24))
+
+        # Buttons
+        button_frame = ctk.CTkFrame(self, fg_color="#FAFAFA")
+        button_frame.pack(side="bottom", fill="x", padx=16, pady=(10, 16))
+        cancel_btn = ctk.CTkButton(
+            button_frame,
+            text="Cancel",
+            fg_color="#E5E7EB",
+            text_color="#222",
+            hover_color="#D1D5DB",
+            width=120,
+            height=36,
+            command=self.destroy
+        )
+        cancel_btn.pack(side="left", padx=(0, 8))
+        update_btn = ctk.CTkButton(
+            button_frame,
+            text="Update",
+            fg_color="#1E3A8A",
+            hover_color="#1D4ED8",
+            text_color="#fff",
+            width=120,
+            height=36,
+            command=self.update_section
+        )
+        update_btn.pack(side="right", padx=(8, 0))
+
+    def update_section(self):
+        # TODO: Implement update logic
+        self.destroy() 

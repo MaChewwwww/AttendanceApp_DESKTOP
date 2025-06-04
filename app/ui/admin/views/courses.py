@@ -1,6 +1,7 @@
 import customtkinter as ctk
 from app.ui.admin.components.sidebar import DateTimePill
 import tkinter as tk
+from app.ui.admin.components.modals import DeleteModal, SuccessModal
 
 class FilterPopup(ctk.CTkToplevel):
     def __init__(self, parent):
@@ -201,7 +202,7 @@ class CoursesView(ctk.CTkFrame):
 
         # Columns: Course Subject, Program, Year & Section, Actions
         columns = ["Course Subject", "Program", "Year & Section", "Actions"]
-        col_widths = [8, 2, 2, 1]
+        col_widths = [70, 15, 15, 1]  # Course Subject takes 70%, Program and Year & Section each take 15%, Actions takes minimal space
         for i, weight in enumerate(col_widths):
             table_frame.grid_columnconfigure(i, weight=weight)
 
@@ -258,7 +259,13 @@ class CoursesView(ctk.CTkFrame):
         FilterPopup(self)
 
     def handle_action(self, action, data):
-        print(f"{action} {data}")
+        if action == "Delete":
+            def on_delete():
+                root = self.winfo_toplevel()  # Get root window
+                SuccessModal(root)  # Show success modal
+            DeleteModal(self, on_delete=on_delete)
+        else:
+            print(f"{action} {data}")
 
     def create_course(self):
         print("Create course clicked!") 

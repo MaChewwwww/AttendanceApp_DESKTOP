@@ -63,10 +63,15 @@ class DeleteModal(ctk.CTkToplevel):
         self.transient(parent)
         self.grab_set()
         self.on_delete = on_delete
+        
+        # Bind close event
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+        
         # Card frame for rounded corners, responsive
         card = ctk.CTkFrame(self, fg_color="#fff", corner_radius=16)
         card.pack(expand=True, fill="both", padx=16, pady=16)
         card.pack_propagate(True)
+        
         # Circle + Trash icon (centered)
         import os
         from PIL import Image, ImageTk, ImageOps
@@ -88,6 +93,7 @@ class DeleteModal(ctk.CTkToplevel):
         except Exception:
             icon_label = ctk.CTkLabel(card, text="\U0001F5D1", font=ctk.CTkFont(size=40), text_color="#F87171", fg_color="#fff")
             icon_label.pack(pady=(8, 0))
+        
         # Title
         ctk.CTkLabel(card, text="Delete", font=ctk.CTkFont(size=16, weight="bold"), text_color="#222", fg_color="#fff").pack(pady=(4, 0))
         # Subtitle
@@ -103,7 +109,7 @@ class DeleteModal(ctk.CTkToplevel):
             hover_color="#BDBDBD",
             height=38,
             corner_radius=8,
-            command=self.destroy
+            command=self._on_close
         ).pack(side="left", expand=True, fill="x", padx=(0, 8))
         ctk.CTkButton(
             btns_frame,
@@ -116,10 +122,18 @@ class DeleteModal(ctk.CTkToplevel):
             command=self._handle_delete
         ).pack(side="left", expand=True, fill="x", padx=(8, 0))
 
-    def _handle_delete(self):
-        if self.on_delete:
-            self.on_delete()
+    def _on_close(self):
+        self.grab_release()
         self.destroy()
+
+    def _handle_delete(self):
+        try:
+            if self.on_delete:
+                self.on_delete()
+        except Exception as e:
+            print(f"Error in delete handler: {e}")
+        finally:
+            self._on_close()
 
 class SuccessModal(ctk.CTkToplevel):
     def __init__(self, parent, on_continue=None):
@@ -131,16 +145,22 @@ class SuccessModal(ctk.CTkToplevel):
         self.transient(parent)
         self.grab_set()
         self.on_continue = on_continue
+        
+        # Bind close event
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+        
         # Card frame for rounded corners, responsive and matching other modals
         card = ctk.CTkFrame(self, fg_color="#fff", corner_radius=16)
         card.pack(expand=True, fill="both", padx=16, pady=16)
         card.pack_propagate(True)
+        
         # Draw green circle with checkmark
         canvas = tk.Canvas(card, width=56, height=56, bg="#fff", highlightthickness=0)
         canvas.create_oval(4, 4, 52, 52, outline="#22C55E", width=3)
         # Draw checkmark
         canvas.create_line(18, 32, 27, 42, 40, 18, fill="#22C55E", width=4, capstyle=tk.ROUND, joinstyle=tk.ROUND)
         canvas.pack(pady=(8, 0))
+        
         # Title
         ctk.CTkLabel(card, text="Success!", font=ctk.CTkFont(size=16, weight="bold"), text_color="#222", fg_color="#fff").pack(pady=(4, 0))
         # Subtitle
@@ -160,7 +180,15 @@ class SuccessModal(ctk.CTkToplevel):
             command=self._handle_continue
         ).pack(expand=True, fill="both", padx=0)
 
+    def _on_close(self):
+        self.grab_release()
+        self.destroy()
+
     def _handle_continue(self):
-        if self.on_continue:
-            self.on_continue()
-        self.destroy()  # Only close the success modal itself 
+        try:
+            if self.on_continue:
+                self.on_continue()
+        except Exception as e:
+            print(f"Error in continue handler: {e}")
+        finally:
+            self._on_close() 
