@@ -69,11 +69,35 @@ class DatabaseManager:
             if count > 0:
                 return True, "Student ID already exists"
             else:
-                return False, "Student ID available"
+                return False, "Student ID is available"
                 
         except Exception as e:
             print(f"Database error checking student ID: {str(e)}")
             return False, f"Error checking student ID: {str(e)}"
+
+    def check_employee_number_exists(self, employee_number):
+        """Check if an employee number is already registered
+        
+        Returns:
+            tuple: (success, message) where success is True if employee number exists
+        """
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT COUNT(*) FROM faculties WHERE employee_number = ?", (employee_number,))
+            count = cursor.fetchone()[0]
+            
+            conn.close()
+            
+            if count > 0:
+                return True, "Employee number already exists"
+            else:
+                return False, "Employee number is available"
+                
+        except Exception as e:
+            print(f"Database error checking employee number: {str(e)}")
+            return False, f"Error checking employee number: {str(e)}"
     
     def register(self, first_name, last_name, email, student_number, password, face_image=None, contact_number=None, date_of_birth=None):
         """Register a new student with face image and additional details"""
@@ -108,13 +132,24 @@ class DatabaseManager:
                 except ValueError:
                     return False, "Invalid date format"
             
+            # Get default status for new students (Enrolled)
+            cursor.execute("SELECT id FROM statuses WHERE name = 'Enrolled' AND user_type = 'student'")
+            status_result = cursor.fetchone()
+            default_status_id = status_result[0] if status_result else None
+            
+            if not default_status_id:
+                # Fallback: get any student status if "Enrolled" doesn't exist
+                cursor.execute("SELECT id FROM statuses WHERE user_type = 'student' LIMIT 1")
+                fallback_result = cursor.fetchone()
+                default_status_id = fallback_result[0] if fallback_result else None
+            
             # Begin transaction
             conn.execute("BEGIN TRANSACTION")
             
-            # Insert user - set as pending for admin verification
+            # Insert user - set as pending for admin verification with default status
             user_query = """
-            INSERT INTO users (first_name, last_name, email, birthday, password_hash, contact_number, role, face_image, verified, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users (first_name, last_name, email, birthday, password_hash, contact_number, role, status_id, face_image, verified, isDeleted, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
             current_time = datetime.now().isoformat()
             cursor.execute(user_query, (
@@ -125,8 +160,10 @@ class DatabaseManager:
                 hashed_pw.decode('utf-8'),
                 contact_number,
                 "Student",
+                default_status_id,  # Assign default status
                 face_image,
                 0,  # verified = 0 (False) - admin needs to verify
+                0,  # isDeleted = 0 (False)
                 current_time,
                 current_time
             ))
@@ -146,7 +183,7 @@ class DatabaseManager:
             # Commit transaction
             conn.commit()
             
-            print(f"Successfully registered user: {email} (ID: {user_id}) - Pending admin approval")
+            print(f"Successfully registered user: {email} (ID: {user_id}) - Pending admin approval with status ID: {default_status_id}")
             
             # Send registration confirmation email (not welcome email)
             try:
@@ -536,10 +573,21 @@ class DatabaseManager:
                         conn.close()
                         return False, "Invalid date format"
                 
-                # Insert user - set as VERIFIED since OTP was successful
+                # Get default status for new students (Enrolled)
+                cursor.execute("SELECT id FROM statuses WHERE name = 'Enrolled' AND user_type = 'student'")
+                status_result = cursor.fetchone()
+                default_status_id = status_result[0] if status_result else None
+                
+                if not default_status_id:
+                    # Fallback: get any student status if "Enrolled" doesn't exist
+                    cursor.execute("SELECT id FROM statuses WHERE user_type = 'student' LIMIT 1")
+                    fallback_result = cursor.fetchone()
+                    default_status_id = fallback_result[0] if fallback_result else None
+                
+                # Insert user - set as VERIFIED since OTP was successful with default status
                 user_query = """
-                INSERT INTO users (first_name, last_name, email, birthday, password_hash, contact_number, role, face_image, verified, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO users (first_name, last_name, email, birthday, password_hash, contact_number, role, status_id, face_image, verified, isDeleted, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
                 current_time = datetime.now().isoformat()
                 cursor.execute(user_query, (
@@ -550,8 +598,10 @@ class DatabaseManager:
                     hashed_pw.decode('utf-8'),
                     registration_data.get('contact_number'),
                     "Student",
+                    default_status_id,  # Assign default status
                     registration_data.get('face_image'),
                     1,  # verified = 1 (True) - OTP verification means account is verified
+                    0,  # isDeleted = 0 (False)
                     current_time,
                     current_time
                 ))
@@ -575,7 +625,7 @@ class DatabaseManager:
                 conn.commit()
                 conn.close()
                 
-                print(f"Successfully registered and verified user: {email} (ID: {user_id})")
+                print(f"Successfully registered and verified user: {email} (ID: {user_id}) with status ID: {default_status_id}")
                 
                 # Send welcome email
                 try:
@@ -624,11 +674,164 @@ class DatabaseManager:
             print(f"Error cleaning up expired OTPs: {e}")
             return False, str(e)
 
+    def create_password_reset_otp(self, email):
+        """Create and send password reset OTP for a user"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Check if user exists
+            cursor.execute("SELECT id, first_name FROM users WHERE email = ?", (email,))
+            user = cursor.fetchone()
+            
+            if not user:
+                conn.close()
+                return False, "No account found with this email address"
+            
+            user_id, first_name = user
+            
+            # Generate OTP
+            otp_code = self.generate_otp()
+            expires_at = datetime.now() + timedelta(minutes=15)  # Password reset OTP expires in 15 minutes
+            
+            # Store OTP in database
+            cursor.execute("""
+                INSERT INTO otp_requests (user_id, otp_code, type, created_at, expires_at, email)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (user_id, otp_code, 'password_reset', datetime.now().isoformat(), expires_at.isoformat(), email))
+            
+            conn.commit()
+            conn.close()
+            
+            # Send password reset OTP email
+            success, message = self.email_service.send_password_reset_otp_email(email, first_name, otp_code)
+            
+            if success:
+                return True, "Password reset verification code sent successfully to your email"
+            else:
+                return False, f"Failed to send verification code: {message}"
+            
+        except Exception as e:
+            print(f"Error creating password reset OTP: {e}")
+            return False, str(e)
+
+    def verify_password_reset_otp(self, email, otp_code):
+        """Verify password reset OTP"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Find valid password reset OTP
+            cursor.execute("""
+                SELECT o.user_id, u.first_name
+                FROM otp_requests o
+                JOIN users u ON o.user_id = u.id
+                WHERE u.email = ? AND o.otp_code = ? AND o.type = 'password_reset' 
+                AND o.expires_at > ? 
+                ORDER BY o.created_at DESC
+                LIMIT 1
+            """, (email, otp_code, datetime.now().isoformat()))
+            
+            result = cursor.fetchone()
+            
+            if not result:
+                conn.close()
+                return False, "Invalid or expired OTP code"
+            
+            # OTP is valid but don't delete it yet - wait for password reset completion
+            conn.close()
+            return True, "OTP verified successfully"
+            
+        except Exception as e:
+            print(f"Error verifying password reset OTP: {e}")
+            return False, str(e)
+
+    def reset_password_with_otp(self, email, otp_code, new_password):
+        """Reset password using OTP verification"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Find valid password reset OTP
+            cursor.execute("""
+                SELECT o.user_id, o.id
+                FROM otp_requests o
+                JOIN users u ON o.user_id = u.id
+                WHERE u.email = ? AND o.otp_code = ? AND o.type = 'password_reset' 
+                AND o.expires_at > ? 
+                ORDER BY o.created_at DESC
+                LIMIT 1
+            """, (email, otp_code, datetime.now().isoformat()))
+            
+            result = cursor.fetchone()
+            
+            if not result:
+                conn.close()
+                return False, "Invalid or expired OTP code"
+            
+            user_id, otp_id = result
+            
+            # Hash the new password
+            hashed_pw = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+            
+            # Begin transaction
+            conn.execute("BEGIN TRANSACTION")
+            
+            try:
+                # Update user password
+                cursor.execute("""
+                    UPDATE users 
+                    SET password_hash = ?, updated_at = ?
+                    WHERE id = ?
+                """, (hashed_pw.decode('utf-8'), datetime.now().isoformat(), user_id))
+                
+                # Delete used OTP
+                cursor.execute("DELETE FROM otp_requests WHERE id = ?", (otp_id,))
+                
+                # Commit transaction
+                conn.commit()
+                conn.close()
+                
+                print(f"Password reset successfully for user ID: {user_id}")
+                return True, "Password reset successfully"
+                
+            except Exception as e:
+                conn.rollback()
+                conn.close()
+                return False, f"Failed to reset password: {str(e)}"
+            
+        except Exception as e:
+            print(f"Error resetting password with OTP: {e}")
+            return False, str(e)
+
     def _initialize_database(self):
         """Initialize database tables if they don't exist"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
+            
+            # Check if database is empty (no tables exist)
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = cursor.fetchall()
+            
+            if not tables:
+                # Database is empty, run full initialization
+                conn.close()
+                print("Empty database detected. Running full initialization...")
+                self._run_database_seeder()
+                return
+            
+            # Create statuses table if it doesn't exist
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS statuses (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE,
+                    description TEXT,
+                    user_type TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
             
             # Create otp_requests table if it doesn't exist
             cursor.execute("""
@@ -656,14 +859,1058 @@ class DatabaseManager:
             except sqlite3.OperationalError:
                 pass  # Column already exists
             
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN status_id INTEGER REFERENCES statuses(id)")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+            
             # Add email column to otp_requests if it doesn't exist
             try:
                 cursor.execute("ALTER TABLE otp_requests ADD COLUMN email TEXT")
             except sqlite3.OperationalError:
                 pass
             
+            # Insert default statuses if they don't exist
+            self._seed_default_statuses(cursor)
+            
             conn.commit()
             conn.close()
             
         except Exception as e:
             print(f"Error initializing database: {e}")
+
+    def _seed_default_statuses(self, cursor):
+        """Seed default status values"""
+        try:
+            current_time = datetime.now().isoformat()
+            
+            # Default student statuses
+            student_statuses = [
+                ('Enrolled', 'Student is currently enrolled', 'student'),
+                ('Graduated', 'Student has graduated', 'student'),
+                ('Dropout', 'Student has dropped out', 'student'),
+                ('On Leave', 'Student is on leave', 'student'),
+                ('Suspended', 'Student is suspended', 'student')
+            ]
+            
+            # Default faculty statuses
+            faculty_statuses = [
+                ('Active', 'Faculty member is active', 'faculty'),
+                ('Inactive', 'Faculty member is inactive', 'faculty'),
+                ('Retired', 'Faculty member has retired', 'faculty'),
+                ('Probationary', 'Faculty member is on probation', 'faculty'),
+                ('Tenure Track', 'Faculty member is on tenure track', 'faculty'),
+                ('Tenured', 'Faculty member has tenure', 'faculty')
+            ]
+            
+            all_statuses = student_statuses + faculty_statuses
+            
+            for name, description, user_type in all_statuses:
+                # Check if status already exists
+                cursor.execute("SELECT id FROM statuses WHERE name = ? AND user_type = ?", (name, user_type))
+                if not cursor.fetchone():
+                    # Insert new status
+                    cursor.execute("""
+                        INSERT INTO statuses (name, description, user_type, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (name, description, user_type, current_time, current_time))
+                    print(f"Created default status: {name} ({user_type})")
+                    
+        except Exception as e:
+            print(f"Error seeding default statuses: {e}")
+
+    def _run_database_seeder(self):
+        """Run the database seeder for full initialization"""
+        try:
+            import os
+            import subprocess
+            import sys
+            
+            # Get the path to the database seeder
+            current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            seeder_path = os.path.join(current_dir, "app", "db_seeder.py")
+            
+            # Run the seeder script
+            result = subprocess.run([sys.executable, seeder_path], check=True)
+            
+            if result.returncode == 0:
+                print("Database seeder ran successfully")
+            else:
+                print(f"Database seeder exited with code {result.returncode}")
+                
+        except Exception as e:
+            print(f"Error running database seeder: {e}")
+    
+    def get_all_users_simple(self):
+        """Get all users with basic joins - simple query"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Simple query to get all user data with basic joins
+            query = """
+            SELECT 
+                u.*,
+                s.name as status_name,
+                st.student_number,
+                st.section as section_id,
+                f.employee_number,
+                sec.name as section_name,
+                p.name as program_name
+            FROM users u
+            LEFT JOIN statuses s ON u.status_id = s.id
+            LEFT JOIN students st ON u.id = st.user_id
+            LEFT JOIN faculties f ON u.id = f.user_id
+            LEFT JOIN sections sec ON st.section = sec.id
+            LEFT JOIN programs p ON sec.program_id = p.id
+            WHERE u.isDeleted = 0
+            ORDER BY u.role, u.last_name, u.first_name
+            """
+            
+            cursor.execute(query)
+            results = cursor.fetchall()
+            
+            users = []
+            for row in results:
+                user_dict = dict(row)
+                # Add full_name for convenience
+                user_dict['full_name'] = f"{user_dict['first_name']} {user_dict['last_name']}"
+                users.append(user_dict)
+            
+            conn.close()
+            return True, users
+            
+        except Exception as e:
+            print(f"Error getting all users: {e}")
+            return False, str(e)
+
+    def filter_users_python(self, all_users, search_term="", role_filter="", year_filter="", section_filter="", program_filter="", status_filter=""):
+        """Filter users using Python instead of SQL"""
+        filtered_users = []
+        
+        for user in all_users:
+            # Apply role filter first
+            if role_filter and role_filter != "All":
+                if user['role'] != role_filter:
+                    continue
+            
+            # Apply status filter
+            if status_filter and status_filter != "All":
+                if user.get('status_name') != status_filter:
+                    continue
+            
+            # Apply search term (search in multiple fields)
+            if search_term:
+                search_fields = [
+                    user.get('first_name', ''),
+                    user.get('last_name', ''),
+                    user.get('email', ''),
+                    user.get('student_number', ''),
+                    user.get('employee_number', ''),
+                    user.get('full_name', '')
+                ]
+                
+                # Check if search term exists in any field
+                search_found = False
+                for field in search_fields:
+                    if field and search_term.lower() in str(field).lower():
+                        search_found = True
+                        break
+                
+                if not search_found:
+                    continue
+            
+            # Apply year filter (for students only)
+            if year_filter and year_filter != "All" and user['role'] == 'Student':
+                section_name = user.get('section_name', '')
+                if section_name:
+                    # Extract year from section name (e.g., "1-1" -> "1")
+                    section_year = section_name.split('-')[0] if '-' in section_name else ''
+                    year_mapping = {'1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year'}
+                    user_year = year_mapping.get(section_year, '')
+                    
+                    if user_year != year_filter:
+                        continue
+                else:
+                    # If no section, skip this user for year filter
+                    continue
+            
+            # Apply section filter (for students only)
+            if section_filter and section_filter != "All" and user['role'] == 'Student':
+                if user.get('section_name') != section_filter:
+                    continue
+            
+            # Apply program filter (for students only)
+            if program_filter and program_filter != "All" and user['role'] == 'Student':
+                program_name = user.get('program_name', '')
+                
+                # Handle both full names and abbreviations
+                program_matches = False
+                if program_filter == 'BSIT' and 'Information Technology' in program_name:
+                    program_matches = True
+                elif program_filter == 'BSCS' and 'Computer Science' in program_name:
+                    program_matches = True
+                elif program_filter == 'BSIS' and 'Information Systems' in program_name:
+                    program_matches = True
+                elif program_name == program_filter:
+                    program_matches = True
+                
+                if not program_matches:
+                    continue
+            
+            # If we reach here, user passes all filters
+            filtered_users.append(user)
+        
+        return filtered_users
+
+    def get_students_with_filters(self, search_term="", year_filter="", section_filter="", program_filter="", status_filter=""):
+        """Get filtered students using Python filtering"""
+        try:
+            # Get all users first
+            success, all_users = self.get_all_users_simple()
+            if not success:
+                return False, all_users
+            
+            # Filter to only students
+            students = [user for user in all_users if user['role'] == 'Student']
+            
+            # Apply filters using Python
+            filtered_students = self.filter_users_python(
+                students,
+                search_term=search_term,
+                role_filter="Student",
+                year_filter=year_filter,
+                section_filter=section_filter,
+                program_filter=program_filter,
+                status_filter=status_filter
+            )
+            
+            return True, filtered_students
+            
+        except Exception as e:
+            print(f"Error getting filtered students: {e}")
+            return False, str(e)
+
+    def get_faculty_with_filters(self, search_term="", status_filter="", role_filter=""):
+        """Get filtered faculty using Python filtering"""
+        try:
+            # Get all users first
+            success, all_users = self.get_all_users_simple()
+            if not success:
+                return False, all_users
+            
+            # Filter to only faculty and admin
+            faculty = [user for user in all_users if user['role'] in ['Faculty', 'Admin']]
+            
+            # Apply filters using Python
+            filtered_faculty = self.filter_users_python(
+                faculty,
+                search_term=search_term,
+                role_filter=role_filter if role_filter and role_filter != "All" else "",
+                status_filter=status_filter
+            )
+            
+            return True, filtered_faculty
+            
+        except Exception as e:
+            print(f"Error getting filtered faculty: {e}")
+            return False, str(e)
+
+    def get_attendance_logs(self, user_id=None, course_id=None, date_from=None, date_to=None):
+        """Get attendance logs with optional filters"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            base_query = """
+            SELECT 
+                al.id,
+                al.user_id,
+                al.assigned_course_id,
+                al.date,
+                al.status,
+                al.created_at,
+                u.first_name || ' ' || u.last_name as student_name,
+                c.name as course_name,
+                s.name as section_name,
+                p.name as program_name,
+                fu.first_name || ' ' || fu.last_name as faculty_name
+            FROM attendance_logs al
+            JOIN users u ON al.user_id = u.id
+            JOIN assigned_courses ac ON al.assigned_course_id = ac.id
+            JOIN courses c ON ac.course_id = c.id
+            JOIN sections s ON ac.section_id = s.id
+            JOIN programs p ON s.course_id = p.id
+            JOIN users fu ON ac.user_id = fu.id
+            WHERE u.isDeleted = 0
+            """
+            
+            params = []
+            conditions = []
+            
+            if user_id:
+                conditions.append("al.user_id = ?")
+                params.append(user_id)
+            
+            if course_id:
+                conditions.append("ac.id = ?")
+                params.append(course_id)
+            
+            if date_from:
+                conditions.append("al.date >= ?")
+                params.append(date_from)
+            
+            if date_to:
+                conditions.append("al.date <= ?")
+                params.append(date_to)
+            
+            if conditions:
+                base_query += " AND " + " AND ".join(conditions)
+            
+            base_query += " ORDER BY al.date DESC, u.last_name, u.first_name"
+            
+            cursor.execute(base_query, params)
+            results = cursor.fetchall()
+            
+            attendance_logs = []
+            for row in results:
+                log_dict = dict(row)
+                attendance_logs.append(log_dict)
+            
+            conn.close()
+            return True, attendance_logs
+            
+        except Exception as e:
+            print(f"Error getting attendance logs: {e}")
+            return False, str(e)
+
+    def get_assigned_courses(self, faculty_id=None):
+        """Get assigned courses with optional faculty filter"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            query = """
+            SELECT 
+                ac.id,
+                ac.user_id as faculty_id,
+                ac.course_id,
+                ac.section_id,
+                ac.academic_year,
+                ac.semester,
+                ac.schedule_day,
+                ac.schedule_time,
+                ac.room,
+                c.name as course_name,
+                c.description as course_description,
+                s.name as section_name,
+                p.name as program_name,
+                u.first_name || ' ' || u.last_name as faculty_name
+            FROM assigned_courses ac
+            JOIN courses c ON ac.course_id = c.id
+            JOIN sections s ON ac.section_id = s.id
+            JOIN programs p ON s.program_id = p.id
+            JOIN users u ON ac.user_id = u.id
+            WHERE u.isDeleted = 0
+            """
+            
+            params = []
+            if faculty_id:
+                query += " AND ac.user_id = ?"
+                params.append(faculty_id)
+            
+            query += " ORDER BY c.name, s.name"
+            
+            cursor.execute(query, params)
+            results = cursor.fetchall()
+            
+            courses = []
+            for row in results:
+                course_dict = dict(row)
+                courses.append(course_dict)
+            
+            conn.close()
+            return True, courses
+            
+        except Exception as e:
+            print(f"Error getting assigned courses: {e}")
+            return False, str(e)
+
+    def get_user_by_name(self, first_name, last_name, role=None):
+        """Get user details by name"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            query = """
+            SELECT u.*, s.student_number, f.employee_number, st.name as status_name
+            FROM users u
+            LEFT JOIN students s ON u.id = s.user_id
+            LEFT JOIN faculties f ON u.id = f.user_id
+            LEFT JOIN statuses st ON u.status_id = st.id
+            WHERE u.first_name = ? AND u.last_name = ?
+            """
+            
+            params = [first_name, last_name]
+            
+            if role:
+                query += " AND u.role = ?"
+                params.append(role)
+            
+            query += " AND u.isDeleted = 0 LIMIT 1"
+            
+            cursor.execute(query, params)
+            result = cursor.fetchone()
+            conn.close()
+            
+            if result:
+                return True, dict(result)
+            else:
+                return False, "User not found"
+                
+        except Exception as e:
+            print(f"Error getting user by name: {e}")
+            return False, str(e)
+
+    def get_course_enrollment_count(self, assigned_course_id):
+        """Get number of students with attendance records for a course"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT COUNT(DISTINCT user_id) as student_count
+                FROM attendance_logs
+                WHERE assigned_course_id = ?
+            """, (assigned_course_id,))
+            
+            result = cursor.fetchone()
+            conn.close()
+            
+            return result['student_count'] if result else 0
+            
+        except Exception as e:
+            print(f"Error getting course enrollment count: {e}")
+            return 0
+
+    def get_detailed_attendance_logs(self, user_id=None, assigned_course_id=None, date_from=None, date_to=None, limit=None):
+        """Get detailed attendance logs with additional information"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            query = """
+            SELECT 
+                al.*,
+                u.first_name || ' ' || u.last_name as student_name,
+                u.email as student_email,
+                s.student_number,
+                c.name as course_name,
+                sec.name as section_name,
+                p.name as program_name,
+                fu.first_name || ' ' || fu.last_name as faculty_name,
+                ac.schedule_day,
+                ac.schedule_time,
+                ac.room
+            FROM attendance_logs al
+            JOIN users u ON al.user_id = u.id
+            JOIN students s ON u.id = s.user_id
+            JOIN assigned_courses ac ON al.assigned_course_id = ac.id
+            JOIN courses c ON ac.course_id = c.id
+            JOIN sections sec ON ac.section_id = sec.id
+            JOIN programs p ON sec.program_id = p.id
+            JOIN users fu ON ac.user_id = fu.id
+            WHERE u.isDeleted = 0
+            """
+            
+            params = []
+            
+            if user_id:
+                query += " AND al.user_id = ?"
+                params.append(user_id)
+            
+            if assigned_course_id:
+                query += " AND al.assigned_course_id = ?"
+                params.append(assigned_course_id)
+            
+            if date_from:
+                query += " AND al.date >= ?"
+                params.append(date_from)
+            
+            if date_to:
+                query += " AND al.date <= ?"
+                params.append(date_to)
+            
+            query += " ORDER BY al.date DESC, al.created_at DESC"
+            
+            if limit:
+                query += f" LIMIT {limit}"
+            
+            cursor.execute(query, params)
+            results = cursor.fetchall()
+            
+            logs = [dict(row) for row in results]
+            conn.close();
+            
+            return True, logs
+            
+        except Exception as e:
+            print(f"Error getting detailed attendance logs: {e}")
+            return False, str(e)
+
+    def get_student_attendance_summary(self, user_id):
+        """Get attendance summary for a specific student"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Get attendance summary grouped by course
+            query = """
+            SELECT 
+                c.name as course_name,
+                s.name as section_name,
+                p.name as program_name,
+                COUNT(al.id) as total_classes,
+                SUM(CASE WHEN al.status = 'present' THEN 1 ELSE 0 END) as present_count,
+                SUM(CASE WHEN al.status = 'absent' THEN 1 ELSE 0 END) as absent_count,
+                SUM(CASE WHEN al.status = 'late' THEN 1 ELSE 0 END) as late_count,
+                ac.id as assigned_course_id,
+                ac.schedule_day,
+                ac.schedule_time,
+                ac.room,
+                ac.semester,
+                ac.academic_year
+            FROM attendance_logs al
+            JOIN assigned_courses ac ON al.assigned_course_id = ac.id
+            JOIN courses c ON ac.course_id = c.id
+            JOIN sections sec ON ac.section_id = sec.id
+            JOIN programs p ON sec.program_id = p.id
+            LEFT JOIN sections s ON ac.section_id = s.id
+            WHERE al.user_id = ?
+            GROUP BY ac.id, c.name, s.name, p.name
+            ORDER BY c.name, s.name
+            """
+            
+            cursor.execute(query, (user_id,))
+            results = cursor.fetchall()
+            
+            summary = []
+            for row in results:
+                summary_dict = dict(row)
+                summary.append(summary_dict)
+            
+            conn.close()
+            return True, summary
+            
+        except Exception as e:
+            print(f"Error getting student attendance summary: {e}")
+            return False, str(e)
+
+    def get_user_details(self, user_id):
+        """Get detailed user information from database for a specific user"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Get comprehensive user data with joins - handle null sections/programs
+            query = """
+            SELECT 
+                u.id, u.first_name, u.last_name, u.email, u.birthday, 
+                u.contact_number, u.role, u.face_image, u.status_id, 
+                u.verified, u.isDeleted, u.created_at, u.updated_at,
+                s.name as status_name,
+                st.student_number, st.section as section_id,
+                f.employee_number,
+                COALESCE(sec.name, '') as section_name,
+                COALESCE(p.name, '') as program_name
+            FROM users u
+            LEFT JOIN statuses s ON u.status_id = s.id
+            LEFT JOIN students st ON u.id = st.user_id
+            LEFT JOIN faculties f ON u.id = f.user_id
+            LEFT JOIN sections sec ON st.section = sec.id
+            LEFT JOIN programs p ON sec.program_id = p.id
+            WHERE u.id = ? AND u.isDeleted = 0
+            """
+            
+            cursor.execute(query, (user_id,))
+            result = cursor.fetchone()
+            
+            if not result:
+                conn.close()
+                return (False, "User not found")
+            
+            # Convert row to dictionary - handle null values properly
+            user_data = {
+                'id': result['id'],
+                'first_name': result['first_name'],
+                'last_name': result['last_name'],
+                'email': result['email'],
+                'birthday': result['birthday'],
+                'contact_number': result['contact_number'] or '',
+                'role': result['role'],
+                'face_image': result['face_image'],
+                'status_id': result['status_id'],
+                'status_name': result['status_name'] or 'No Status',
+                'verified': result['verified'],
+                'created_at': result['created_at'],
+                'updated_at': result['updated_at'],
+                'student_number': result['student_number'] if result['student_number'] else '',
+                'section_id': result['section_id'],
+                'section_name': result['section_name'] if result['section_name'] else '',
+                'employee_number': result['employee_number'] if result['employee_number'] else '',
+                'program_name': result['program_name'] if result['program_name'] else ''
+            }
+            
+            conn.close()
+            return (True, user_data)
+            
+        except Exception as e:
+            print(f"Error getting user details: {e}")
+            return (False, f"Database error: {str(e)}")
+
+    def get_programs(self):
+        """Get all available programs"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT id, name, description 
+                FROM programs 
+                ORDER BY name
+            """)
+            
+            results = cursor.fetchall()
+            programs = [dict(row) for row in results]
+            
+            conn.close()
+            return True, programs
+            
+        except Exception as e:
+            print(f"Error getting programs: {e}")
+            return False, str(e)
+
+    def get_sections(self, program_id=None):
+        """Get all sections, optionally filtered by program"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            if program_id:
+                cursor.execute("""
+                    SELECT id, name, program_id 
+                    FROM sections 
+                    WHERE program_id = ?
+                    ORDER BY name
+                """, (program_id,))
+            else:
+                cursor.execute("""
+                    SELECT s.id, s.name, s.program_id, p.name as program_name
+                    FROM sections s
+                    JOIN programs p ON s.program_id = p.id
+                    ORDER BY p.name, s.name
+                """)
+            
+            results = cursor.fetchall()
+            sections = [dict(row) for row in results]
+            
+            conn.close()
+            return True, sections
+            
+        except Exception as e:
+            print(f"Error getting sections: {e}")
+            return False, str(e)
+
+    def get_sections_by_program(self, program_id):
+        """Get sections filtered by program ID"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT id, name, program_id 
+                FROM sections 
+                WHERE program_id = ?
+                ORDER BY name
+            """, (program_id,))
+            
+            results = cursor.fetchall()
+            sections = [dict(row) for row in results]
+            
+            conn.close()
+            return True, sections
+            
+        except Exception as e:
+            print(f"Error getting sections by program: {e}")
+            return False, str(e)
+
+    def get_statuses(self, user_type=None):
+        """Get all statuses, optionally filtered by user type"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            if user_type:
+                cursor.execute("""
+                    SELECT id, name, description, user_type 
+                    FROM statuses 
+                    WHERE user_type = ?
+                    ORDER BY name
+                """, (user_type,))
+            else:
+                cursor.execute("""
+                    SELECT id, name, description, user_type 
+                    FROM statuses 
+                    ORDER BY user_type, name
+                """)
+            
+            results = cursor.fetchall()
+            statuses = [dict(row) for row in results]
+            
+            conn.close()
+            return True, statuses
+            
+        except Exception as e:
+            print(f"Error getting statuses: {e}")
+            return False, str(e)
+
+    def get_dropdown_options_for_user_type(self, user_type):
+        """Get all dropdown options for a specific user type (student/faculty)"""
+        try:
+            # Get programs
+            success_programs, programs = self.get_programs()
+            if not success_programs:
+                return False, f"Error fetching programs: {programs}"
+            
+            # Get sections  
+            success_sections, sections = self.get_sections()
+            if not success_sections:
+                return False, f"Error fetching sections: {sections}"
+            
+            # Get statuses for this user type
+            success_statuses, statuses = self.get_statuses(user_type)
+            if not success_statuses:
+                return False, f"Error fetching statuses: {statuses}"
+            
+            # Format for dropdown usage
+            dropdown_options = {
+                'programs': [{'id': p['id'], 'name': p['name'], 'abbreviation': self._get_program_abbreviation(p['name'])} for p in programs],
+                'sections': [{'id': s['id'], 'name': s['name'], 'program_id': s.get('program_id')} for s in sections],
+                'statuses': [{'id': s['id'], 'name': s['name']} for s in statuses]
+            }
+            
+            return True, dropdown_options
+            
+        except Exception as e:
+            print(f"Error getting dropdown options: {e}")
+            return False, str(e)
+
+    def _get_program_abbreviation(self, program_name):
+        """Convert program name to abbreviation"""
+        if not program_name:
+            return "N/A"
+        
+        if "Information Technology" in program_name:
+            return "BSIT"
+        elif "Computer Science" in program_name:
+            return "BSCS"  
+        elif "Information Systems" in program_name:
+            return "BSIS"
+        else:
+            # Extract abbreviation from name if possible, or return first letters
+            words = program_name.split()
+            if len(words) >= 2:
+                return ''.join([word[0].upper() for word in words])
+            return program_name[:4].upper()
+
+    def get_user_section_and_program_ids(self, user_id):
+        """Get the current section_id and program_id for a user"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT st.section as section_id, s.program_id
+                FROM students st
+                JOIN sections s ON st.section = s.id
+                WHERE st.user_id = ?
+            """, (user_id,))
+            
+            result = cursor.fetchone()
+            conn.close()
+            
+            if result:
+                return True, {'section_id': result['section_id'], 'program_id': result['program_id']}
+            else:
+                return False, "User section/program not found"
+                
+        except Exception as e:
+            print(f"Error getting user section/program: {e}")
+            return False, str(e)
+
+    def update_user(self, user_id, user_data):
+        """Update user information with comprehensive validations"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Begin transaction
+            conn.execute("BEGIN TRANSACTION")
+            
+            # Validate required fields
+            if not user_data.get('first_name') or not user_data.get('first_name').strip():
+                conn.rollback()
+                conn.close()
+                return False, "First name is required"
+            
+            if not user_data.get('last_name') or not user_data.get('last_name').strip():
+                conn.rollback()
+                conn.close()
+                return False, "Last name is required"
+            
+            if not user_data.get('email') or not user_data.get('email').strip():
+                conn.rollback()
+                conn.close()
+                return False, "Email is required"
+            
+            # Validate email format
+            import re
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            if not re.match(email_pattern, user_data['email'].strip()):
+                conn.rollback()
+                conn.close()
+                return False, "Invalid email format"
+            
+            # Check if user exists
+            cursor.execute("SELECT role FROM users WHERE id = ? AND isDeleted = 0", (user_id,))
+            user_result = cursor.fetchone()
+            if not user_result:
+                conn.rollback()
+                conn.close()
+                return False, "User not found"
+            
+            user_role = user_result['role']
+            
+            # Check if email is already used by another user
+            cursor.execute("SELECT id FROM users WHERE email = ? AND id != ? AND isDeleted = 0", 
+                          (user_data['email'].strip(), user_id))
+            if cursor.fetchone():
+                conn.rollback()
+                conn.close()
+                return False, "Email is already in use by another user"
+            
+            # Validate contact number if provided
+            contact_number = user_data.get('contact_number', '').strip()
+            if contact_number:
+                # Basic phone number validation (digits, spaces, dashes, parentheses, plus)
+                phone_pattern = r'^[\d\s\-\(\)\+]+$'
+                if not re.match(phone_pattern, contact_number) or len(contact_number.replace(' ', '').replace('-', '').replace('(', '').replace(')', '').replace('+', '')) < 10:
+                    conn.rollback()
+                    conn.close()
+                    return False, "Invalid contact number format"
+            
+            # Get status ID if status is provided
+            status_id = None
+            if user_data.get('status'):
+                cursor.execute("SELECT id FROM statuses WHERE name = ?", (user_data['status'],))
+                status_result = cursor.fetchone()
+                if status_result:
+                    status_id = status_result['id']
+                else:
+                    conn.rollback()
+                    conn.close()
+                    return False, f"Invalid status: {user_data['status']}"
+            
+            # Prepare update data
+            current_time = datetime.now().isoformat()
+            
+            # Build update query dynamically based on provided fields
+            update_fields = []
+            update_values = []
+            
+            # Always update these basic fields
+            update_fields.extend(['first_name', 'last_name', 'email', 'contact_number', 'updated_at'])
+            update_values.extend([
+                user_data['first_name'].strip(),
+                user_data['last_name'].strip(), 
+                user_data['email'].strip(),
+                contact_number,
+                current_time
+            ])
+            
+            # Update status if provided
+            if status_id:
+                update_fields.append('status_id')
+                update_values.append(status_id)
+            
+            # Update password if provided
+            if user_data.get('password'):
+                # Validate password strength
+                password = user_data['password']
+                if len(password) < 6:
+                    conn.rollback()
+                    conn.close()
+                    return False, "Password must be at least 6 characters long"
+                
+                # Hash the new password
+                hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+                update_fields.append('password_hash')
+                update_values.append(hashed_pw.decode('utf-8'))
+            
+            # Update face image if provided
+            if user_data.get('face_image'):
+                # Validate face image size (max 5MB)
+                if len(user_data['face_image']) > 5 * 1024 * 1024:
+                    conn.rollback()
+                    conn.close()
+                    return False, "Face image size exceeds 5MB limit"
+                
+                update_fields.append('face_image')
+                update_values.append(user_data['face_image'])
+            
+            # Update users table
+            update_query = f"UPDATE users SET {', '.join([f'{field} = ?' for field in update_fields])} WHERE id = ?"
+            update_values.append(user_id)
+            
+            cursor.execute(update_query, update_values)
+            
+            # Handle role-specific updates
+            if user_role == 'Student':
+                # Handle program and section updates for students
+                program_name = user_data.get('program')
+                section_name = user_data.get('section')
+                
+                # Get current student record
+                cursor.execute("SELECT section FROM students WHERE user_id = ?", (user_id,))
+                student_result = cursor.fetchone()
+                
+                if student_result:
+                    new_section_id = None
+                    
+                    # Handle program and section assignment
+                    if program_name and section_name:
+                        # Validate section assignment using database directly
+                        success, section_id_or_error = self._validate_section_assignment_direct(cursor, program_name, section_name)
+                        if success:
+                            new_section_id = section_id_or_error
+                        else:
+                            conn.rollback()
+                            conn.close()
+                            return False, section_id_or_error
+                    
+                    # Update student section (None if not assigned)
+                    cursor.execute("UPDATE students SET section = ? WHERE user_id = ?", 
+                                 (new_section_id, user_id))
+                else:
+                    conn.rollback()
+                    conn.close()
+                    return False, "Student record not found"
+            
+            elif user_role in ['Faculty', 'Admin']:
+                # Handle faculty-specific updates
+                employee_number = user_data.get('employee_number')
+                if employee_number:
+                    # Check if employee number already exists for another user
+                    cursor.execute("SELECT user_id FROM faculties WHERE employee_number = ? AND user_id != ?", 
+                                 (employee_number, user_id))
+                    if cursor.fetchone():
+                        conn.rollback()
+                        conn.close()
+                        return False, "Employee number is already in use by another faculty member"
+                
+                # Check if faculty record exists
+                cursor.execute("SELECT user_id FROM faculties WHERE user_id = ?", (user_id,))
+                faculty_result = cursor.fetchone()
+                
+                if faculty_result:
+                    # Update existing faculty record
+                    if employee_number:
+                        cursor.execute("UPDATE faculties SET employee_number = ? WHERE user_id = ?", 
+                                     (employee_number, user_id))
+                else:
+                    # Create faculty record if it doesn't exist
+                    cursor.execute("INSERT INTO faculties (user_id, employee_number) VALUES (?, ?)", 
+                                 (user_id, employee_number))
+            
+            # Commit transaction
+            conn.commit()
+            conn.close()
+            
+            print(f"Successfully updated user {user_id}: {user_data['first_name']} {user_data['last_name']}")
+            
+            return True, {
+                "message": "User updated successfully",
+                "user_id": user_id,
+                "name": f"{user_data['first_name']} {user_data['last_name']}",
+                "email": user_data['email']
+            }
+            
+        except sqlite3.Error as e:
+            if conn:
+                conn.rollback()
+                conn.close()
+            print(f"Database error during user update: {e}")
+            return False, f"Database error: {str(e)}"
+        except Exception as e:
+            if conn:
+                conn.rollback()
+                conn.close()
+            print(f"Unexpected error during user update: {e}")
+            return False, f"Update failed: {str(e)}"
+
+    def _validate_section_assignment_direct(self, cursor, program_abbreviation, section_name):
+        """Validate section assignment using database cursor directly"""
+        try:
+            # Find program by abbreviation - check multiple ways
+            program_id = None
+            
+            # Try direct name match first
+            cursor.execute("SELECT id FROM programs WHERE name = ?", (program_abbreviation,))
+            result = cursor.fetchone()
+            if result:
+                program_id = result['id']
+            else:
+                # Try partial match for common abbreviations
+                if program_abbreviation == 'BSIT':
+                    cursor.execute("SELECT id FROM programs WHERE name LIKE '%Information Technology%'")
+                elif program_abbreviation == 'BSCS':
+                    cursor.execute("SELECT id FROM programs WHERE name LIKE '%Computer Science%'")
+                elif program_abbreviation == 'BSIS':
+                    cursor.execute("SELECT id FROM programs WHERE name LIKE '%Information Systems%'")
+                else:
+                    cursor.execute("SELECT id FROM programs WHERE name LIKE ?", (f"%{program_abbreviation}%",))
+                
+                result = cursor.fetchone()
+                if result:
+                    program_id = result['id']
+            
+            if not program_id:
+                return False, f"Program '{program_abbreviation}' not found"
+            
+            # Check if section exists in this program
+            cursor.execute("SELECT id FROM sections WHERE name = ? AND program_id = ?", 
+                         (section_name, program_id))
+            section_result = cursor.fetchone()
+            
+            if section_result:
+                return True, section_result['id']
+            else:
+                return False, f"Section '{section_name}' does not belong to program '{program_abbreviation}'"
+                
+        except Exception as e:
+            return False, f"Error validating section assignment: {str(e)}"
+
+    def validate_section_assignment(self, program_abbreviation, section_name):
+        """Validate that a section belongs to the specified program"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            success, result = self._validate_section_assignment_direct(cursor, program_abbreviation, section_name)
+            conn.close()
+            
+            return success, result
+                
+        except Exception as e:
+            print(f"Error validating section assignment: {e}")
+            return False, str(e)

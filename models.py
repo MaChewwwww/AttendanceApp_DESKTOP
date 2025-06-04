@@ -5,6 +5,15 @@ from sqlalchemy.sql import func
 
 
 Base = declarative_base()
+class Status(Base):
+    __tablename__ = "statuses"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(50), nullable=False, unique=True)
+    description = Column(String(255), nullable=True)
+    user_type = Column(String(20), nullable=False)  # 'student' or 'faculty'
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -15,8 +24,10 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     contact_number = Column(String(20), nullable=False)
     role = Column(String(50), nullable=False, default="Student")
+    status_id = Column(Integer, ForeignKey("statuses.id"), nullable=True)  # Added status reference
     face_image = Column(LargeBinary, nullable=True)  # LargeBinary (LBLOB)
     verified = Column(Integer, nullable=False, default=0)  # 0 for False, 1 for True
+    isDeleted = Column(Integer, nullable=False, default=0)  # 0 for False, 1 for True
     last_verified_otp = Column(DateTime, nullable=True)  # Last OTP verification time
     last_verified_otp_expiry = Column(DateTime, nullable=True)  # Last OTP expiry time
     created_at = Column(DateTime, nullable=False, server_default=func.now())
@@ -65,7 +76,7 @@ class Section(Base):
     __tablename__ = "sections"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
-    course_id = Column(Integer, ForeignKey("programs.id"), nullable=False)
+    program_id = Column(Integer, ForeignKey("programs.id"), nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 

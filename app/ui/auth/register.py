@@ -420,12 +420,22 @@ class RegisterForm(ctk.CTkFrame):
             checkbox_width=14,
             checkbox_height=14,
             corner_radius=2,
-            border_width=1
+            border_width=1,
+            command=self._on_checkbox_click  # Add command to handle clicks
         )
         self.terms_checkbox.pack(anchor="w")
         
-        # Bind click event to open terms modal when clicking on the text
-        self.terms_checkbox.bind("<Button-1>", self._on_terms_checkbox_click)
+        # Create a clickable label overlay just for the text part (not covering checkbox)
+        terms_clickable_label = ctk.CTkLabel(
+            terms_container,
+            text="I agree to the Terms and Conditions",
+            font=ctk.CTkFont("Roboto", 10),
+            text_color="#1E3A8A",
+            cursor="hand2",
+            bg_color="transparent"
+        )
+        terms_clickable_label.place(x=20, y=0)  # Position to the right of checkbox, not covering it
+        terms_clickable_label.bind("<Button-1>", lambda e: self.open_terms_modal())
         
         # Validation Label (initially hidden) - more compact
         self.validation_label = ctk.CTkLabel(
@@ -1469,7 +1479,7 @@ class RegisterForm(ctk.CTkFrame):
         self.terms_modal = ctk.CTkToplevel(self)
         self.terms_modal.title("Terms of Use & Privacy Statement")
         self.terms_modal.geometry("700x600")  # Increased size for better readability
-        self.terms_modal.resizable(True, True)
+        self.terms_modal.resizable(False, False)  # Disable resizing to prevent fullscreen
         self.terms_modal.configure(fg_color="#ffffff")
         
         # Make modal and center it
@@ -1593,9 +1603,30 @@ By clicking "I Agree," you acknowledge that you have read, understood, and agree
         button_frame.pack(fill="x", padx=20, pady=(0, 20))
         button_frame.pack_propagate(False)
         
-        # Agree button (centered)
+        # Button container for side-by-side layout
+        button_container = ctk.CTkFrame(button_frame, fg_color="transparent")
+        button_container.pack(anchor="center")
+        
+        # I Decline button (left)
+        decline_button = ctk.CTkButton(
+            button_container,
+            text="I Decline",
+            width=120,
+            height=35,
+            corner_radius=8,
+            font=ctk.CTkFont("Roboto", 12, "bold"),
+            fg_color="transparent",
+            text_color="#666666",
+            border_width=1,
+            border_color="#d1d1d1",
+            hover_color="#f5f5f5",
+            command=self.decline_terms
+        )
+        decline_button.pack(side="left", padx=(0, 10))
+        
+        # I Agree button (right)
         agree_button = ctk.CTkButton(
-            button_frame,
+            button_container,
             text="I Agree",
             width=120,
             height=35,
@@ -1605,14 +1636,35 @@ By clicking "I Agree," you acknowledge that you have read, understood, and agree
             hover_color="#152a63",
             command=self.agree_to_terms
         )
-        agree_button.pack(anchor="center")
+        agree_button.pack(side="left")
         
         # Handle modal close
-        self.terms_modal.protocol("WM_DELETE_WINDOW", self.close_terms_modal)
+        self.terms_modal.protocol("WM_DELETE_WINDOW", self.decline_terms)
+
+    def _on_checkbox_click(self):
+        """Handle checkbox click - always open modal and revert state"""
+        # Store current state before opening modal
+        current_state = self.terms_checkbox.get()
+        
+        # Revert the checkbox state immediately (since click already changed it)
+        if current_state:
+            self.terms_checkbox.deselect()
+        else:
+            self.terms_checkbox.select()
+        
+        # Open the terms modal
+        self.open_terms_modal()
+
+    def decline_terms(self):
+        """Handle declining terms - ensure checkbox remains unchecked and close modal"""
+        # Ensure checkbox is unchecked
+        self.terms_checkbox.deselect()
+        self.close_terms_modal()
 
     def agree_to_terms(self):
         """Handle agreeing to terms - check the checkbox and close modal"""
-        self.terms_checkbox.select()  # Check the checkbox
+        # Simply select the checkbox (no need to temporarily enable/disable)
+        self.terms_checkbox.select()
         self.close_terms_modal()
     
     def close_terms_modal(self):
@@ -1622,14 +1674,7 @@ By clicking "I Agree," you acknowledge that you have read, understood, and agree
             self.terms_modal = None
 
     def _on_terms_checkbox_click(self, event):
-        """Handle clicking on terms checkbox - open modal if clicking on text area"""
-        # Get the click position relative to the checkbox widget
-        x = event.x
-        
-        # If click is beyond the checkbox itself (i.e., on the text), open terms modal
-        # Checkbox is about 14px wide, so clicks beyond x=20 are likely on text
-        if x > 20:
-            # Prevent the checkbox from toggling
-            self.after(1, lambda: self.terms_checkbox.deselect() if self.terms_checkbox.get() else self.terms_checkbox.select())
-            # Open terms modal
-            self.open_terms_modal()
+        """Handle clicking on terms checkbox - always open modal"""
+        # Always open terms modal regardless of click position
+        self.open_terms_modal()
+

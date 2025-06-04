@@ -92,7 +92,14 @@ The `.env.example` file is just a template. Your actual configuration must be in
 python create_db.py
 ```
 
-### 7. Run the Application
+### 7. Seed Initial Users (Optional but Recommended)
+```bash
+python create_seed_users.py
+```
+
+This will create default admin and test users for easier setup and testing.
+
+### 8. Run the Application
 ```bash
 python main.py
 ```

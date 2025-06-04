@@ -51,7 +51,7 @@ def seed_admin_users():
             "email": "admin@iskolarngbayan.pup.edu.ph",
             "birthday": date(1985, 5, 15),
             "password_hash": bcrypt.hashpw("admin123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
-            "contact_number": "admin123",
+            "contact_number": "09947561810",
             "role": "Admin",
             "verified": 1,  # Admin is automatically verified
             "created_at": datetime.now(),
