@@ -47,7 +47,19 @@ class ProgramsView(ctk.CTkFrame):
             menu_btn.place(relx=1.0, rely=0.0, anchor="ne", x=-8, y=8)
 
         # Floating '+' button (bottom right)
-        plus_btn = ctk.CTkButton(self, text="+", width=56, height=56, corner_radius=28, fg_color="#1E3A8A", text_color="#fff", font=ctk.CTkFont(size=32, weight="bold"), hover_color="#274690", border_width=0, command=self.create_program)
+        plus_btn = ctk.CTkButton(
+            self,
+            text="+",
+            width=56,
+            height=56,
+            corner_radius=28,  # Half of width/height
+            fg_color="#1E3A8A",
+            text_color="#fff",
+            font=ctk.CTkFont(size=32, weight="bold"),
+            hover_color="#274690",
+            border_width=0,
+            command=self.create_program
+        )
         plus_btn.place(relx=1.0, rely=1.0, anchor="se", x=-32, y=-32)
 
     def show_card_menu(self, card, btn=None):
