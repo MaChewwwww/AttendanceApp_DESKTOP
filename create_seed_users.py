@@ -31,14 +31,20 @@ def seed_programs_and_courses():
         programs_data = [
             {
                 'name': 'Bachelor of Science in Information Technology',
+                'acronym': 'BSIT',
+                'code': 'IT-001',
                 'description': 'BSIT - A comprehensive program focusing on information technology and computer systems'
             },
             {
                 'name': 'Bachelor of Science in Computer Science',
+                'acronym': 'BSCS',
+                'code': 'CS-001',
                 'description': 'BSCS - A program emphasizing theoretical foundations of computation and practical software engineering'
             },
             {
                 'name': 'Bachelor of Science in Information Systems',
+                'acronym': 'BSIS',
+                'code': 'IS-001',
                 'description': 'BSIS - A program combining business processes with information technology solutions'
             }
         ]
@@ -56,13 +62,13 @@ def seed_programs_and_courses():
             
             current_time = datetime.now().isoformat()
             cursor.execute("""
-                INSERT INTO programs (name, description, created_at, updated_at)
-                VALUES (?, ?, ?, ?)
-            """, (program_data['name'], program_data['description'], current_time, current_time))
+                INSERT INTO programs (name, acronym, code, description, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (program_data['name'], program_data['acronym'], program_data['code'], program_data['description'], current_time, current_time))
             
             program_id = cursor.lastrowid
             program_ids[program_data['name']] = program_id
-            logger.info(f"Created program: {program_data['name']} (ID: {program_id})")
+            logger.info(f"Created program: {program_data['name']} ({program_data['acronym']}) - Code: {program_data['code']} (ID: {program_id})")
         
         # Courses data for each program
         courses_data = [

@@ -59,6 +59,8 @@ class Program(Base):
     __tablename__ = "programs"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
+    acronym = Column(String(50), nullable=False, unique=True) 
+    code = Column(String(50), nullable=False, unique=True) 
     description = Column(String(255), nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
