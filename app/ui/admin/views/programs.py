@@ -5,40 +5,58 @@ from app.ui.admin.components.modals import DeleteModal, SuccessModal
 from .programs_add import CreateProgramPopup
 from .programs_edit import EditProgramPopup
 from .programs_view import ViewProgramPopup
+from PIL import Image
+import os
 
 class ProgramsView(ctk.CTkFrame):
     def __init__(self, parent):
         super().__init__(parent, fg_color="transparent")
         self._open_menu = None  # Track open menu widget
         self._open_menu_card = None  # Track which card the menu is for
-        self.programs_data = self.load_programs_data()  # TODO: Load from backend
+        self.programs_data = self.load_programs_data()
         self.setup_ui()
 
     def load_programs_data(self):
-        # TODO: Replace with actual backend call
-        return [
-            {
-                'id': 1,
-                'name': 'Bachelor of Science in Information Technology',
-                'acronym': 'BSIT',
-                'code': 'IT-001',
-                'description': 'A comprehensive program focusing on information technology and computer systems'
-            },
-            {
-                'id': 2,
-                'name': 'Bachelor of Science in Business Administration',
-                'acronym': 'BSBA',
-                'code': 'BA-001',
-                'description': 'Business administration and management program'
-            },
-            {
-                'id': 3,
-                'name': 'Bachelor of Technology and Livelihood Education',
-                'acronym': 'BTLED ICT',
-                'code': 'TLE-001',
-                'description': 'Technology and livelihood education with ICT focus'
-            }
-        ]
+        # Load from database instead of hardcoded data
+        try:
+            from app.db_manager import DatabaseManager
+            db = DatabaseManager()
+            success, programs = db.get_programs()
+            
+            if success:
+                return programs
+            else:
+                print(f"Error loading programs: {programs}")
+                return []
+        except Exception as e:
+            print(f"Error loading programs data: {e}")
+            # Fallback to hardcoded data if database fails
+            return [
+                {
+                    'id': 1,
+                    'name': 'Bachelor of Science in Information Technology',
+                    'acronym': 'BSIT',
+                    'code': 'IT-001',
+                    'description': 'A comprehensive program focusing on information technology and computer systems',
+                    'color': '#3B82F6'  # Blue
+                },
+                {
+                    'id': 2,
+                    'name': 'Bachelor of Science in Computer Science',
+                    'acronym': 'BSCS',
+                    'code': 'CS-001',
+                    'description': 'A program emphasizing theoretical foundations of computation and practical software engineering',
+                    'color': '#10B981'  # Green
+                },
+                {
+                    'id': 3,
+                    'name': 'Bachelor of Science in Information Systems',
+                    'acronym': 'BSIS',
+                    'code': 'IS-001',
+                    'description': 'A program combining business processes with information technology solutions',
+                    'color': '#F59E0B'  # Orange
+                }
+            ]
 
     def setup_ui(self):
         # Top bar for the DateTimePill
@@ -74,6 +92,9 @@ class ProgramsView(ctk.CTkFrame):
             
             # Store program data in card for reference
             card.program_data = program
+            
+            # Add program image or placeholder
+            self._add_program_image(card, program)
             
             # Program acronym at the bottom
             ctk.CTkLabel(
@@ -113,6 +134,41 @@ class ProgramsView(ctk.CTkFrame):
             command=self.create_program
         )
         plus_btn.place(relx=1.0, rely=1.0, anchor="se", x=-32, y=-32)
+
+    def _add_program_image(self, card, program):
+        """Add program color background or placeholder to card"""
+        try:
+            color = program.get('color', '#6B7280')  # Default gray if no color
+            
+            # Create a colored frame as background
+            color_frame = ctk.CTkFrame(
+                card, 
+                fg_color=color,
+                width=120, 
+                height=80, 
+                corner_radius=8
+            )
+            color_frame.pack(pady=(16, 8))
+            
+            # Add program acronym on the colored background
+            acronym_label = ctk.CTkLabel(
+                color_frame,
+                text=program.get('acronym', '?'),
+                font=ctk.CTkFont(size=16, weight="bold"),
+                text_color="white"
+            )
+            acronym_label.place(relx=0.5, rely=0.5, anchor="center")
+                
+        except Exception as e:
+            print(f"Error creating color background for {program.get('name', 'Unknown')}: {e}")
+            # Fallback to emoji placeholder
+            fallback_label = ctk.CTkLabel(
+                card, 
+                text="📚", 
+                font=ctk.CTkFont(size=40), 
+                text_color="#666"
+            )
+            fallback_label.pack(pady=(16, 8))
 
     def show_card_menu(self, card):
         # Toggle: if menu is open for this card, close it

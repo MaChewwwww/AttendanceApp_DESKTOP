@@ -62,6 +62,7 @@ class Program(Base):
     acronym = Column(String(50), nullable=False, unique=True) 
     code = Column(String(50), nullable=False, unique=True) 
     description = Column(String(255), nullable=True)
+    color = Column(String(7), nullable=True)  # Hex color code like #FF5733
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
