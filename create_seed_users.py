@@ -1001,7 +1001,7 @@ if __name__ == "__main__":
     print("Seeding database with sample users...")
     success = seed_users()
     if success:
-        print("\n✅ Database seeded successfully!")
+        print("\nDatabase seeded successfully!")
     else:
-        print("\n❌ Failed to seed database!")
+        print("\nFailed to seed database!")
         exit(1)

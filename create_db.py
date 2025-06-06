@@ -82,8 +82,8 @@ def seed_statuses(db_path):
         conn.commit()
         conn.close()
         
-        logger.info("✓ Status data seeded successfully")
-        print("✓ Status data seeded successfully")
+        logger.info("Status data seeded successfully")
+        print("Status data seeded successfully")
         
         # Show seeded statuses
         conn = sqlite3.connect(db_path)
@@ -103,8 +103,8 @@ def seed_statuses(db_path):
         return True
         
     except Exception as e:
-        logger.error(f"✗ Error seeding statuses: {e}")
-        print(f"✗ Error seeding statuses: {e}")
+        logger.error(f"Error seeding statuses: {e}")
+        print(f"Error seeding statuses: {e}")
         return False
 
 def create_superadmin(db_path):
@@ -122,9 +122,9 @@ def create_superadmin(db_path):
         current_time = datetime.now().isoformat()
         
         # Check if superadmin already exists
-        cursor.execute("SELECT id FROM users WHERE email = ?", ("admin@university.edu",))
+        cursor.execute("SELECT id FROM users WHERE email = ?", ("admin@iskolarngbayan.pup.edu.ph",))
         if cursor.fetchone():
-            print("✓ Superadmin already exists")
+            print("Superadmin already exists")
             conn.close()
             return True
         
@@ -155,16 +155,16 @@ def create_superadmin(db_path):
         conn.commit()
         conn.close()
         
-        logger.info("✓ Superadmin created successfully")
-        print("✓ Superadmin created successfully")
+        logger.info("Superadmin created successfully")
+        print("Superadmin created successfully")
         print("  Email: admin@iskolarngbayan.pup.edu.ph")
         print("  Password: admin123")
         
         return True
         
     except Exception as e:
-        logger.error(f"✗ Error creating superadmin: {e}")
-        print(f"✗ Error creating superadmin: {e}")
+        logger.error(f"Error creating superadmin: {e}")
+        print(f"Error creating superadmin: {e}")
         return False
 
 # Delete the database file if it exists
@@ -224,20 +224,20 @@ import time
 time.sleep(1)
 
 # Seed status data
-print("\n🌱 Seeding status data...")
+print("\nSeeding status data...")
 if seed_statuses(DB_PATH):
-    print("✅ Status seeding completed successfully")
+    print("Status seeding completed successfully")
 else:
-    print("❌ Status seeding failed")
+    print("Status seeding failed")
 
 # Create superadmin
-print("\n👤 Creating superadmin...")
+print("\nCreating superadmin...")
 if create_superadmin(DB_PATH):
-    print("✅ Superadmin creation completed successfully")
+    print("Superadmin creation completed successfully")
 else:
-    print("❌ Superadmin creation failed")
+    print("Superadmin creation failed")
 
-print("\n🎉 Database initialization completed!")
+print("\nDatabase initialization completed!")
 print("\nYour clean database is ready with:")
 print("- Status tables for students and faculty")
 print("- Superadmin account (admin@iskolarngbayan.pup.edu.ph / admin123)")
