@@ -38,7 +38,9 @@ class ProgramsView(ctk.CTkFrame):
                     'acronym': 'BSIT',
                     'code': 'IT-001',
                     'description': 'A comprehensive program focusing on information technology and computer systems',
-                    'color': '#3B82F6'  # Blue
+                    'color': '#3B82F6',
+                    'created_at': '2024-01-01T00:00:00',
+                    'updated_at': '2024-01-01T00:00:00'
                 },
                 {
                     'id': 2,
@@ -46,7 +48,9 @@ class ProgramsView(ctk.CTkFrame):
                     'acronym': 'BSCS',
                     'code': 'CS-001',
                     'description': 'A program emphasizing theoretical foundations of computation and practical software engineering',
-                    'color': '#10B981'  # Green
+                    'color': '#10B981',
+                    'created_at': '2024-01-01T00:00:00',
+                    'updated_at': '2024-01-01T00:00:00'
                 },
                 {
                     'id': 3,
@@ -54,7 +58,9 @@ class ProgramsView(ctk.CTkFrame):
                     'acronym': 'BSIS',
                     'code': 'IS-001',
                     'description': 'A program combining business processes with information technology solutions',
-                    'color': '#F59E0B'  # Orange
+                    'color': '#F59E0B',
+                    'created_at': '2024-01-01T00:00:00',
+                    'updated_at': '2024-01-01T00:00:00'
                 }
             ]
 
@@ -99,7 +105,7 @@ class ProgramsView(ctk.CTkFrame):
             # Program acronym at the bottom
             ctk.CTkLabel(
                 card, 
-                text=program['acronym'], 
+                text=program.get('acronym', 'N/A'), 
                 font=ctk.CTkFont(size=13, weight="bold"), 
                 text_color="#222"
             ).pack(side="bottom", anchor="w", padx=16, pady=12)
@@ -149,6 +155,7 @@ class ProgramsView(ctk.CTkFrame):
                 corner_radius=8
             )
             color_frame.pack(pady=(16, 8))
+            color_frame.pack_propagate(False)  # Prevent frame from resizing
             
             # Add program acronym on the colored background
             acronym_label = ctk.CTkLabel(

@@ -1359,7 +1359,7 @@ class DatabaseManager:
             cursor = conn.cursor()
             
             cursor.execute("""
-                SELECT id, name, description 
+                SELECT id, name, description, acronym, color
                 FROM programs 
                 ORDER BY name
             """)
