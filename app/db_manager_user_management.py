@@ -773,3 +773,221 @@ class DatabaseUserManager:
         except Exception as e:
             print(f"Error getting student attendance summary: {e}")
             return False, str(e)
+
+    def get_programs(self):
+        """Get all available programs"""
+        try:
+            conn = self.db_manager.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT id, name, description, acronym, color
+                FROM programs 
+                WHERE isDeleted = 0
+                ORDER BY name
+            """)
+            
+            results = cursor.fetchall()
+            programs = [dict(row) for row in results]
+            
+            conn.close()
+            return True, programs
+            
+        except Exception as e:
+            print(f"Error getting programs: {e}")
+            return False, str(e)
+
+    def get_sections(self, program_id=None):
+        """Get all sections, optionally filtered by program"""
+        try:
+            conn = self.db_manager.get_connection()
+            cursor = conn.cursor()
+            
+            if program_id:
+                cursor.execute("""
+                    SELECT id, name, program_id 
+                    FROM sections 
+                    WHERE program_id = ?
+                    ORDER BY name
+                """, (program_id,))
+            else:
+                cursor.execute("""
+                    SELECT s.id, s.name, s.program_id, p.name as program_name
+                    FROM sections s
+                    JOIN programs p ON s.program_id = p.id
+                    ORDER BY p.name, s.name
+                """)
+            
+            results = cursor.fetchall()
+            sections = [dict(row) for row in results]
+            
+            conn.close()
+            return True, sections
+            
+        except Exception as e:
+            print(f"Error getting sections: {e}")
+            return False, str(e)
+
+    def get_sections_all(self):
+        """Get all sections from all programs"""
+        try:
+            conn = self.db_manager.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT s.id, s.name, s.created_at, s.updated_at, p.name as program_name
+                FROM sections s
+                JOIN programs p ON s.program_id = p.id
+                WHERE p.isDeleted = 0
+                ORDER BY p.name ASC, s.name ASC
+            """)
+            
+            sections = cursor.fetchall()
+            conn.close()
+            
+            # Convert to list of dictionaries
+            section_list = []
+            for section in sections:
+                section_dict = {
+                    'id': section[0],
+                    'name': section[1],
+                    'created_at': section[2],
+                    'updated_at': section[3],
+                    'program_name': section[4]
+                }
+                section_list.append(section_dict)
+            
+            return True, section_list
+            
+        except Exception as e:
+            print(f"Exception in get_sections_all: {e}")
+            import traceback
+            traceback.print_exc()
+            return False, str(e)
+
+    def get_sections_by_program(self, program_name):
+        """Get all sections for a specific program by program name"""
+        try:
+            conn = self.db_manager.get_connection()
+            cursor = conn.cursor()
+            
+            # Check if the program exists
+            cursor.execute("SELECT id FROM programs WHERE name = ? AND isDeleted = 0", (program_name,))
+            program_result = cursor.fetchone()
+            
+            if not program_result:
+                conn.close()
+                return True, []  # Return empty list but success=True
+            
+            program_id = program_result[0]
+            
+            # Now get sections for this program
+            cursor.execute("""
+                SELECT s.id, s.name, s.created_at, s.updated_at, p.name as program_name
+                FROM sections s
+                JOIN programs p ON s.program_id = p.id
+                WHERE s.program_id = ? 
+                ORDER BY s.name ASC
+            """, (program_id,))
+            
+            sections = cursor.fetchall()
+            conn.close()
+            
+            # Convert to list of dictionaries
+            section_list = []
+            for section in sections:
+                section_dict = {
+                    'id': section[0],
+                    'name': section[1],
+                    'created_at': section[2],
+                    'updated_at': section[3],
+                    'program_name': section[4]
+                }
+                section_list.append(section_dict)
+            
+            return True, section_list
+            
+        except Exception as e:
+            print(f"Exception in get_sections_by_program: {e}")
+            import traceback
+            traceback.print_exc()
+            return False, str(e)
+
+    def get_statuses(self, user_type=None):
+        """Get all statuses, optionally filtered by user type"""
+        try:
+            conn = self.db_manager.get_connection()
+            cursor = conn.cursor()
+            
+            if user_type:
+                cursor.execute("""
+                    SELECT id, name, description, user_type 
+                    FROM statuses 
+                    WHERE user_type = ?
+                    ORDER BY name
+                """, (user_type,))
+            else:
+                cursor.execute("""
+                    SELECT id, name, description, user_type 
+                    FROM statuses 
+                    ORDER BY user_type, name
+                """)
+            
+            results = cursor.fetchall()
+            statuses = [dict(row) for row in results]
+            
+            conn.close()
+            return True, statuses
+            
+        except Exception as e:
+            print(f"Error getting statuses: {e}")
+            return False, str(e)
+
+    def get_dropdown_options_for_user_type(self, user_type):
+        """Get all dropdown options for a specific user type (student/faculty)"""
+        try:
+            # Get programs
+            success_programs, programs = self.get_programs()
+            if not success_programs:
+                return False, f"Error fetching programs: {programs}"
+            
+            # Get sections  
+            success_sections, sections = self.get_sections()
+            if not success_sections:
+                return False, f"Error fetching sections: {sections}"
+            
+            # Get statuses for this user type
+            success_statuses, statuses = self.get_statuses(user_type)
+            if not success_statuses:
+                return False, f"Error fetching statuses: {statuses}"
+            
+            # Format for dropdown usage
+            dropdown_options = {
+                'programs': [{'id': p['id'], 'name': p['name'], 'abbreviation': self._get_program_abbreviation(p['name'])} for p in programs],
+                'sections': [{'id': s['id'], 'name': s['name'], 'program_id': s.get('program_id')} for s in sections],
+                'statuses': [{'id': s['id'], 'name': s['name']} for s in statuses]
+            }
+            
+            return True, dropdown_options
+            
+        except Exception as e:
+            print(f"Error getting dropdown options: {e}")
+            return False, str(e)
+
+    def _get_program_abbreviation(self, program_name):
+        """Convert program name to abbreviation"""
+        if not program_name:
+            return "N/A"
+        
+        if "Information Technology" in program_name:
+            return "BSIT"
+        elif "Computer Science" in program_name:
+            return "BSCS"  
+        elif "Information Systems" in program_name:
+            return "BSIS"
+        else:
+            # Extract abbreviation from name if possible, or return first letters
+            words = program_name.split()
+            if len(words) >= 2:
+                return ''.join([word[0].upper() for word in words])
+            return program_name[:4].upper()

@@ -13,7 +13,8 @@ from .users_view import UsersViewModal
 from .users_edit import UsersEditModal
 from .users_delete import UsersDeleteModal
 from .users_add import UsersAddModal
-from .users_modals import FacialRecognitionPopup
+from .modals import FacialRecognitionPopup
+from .users_filter_selection import FilterSectionFactory
 
 class FilterPopup(ctk.CTkToplevel):
     def __init__(self, parent, user_type="student"):
@@ -54,127 +55,15 @@ class FilterPopup(ctk.CTkToplevel):
         filter_frame = ctk.CTkFrame(self, fg_color="transparent")
         filter_frame.pack(fill="both", expand=True, padx=20, pady=10)
         
-        # Initialize filter variables
-        self.filters = {}
-        
         # Get current filter values from parent
         current_filters = self.parent_view.current_filters.get(self.user_type, {})
         
-        if self.user_type == "student":
-            # Year filter
-            ctk.CTkLabel(filter_frame, text="Year", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
-            year_var = tk.StringVar(value=current_filters.get('year', 'All'))
-            self.filters['year'] = year_var
-            year_options = ["All", "1st Year", "2nd Year", "3rd Year", "4th Year"]
-            year_menu = ctk.CTkOptionMenu(
-                filter_frame,
-                values=year_options,
-                variable=year_var,
-                fg_color="#F3F4F6",
-                text_color="#222",
-                button_color="#E5E7EB",
-                button_hover_color="#D1D5DB",
-                dropdown_fg_color="#fff",
-                dropdown_hover_color="#E5E7EB",
-                dropdown_text_color="#222"
-            )
-            year_menu.pack(fill="x", pady=(0, 15))
-            
-            # Section filter
-            ctk.CTkLabel(filter_frame, text="Section", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
-            section_var = tk.StringVar(value=current_filters.get('section', 'All'))
-            self.filters['section'] = section_var
-            section_options = ["All", "1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"]
-            section_menu = ctk.CTkOptionMenu(
-                filter_frame,
-                values=section_options,
-                variable=section_var,
-                fg_color="#F3F4F6",
-                text_color="#222",
-                button_color="#E5E7EB",
-                button_hover_color="#D1D5DB",
-                dropdown_fg_color="#fff",
-                dropdown_hover_color="#E5E7EB",
-                dropdown_text_color="#222"
-            )
-            section_menu.pack(fill="x", pady=(0, 15))
-            
-            # Programs filter
-            ctk.CTkLabel(filter_frame, text="Programs", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
-            programs_var = tk.StringVar(value=current_filters.get('program', 'All'))
-            self.filters['program'] = programs_var
-            programs_options = ["All", "BSIT", "BSCS", "BSIS"]
-            programs_menu = ctk.CTkOptionMenu(
-                filter_frame,
-                values=programs_options,
-                variable=programs_var,
-                fg_color="#F3F4F6",
-                text_color="#222",
-                button_color="#E5E7EB",
-                button_hover_color="#D1D5DB",
-                dropdown_fg_color="#fff",
-                dropdown_hover_color="#E5E7EB",
-                dropdown_text_color="#222"
-            )
-            programs_menu.pack(fill="x", pady=(0, 15))
-            
-            # Status filter
-            ctk.CTkLabel(filter_frame, text="Status", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
-            status_var = tk.StringVar(value=current_filters.get('status', 'All'))
-            self.filters['status'] = status_var
-            status_options = ["All", "Enrolled", "Graduated", "Dropout", "On Leave", "Suspended"]
-            status_menu = ctk.CTkOptionMenu(
-                filter_frame,
-                values=status_options,
-                variable=status_var,
-                fg_color="#F3F4F6",
-                text_color="#222",
-                button_color="#E5E7EB",
-                button_hover_color="#D1D5DB",
-                dropdown_fg_color="#fff",
-                dropdown_hover_color="#E5E7EB",
-                dropdown_text_color="#222"
-            )
-            status_menu.pack(fill="x", pady=(0, 15))
-        
-        else:
-            # Role filter
-            ctk.CTkLabel(filter_frame, text="Role", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
-            role_var = tk.StringVar(value=current_filters.get('role', 'All'))
-            self.filters['role'] = role_var
-            role_options = ["All", "Faculty", "Admin"]
-            role_menu = ctk.CTkOptionMenu(
-                filter_frame,
-                values=role_options,
-                variable=role_var,
-                fg_color="#F3F4F6",
-                text_color="#222",
-                button_color="#E5E7EB",
-                button_hover_color="#D1D5DB",
-                dropdown_fg_color="#fff",
-                dropdown_hover_color="#E5E7EB",
-                dropdown_text_color="#222"
-            )
-            role_menu.pack(fill="x", pady=(0, 15))
-            
-            # Status filter
-            ctk.CTkLabel(filter_frame, text="Status", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
-            status_var = tk.StringVar(value=current_filters.get('status', 'All'))
-            self.filters['status'] = status_var
-            status_options = ["All", "Active", "Inactive", "Retired", "Probationary", "Tenure Track", "Tenured"]
-            status_menu = ctk.CTkOptionMenu(
-                filter_frame,
-                values=status_options,
-                variable=status_var,
-                fg_color="#F3F4F6",
-                text_color="#222",
-                button_color="#E5E7EB",
-                button_hover_color="#D1D5DB",
-                dropdown_fg_color="#fff",
-                dropdown_hover_color="#E5E7EB",
-                dropdown_text_color="#222"
-            )
-            status_menu.pack(fill="x", pady=(0, 15))
+        # Create filter section using factory
+        self.filter_section = FilterSectionFactory.create_filter_section(
+            self.user_type, 
+            filter_frame, 
+            current_filters
+        )
         
         # Buttons
         button_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -201,7 +90,9 @@ class FilterPopup(ctk.CTkToplevel):
     def apply_filters(self):
         """Apply filters and update the parent view"""
         filter_values = {}
-        for key, var in self.filters.items():
+        filters = self.filter_section.get_filter_values()
+        
+        for key, var in filters.items():
             value = var.get()
             if value != "All":
                 filter_values[key] = value
@@ -212,7 +103,8 @@ class FilterPopup(ctk.CTkToplevel):
     
     def reset_filters(self):
         """Reset all filters to default values"""
-        for var in self.filters.values():
+        filters = self.filter_section.get_filter_values()
+        for var in filters.values():
             var.set("All")
         
         # Apply reset filters
@@ -634,7 +526,11 @@ class UsersView(ctk.CTkFrame):
                     section_name = student['section_name']
                     if '-' in section_name:
                         year_num = section_name.split('-')[0]
-                        year_mapping = {'1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year'}
+                        year_mapping = {
+                            '1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year',
+                            '5': '5th Year', '6': '6th Year', '7': '7th Year', '8': '8th Year',
+                            '9': '9th Year', '10': '10th Year'
+                        }
                         year_display = year_mapping.get(year_num, "N/A")
                 
                 data_to_display.append({

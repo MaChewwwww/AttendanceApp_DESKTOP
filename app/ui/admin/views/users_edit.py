@@ -1056,7 +1056,7 @@ class UsersEditModal(ctk.CTkToplevel):
             print('Changes saved!')
             # Place your save logic here
         
-        from .users_modals import CautionModal
+        from .modals import CautionModal
         CautionModal(self, on_continue=on_continue)
 
     def save_changes(self):

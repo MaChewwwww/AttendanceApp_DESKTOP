@@ -126,156 +126,22 @@ class DatabaseManager:
         return self.users.get_student_attendance_summary(user_id)
 
     def get_programs(self):
-        """Get all available programs"""
-        try:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-                SELECT id, name, description, acronym, color
-                FROM programs 
-                ORDER BY name
-            """)
-            
-            results = cursor.fetchall()
-            programs = [dict(row) for row in results]
-            
-            conn.close()
-            return True, programs
-            
-        except Exception as e:
-            print(f"Error getting programs: {e}")
-            return False, str(e)
+        return self.users.get_programs()
 
     def get_sections(self, program_id=None):
-        """Get all sections, optionally filtered by program"""
-        try:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-            
-            if program_id:
-                cursor.execute("""
-                    SELECT id, name, program_id 
-                    FROM sections 
-                    WHERE program_id = ?
-                    ORDER BY name
-                """, (program_id,))
-            else:
-                cursor.execute("""
-                    SELECT s.id, s.name, s.program_id, p.name as program_name
-                    FROM sections s
-                    JOIN programs p ON s.program_id = p.id
-                    ORDER BY p.name, s.name
-                """)
-            
-            results = cursor.fetchall()
-            sections = [dict(row) for row in results]
-            
-            conn.close()
-            return True, sections
-            
-        except Exception as e:
-            print(f"Error getting sections: {e}")
-            return False, str(e)
+        return self.users.get_sections(program_id)
 
-    def get_sections_by_program(self, program_id):
-        """Get sections filtered by program ID"""
-        try:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-                SELECT id, name, program_id 
-                FROM sections 
-                WHERE program_id = ?
-                ORDER BY name
-            """, (program_id,))
-            
-            results = cursor.fetchall()
-            sections = [dict(row) for row in results]
-            
-            conn.close()
-            return True, sections
-            
-        except Exception as e:
-            print(f"Error getting sections by program: {e}")
-            return False, str(e)
+    def get_sections_all(self):
+        return self.users.get_sections_all()
+
+    def get_sections_by_program(self, program_name):
+        return self.users.get_sections_by_program(program_name)
 
     def get_statuses(self, user_type=None):
-        """Get all statuses, optionally filtered by user type"""
-        try:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-            
-            if user_type:
-                cursor.execute("""
-                    SELECT id, name, description, user_type 
-                    FROM statuses 
-                    WHERE user_type = ?
-                    ORDER BY name
-                """, (user_type,))
-            else:
-                cursor.execute("""
-                    SELECT id, name, description, user_type 
-                    FROM statuses 
-                    ORDER BY user_type, name
-                """)
-            
-            results = cursor.fetchall()
-            statuses = [dict(row) for row in results]
-            
-            conn.close()
-            return True, statuses
-            
-        except Exception as e:
-            print(f"Error getting statuses: {e}")
-            return False, str(e)
+        return self.users.get_statuses(user_type)
 
     def get_dropdown_options_for_user_type(self, user_type):
-        """Get all dropdown options for a specific user type (student/faculty)"""
-        try:
-            # Get programs
-            success_programs, programs = self.get_programs()
-            if not success_programs:
-                return False, f"Error fetching programs: {programs}"
-            
-            # Get sections  
-            success_sections, sections = self.get_sections()
-            if not success_sections:
-                return False, f"Error fetching sections: {sections}"
-            
-            # Get statuses for this user type
-            success_statuses, statuses = self.get_statuses(user_type)
-            if not success_statuses:
-                return False, f"Error fetching statuses: {statuses}"
-            
-            # Format for dropdown usage
-            dropdown_options = {
-                'programs': [{'id': p['id'], 'name': p['name'], 'abbreviation': self._get_program_abbreviation(p['name'])} for p in programs],
-                'sections': [{'id': s['id'], 'name': s['name'], 'program_id': s.get('program_id')} for s in sections],
-                'statuses': [{'id': s['id'], 'name': s['name']} for s in statuses]
-            }
-            
-            return True, dropdown_options
-            
-        except Exception as e:
-            print(f"Error getting dropdown options: {e}")
-            return False, str(e)
+        return self.users.get_dropdown_options_for_user_type(user_type)
 
     def _get_program_abbreviation(self, program_name):
-        """Convert program name to abbreviation"""
-        if not program_name:
-            return "N/A"
-        
-        if "Information Technology" in program_name:
-            return "BSIT"
-        elif "Computer Science" in program_name:
-            return "BSCS"  
-        elif "Information Systems" in program_name:
-            return "BSIS"
-        else:
-            # Extract abbreviation from name if possible, or return first letters
-            words = program_name.split()
-            if len(words) >= 2:
-                return ''.join([word[0].upper() for word in words])
-            return program_name[:4].upper()
+        return self.users._get_program_abbreviation(program_name)

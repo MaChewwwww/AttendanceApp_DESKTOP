@@ -65,9 +65,9 @@ def seed_programs_and_courses():
             
             current_time = datetime.now().isoformat()
             cursor.execute("""
-                INSERT INTO programs (name, acronym, code, description, color, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (program_data['name'], program_data['acronym'], program_data['code'], program_data['description'], program_data['color'], current_time, current_time))
+                INSERT INTO programs (name, acronym, code, description, color, isDeleted, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (program_data['name'], program_data['acronym'], program_data['code'], program_data['description'], program_data['color'], 0, current_time, current_time))
             
             program_id = cursor.lastrowid
             program_ids[program_data['name']] = program_id

@@ -91,7 +91,7 @@ class UsersDeleteModal(ctk.CTkToplevel):
         """Show success modal after deletion"""
         # Perform the actual deletion first
         if self.delete_user():
-            from .users_modals import SuccessModal
+            from .modals import SuccessModal
             SuccessModal(self)
         else:
             # Show error message if deletion failed
