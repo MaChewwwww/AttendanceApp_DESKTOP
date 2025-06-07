@@ -140,13 +140,13 @@ class UsersViewModal(ctk.CTkToplevel):
                     # Get student count for each course
                     student_count = self.get_course_student_count(course['id'])
                     
-                    # Format schedule
-                    schedule = f"{course.get('schedule_day', 'TBD')} {course.get('schedule_time', '')}"
+                    # Get schedule information from schedules table
+                    schedule_info = self.get_course_schedule(course['id'])
                     
                     self.table_data.append({
                         'course': course['course_name'],
                         'section': course['section_name'],
-                        'schedule': schedule.strip(),
+                        'schedule': schedule_info,
                         'room': course.get('room', 'TBD'),
                         'students': student_count,
                         'semester': course.get('semester', 'N/A'),
@@ -187,6 +187,73 @@ class UsersViewModal(ctk.CTkToplevel):
         except Exception as e:
             print(f"Error getting student count: {e}")
             return 0
+
+    def get_course_schedule(self, assigned_course_id):
+        """Get schedule information for a course from schedules table"""
+        try:
+            conn = self.db_manager.get_connection()
+            cursor = conn.cursor()
+            
+            # Get schedule information from schedules table
+            cursor.execute("""
+                SELECT day_of_week, start_time, end_time
+                FROM schedules
+                WHERE assigned_course_id = ?
+                ORDER BY 
+                    CASE day_of_week
+                        WHEN 'Monday' THEN 1
+                        WHEN 'Tuesday' THEN 2
+                        WHEN 'Wednesday' THEN 3
+                        WHEN 'Thursday' THEN 4
+                        WHEN 'Friday' THEN 5
+                        WHEN 'Saturday' THEN 6
+                        WHEN 'Sunday' THEN 7
+                        ELSE 8
+                    END,
+                    start_time
+            """, (assigned_course_id,))
+            
+            schedules = cursor.fetchall()
+            conn.close()
+            
+            if not schedules:
+                return "TBD"
+            
+            # Format multiple schedules
+            schedule_parts = []
+            for schedule in schedules:
+                day = schedule['day_of_week']
+                start_time = schedule['start_time']
+                end_time = schedule['end_time']
+                
+                try:
+                    # Handle different time formats
+                    if isinstance(start_time, str):
+                        # If it's a string, try to parse it
+                        from datetime import datetime
+                        if 'T' in start_time:  # ISO format
+                            start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+                            end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
+                            start_time_str = start_dt.strftime('%H:%M')
+                            end_time_str = end_dt.strftime('%H:%M')
+                        else:  # Assume time only format
+                            start_time_str = start_time
+                            end_time_str = end_time
+                    else:
+                        # If it's already a datetime object
+                        start_time_str = start_time.strftime('%H:%M')
+                        end_time_str = end_time.strftime('%H:%M')
+                    
+                    schedule_parts.append(f"{day} {start_time_str}-{end_time_str}")
+                except Exception as e:
+                    print(f"Error formatting schedule time: {e}")
+                    schedule_parts.append(f"{day} Schedule")
+            
+            return ", ".join(schedule_parts) if schedule_parts else "TBD"
+            
+        except Exception as e:
+            print(f"Error getting course schedule: {e}")
+            return "TBD"
 
     def apply_filter(self):
         """Apply search filter to data"""

@@ -95,7 +95,6 @@ class Assigned_Course(Base):
     section_id = Column(Integer, ForeignKey("sections.id"), nullable=False)
     academic_year = Column(String(20), nullable=True)
     semester = Column(String(20), nullable=True)
-    schedule_time = Column(String(50), nullable=True)
     room = Column(String(100), nullable=True)
     isDeleted = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())

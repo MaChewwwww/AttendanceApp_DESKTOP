@@ -674,58 +674,6 @@ class DatabaseUserManager:
             print(f"Error getting deleted users: {e}")
             return False, str(e)
 
-    def get_assigned_courses(self, faculty_id=None):
-        """Get assigned courses with optional faculty filter"""
-        try:
-            conn = self.db_manager.get_connection()
-            cursor = conn.cursor()
-            
-            query = """
-            SELECT 
-                ac.id,
-                ac.user_id as faculty_id,
-                ac.course_id,
-                ac.section_id,
-                ac.academic_year,
-                ac.semester,
-                ac.schedule_day,
-                ac.schedule_time,
-                ac.room,
-                c.name as course_name,
-                c.description as course_description,
-                s.name as section_name,
-                p.name as program_name,
-                u.first_name || ' ' || u.last_name as faculty_name
-            FROM assigned_courses ac
-            JOIN courses c ON ac.course_id = c.id
-            JOIN sections s ON ac.section_id = s.id
-            JOIN programs p ON s.program_id = p.id
-            JOIN users u ON ac.user_id = u.id
-            WHERE u.isDeleted = 0
-            """
-            
-            params = []
-            if faculty_id:
-                query += " AND ac.user_id = ?"
-                params.append(faculty_id)
-            
-            query += " ORDER BY c.name, s.name"
-            
-            cursor.execute(query, params)
-            results = cursor.fetchall()
-            
-            courses = []
-            for row in results:
-                course_dict = dict(row)
-                courses.append(course_dict)
-            
-            conn.close()
-            return True, courses
-            
-        except Exception as e:
-            print(f"Error getting assigned courses: {e}")
-            return False, str(e)
-
     def get_student_attendance_summary(self, user_id):
         """Get attendance summary for a specific student"""
         try:
@@ -743,8 +691,6 @@ class DatabaseUserManager:
                 SUM(CASE WHEN al.status = 'absent' THEN 1 ELSE 0 END) as absent_count,
                 SUM(CASE WHEN al.status = 'late' THEN 1 ELSE 0 END) as late_count,
                 ac.id as assigned_course_id,
-                ac.schedule_day,
-                ac.schedule_time,
                 ac.room,
                 ac.semester,
                 ac.academic_year
@@ -772,6 +718,56 @@ class DatabaseUserManager:
             
         except Exception as e:
             print(f"Error getting student attendance summary: {e}")
+            return False, str(e)
+
+    def get_assigned_courses(self, faculty_id=None):
+        """Get assigned courses with optional faculty filter"""
+        try:
+            conn = self.db_manager.get_connection()
+            cursor = conn.cursor()
+            
+            query = """
+            SELECT 
+                ac.id,
+                ac.faculty_id,
+                ac.course_id,
+                ac.section_id,
+                ac.academic_year,
+                ac.semester,
+                ac.room,
+                c.name as course_name,
+                c.description as course_description,
+                s.name as section_name,
+                p.name as program_name,
+                u.first_name || ' ' || u.last_name as faculty_name
+            FROM assigned_courses ac
+            JOIN courses c ON ac.course_id = c.id
+            JOIN sections s ON ac.section_id = s.id
+            JOIN programs p ON s.program_id = p.id
+            JOIN users u ON ac.faculty_id = u.id
+            WHERE ac.isDeleted = 0 AND u.isDeleted = 0
+            """
+            
+            params = []
+            if faculty_id:
+                query += " AND ac.faculty_id = ?"
+                params.append(faculty_id)
+            
+            query += " ORDER BY c.name, s.name"
+            
+            cursor.execute(query, params)
+            results = cursor.fetchall()
+            
+            courses = []
+            for row in results:
+                course_dict = dict(row)
+                courses.append(course_dict)
+            
+            conn.close()
+            return True, courses
+            
+        except Exception as e:
+            print(f"Error getting assigned courses: {e}")
             return False, str(e)
 
     def get_programs(self):
