@@ -223,6 +223,28 @@ print("Remembered login credentials cleared")
 import time
 time.sleep(1)
 
+# Check and add missing columns to existing tables
+print("\nChecking for database schema updates...")
+try:
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Check if assigned_courses table has isDeleted column
+    cursor.execute("PRAGMA table_info(assigned_courses)")
+    columns = [column[1] for column in cursor.fetchall()]
+    
+    if 'isDeleted' not in columns:
+        cursor.execute("ALTER TABLE assigned_courses ADD COLUMN isDeleted INTEGER DEFAULT 0")
+        print("✓ Added isDeleted column to assigned_courses table")
+        conn.commit()
+    else:
+        print("✓ assigned_courses table already has isDeleted column")
+    
+    conn.close()
+    
+except Exception as e:
+    print(f"Error checking database schema: {e}")
+
 # Seed status data
 print("\nSeeding status data...")
 if seed_statuses(DB_PATH):

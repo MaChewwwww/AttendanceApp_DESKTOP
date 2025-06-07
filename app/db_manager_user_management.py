@@ -834,14 +834,30 @@ class DatabaseUserManager:
             conn = self.db_manager.get_connection()
             cursor = conn.cursor()
             
-            cursor.execute("""
-                SELECT s.id, s.name, s.created_at, s.updated_at, p.name as program_name
-                FROM sections s
-                JOIN programs p ON s.program_id = p.id
-                WHERE p.isDeleted = 0
-                ORDER BY p.name ASC, s.name ASC
-            """)
+            # Check if sections table has isDeleted column
+            cursor.execute("PRAGMA table_info(sections)")
+            columns = [column[1] for column in cursor.fetchall()]
+            has_is_deleted = 'isDeleted' in columns
             
+            # Build query based on whether isDeleted column exists
+            if has_is_deleted:
+                query = """
+                    SELECT s.id, s.name, s.created_at, s.updated_at, p.name as program_name
+                    FROM sections s
+                    JOIN programs p ON s.program_id = p.id
+                    WHERE p.isDeleted = 0 AND s.isDeleted = 0
+                    ORDER BY p.name ASC, s.name ASC
+                """
+            else:
+                query = """
+                    SELECT s.id, s.name, s.created_at, s.updated_at, p.name as program_name
+                    FROM sections s
+                    JOIN programs p ON s.program_id = p.id
+                    WHERE p.isDeleted = 0
+                    ORDER BY p.name ASC, s.name ASC
+                """
+            
+            cursor.execute(query)
             sections = cursor.fetchall()
             conn.close()
             

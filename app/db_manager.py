@@ -201,3 +201,9 @@ class DatabaseManager:
 
     def get_available_programs_for_courses(self):
         return self.courses.get_available_programs_for_courses()
+
+    def get_courses_by_year(self, year_number):
+        return self.courses.get_courses_by_year(year_number)
+
+    def get_courses_by_section(self, section_name):
+        return self.courses.get_courses_by_section(section_name)

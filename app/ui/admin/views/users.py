@@ -479,8 +479,8 @@ class UsersView(ctk.CTkFrame):
         )
         sort_btn.pack(padx=0, pady=1, fill="both", expand=True)
         
-        # Clear filters button (fourth position) - show if filters are active OR search is active
-        if is_active:
+        # Clear filters button (fourth position) - show if filters are active OR search is active OR sort is active
+        if is_active or is_sort_active:
             clear_filters_btn = ctk.CTkButton(
                 filter_sort_container,
                 text="✕",
@@ -756,8 +756,8 @@ class UsersView(ctk.CTkFrame):
         )
         sort_btn.pack(padx=0, pady=1, fill="both", expand=True)
 
-        # Clear filters button (fourth position) - show if filters are active OR search is active
-        if is_active:
+        # Clear filters button (fourth position) - show if filters are active OR search is active OR sort is active  
+        if is_active or is_sort_active:
             clear_filters_btn = ctk.CTkButton(
                 filter_sort_container,
                 text="✕",

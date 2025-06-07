@@ -28,6 +28,7 @@ class ViewCoursePopup(ctk.CTkToplevel):
 
     def setup_ui(self):
         course_name = self.course_data.get('name', 'Unknown Course')
+        course_code = self.course_data.get('code', 'N/A')
         program_name = self.course_data.get('program_name', 'Unknown Program')
         
         # Header
@@ -35,7 +36,7 @@ class ViewCoursePopup(ctk.CTkToplevel):
         header_frame.pack(fill="x", padx=24, pady=(24, 0))
         ctk.CTkLabel(
             header_frame,
-            text=course_name,
+            text=f"{course_name} ({course_code})",
             font=ctk.CTkFont(family="Inter", size=22, weight="bold"),
             text_color="#111"
         ).pack(side="left", anchor="n")
@@ -43,7 +44,7 @@ class ViewCoursePopup(ctk.CTkToplevel):
         # Current course info
         ctk.CTkLabel(
             self,
-            text=f"Current: {course_name} - {program_name}",
+            text=f"Current: {course_name} ({course_code}) - {program_name}",
             font=ctk.CTkFont(size=13, weight="bold"),
             text_color="#1E3A8A"
         ).pack(anchor="w", padx=24, pady=(8, 0))

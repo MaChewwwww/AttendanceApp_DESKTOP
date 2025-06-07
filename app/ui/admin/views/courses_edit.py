@@ -8,8 +8,11 @@ class EditCoursePopup(ctk.CTkToplevel):
         super().__init__(parent)
         self.parent_view = parent
         self.course_data = course_data
+        self.db_manager = None
+        self.programs_data = []
+        self.load_programs_data()
         self.title("Update Course")
-        self.geometry("360x400")
+        self.geometry("360x520")  # Increased height to match create course popup
         self.resizable(False, False)
         self.configure(fg_color="#FAFAFA")
         self.transient(parent)
@@ -25,9 +28,37 @@ class EditCoursePopup(ctk.CTkToplevel):
         y = (self.winfo_screenheight() // 2) - (height // 2)
         self.geometry(f'{width}x{height}+{x}+{y}')
 
+    def load_programs_data(self):
+        """Load programs data from database"""
+        try:
+            from app.db_manager import DatabaseManager
+            self.db_manager = DatabaseManager()
+            success, programs = self.db_manager.get_programs()
+            
+            if success:
+                self.programs_data = programs
+            else:
+                print(f"Error loading programs: {programs}")
+                # Fallback to sample data
+                self.programs_data = [
+                    {"id": 1, "name": "Bachelor of Science in Information Technology"},
+                    {"id": 2, "name": "Bachelor of Science in Computer Science"},
+                    {"id": 3, "name": "Bachelor of Science in Information Systems"}
+                ]
+        except Exception as e:
+            print(f"Error loading programs data: {e}")
+            # Fallback to sample data
+            self.programs_data = [
+                {"id": 1, "name": "Bachelor of Science in Information Technology"},
+                {"id": 2, "name": "Bachelor of Science in Computer Science"},
+                {"id": 3, "name": "Bachelor of Science in Information Systems"}
+            ]
+
     def setup_ui(self):
         # Extract course data
         course_name = self.course_data.get('name', 'Unknown Course')
+        course_code = self.course_data.get('code', '')
+        course_description = self.course_data.get('description', '')
         program_name = self.course_data.get('program_name', 'Unknown Program')
         
         ctk.CTkLabel(
@@ -44,15 +75,24 @@ class EditCoursePopup(ctk.CTkToplevel):
             font=ctk.CTkFont(size=13, weight="bold"),
             text_color="#222"
         ).pack(anchor="w", padx=24, pady=(0, 4))
-        self.program_var = ctk.StringVar(value=program_name)
-        ctk.CTkOptionMenu(
+        
+        # Set the current program as the default value
+        program_names = [program["name"] for program in self.programs_data]
+        if not program_names:
+            program_names = ["No programs available"]
+        
+        # Ensure the current program is in the list, if not add it
+        if program_name and program_name not in program_names and program_name != "Unknown Program":
+            program_names.append(program_name)
+        
+        # Set initial value - use program_name if valid, otherwise first available program
+        initial_program = program_name if program_name != "Unknown Program" and program_name in program_names else (program_names[0] if program_names else "No programs available")
+        
+        self.program_var = ctk.StringVar(value=initial_program)
+        self.program_menu = ctk.CTkOptionMenu(
             self,
             variable=self.program_var,
-            values=[
-                "Bachelor of Science in Information Technology",
-                "Bachelor of Science in Computer Science", 
-                "Bachelor of Science in Information Systems"
-            ],
+            values=program_names,
             fg_color="#fff",
             text_color="#222",
             button_color="#E5E7EB",
@@ -63,53 +103,93 @@ class EditCoursePopup(ctk.CTkToplevel):
             width=300,
             height=38,
             font=ctk.CTkFont(size=13),
-        ).pack(anchor="w", padx=24, pady=(0, 16))
+        )
+        self.program_menu.pack(anchor="w", padx=24, pady=(0, 16))
 
-        # Course Subject  
+        # Course Subject
         ctk.CTkLabel(
             self,
             text="Course Subject",
             font=ctk.CTkFont(size=13, weight="bold"),
             text_color="#222"
         ).pack(anchor="w", padx=24, pady=(0, 4))
-        self.subject_var = ctk.StringVar(value=course_name)
-        ctk.CTkOptionMenu(
+        
+        self.subject_entry = ctk.CTkEntry(
             self,
-            variable=self.subject_var,
-            values=["Ethics 101", "Programming 1", "Data Structures", "Capstone"],
+            placeholder_text="Enter course subject (e.g., Programming 1)",
             fg_color="#fff",
             text_color="#222",
-            button_color="#E5E7EB",
-            button_hover_color="#D1D5DB",
-            dropdown_fg_color="#fff",
-            dropdown_hover_color="#E5E7EB",
-            dropdown_text_color="#222",
+            border_color="#BDBDBD",
+            border_width=1,
             width=300,
             height=38,
             font=ctk.CTkFont(size=13),
-        ).pack(anchor="w", padx=24, pady=(0, 16))
+        )
+        self.subject_entry.pack(anchor="w", padx=24, pady=(0, 16))
+        
+        # Insert the current course name
+        if course_name and course_name != "Unknown Course":
+            self.subject_entry.insert(0, course_name)
 
-        # Year entry
+        # Course Code
         ctk.CTkLabel(
             self,
-            text="Year",
+            text="Course Code",
             font=ctk.CTkFont(size=13, weight="bold"),
             text_color="#222"
         ).pack(anchor="w", padx=24, pady=(0, 4))
-        year_frame = ctk.CTkFrame(self, fg_color="#fff", border_color="#BDBDBD", border_width=1, height=32)
-        year_frame.pack(anchor="w", padx=24, pady=(0, 24), fill="x")
-        year_frame.pack_propagate(False)
-        self.year_var = ctk.StringVar(value="Enter/Select year")
-        year_entry = ctk.CTkEntry(year_frame, textvariable=self.year_var, fg_color="#fff", border_width=0, text_color="#222", font=ctk.CTkFont(size=10), height=16, width=280)
-        year_entry.pack(side="left", padx=(8, 0), pady=0)
-        calendar_icon = ctk.CTkLabel(year_frame, text="\U0001F4C5", font=ctk.CTkFont(size=14), text_color="#757575", fg_color="#fff", width=24)
-        calendar_icon.pack(side="right", padx=(0, 4), pady=0)
+        
+        self.code_entry = ctk.CTkEntry(
+            self,
+            placeholder_text="Enter course code (e.g., CS101)",
+            fg_color="#fff",
+            text_color="#222",
+            border_color="#BDBDBD",
+            border_width=1,
+            width=300,
+            height=38,
+            font=ctk.CTkFont(size=13),
+        )
+        self.code_entry.pack(anchor="w", padx=24, pady=(0, 16))
+        
+        # Insert the current course code
+        if course_code:
+            self.code_entry.insert(0, course_code)
 
-        # Buttons
+        # Description - Scrollable textbox
+        ctk.CTkLabel(
+            self,
+            text="Description",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            text_color="#222"
+        ).pack(anchor="w", padx=24, pady=(0, 4))
+        self.description_textbox = ctk.CTkTextbox(
+            self,
+            fg_color="#fff",
+            text_color="#222",
+            border_color="#BDBDBD",
+            border_width=1,
+            width=300,
+            height=80,
+            font=ctk.CTkFont(size=13),
+        )
+        self.description_textbox.pack(anchor="w", padx=24, pady=(0, 16))
+        
+        # Insert actual description or placeholder
+        if course_description and course_description.strip():
+            self.description_textbox.insert("1.0", course_description)
+        else:
+            self.description_textbox.insert("1.0", "Enter course description...")
+
+        # Buttons - Fixed positioning matching courses_add.py
         button_frame = ctk.CTkFrame(self, fg_color="#FAFAFA")
-        button_frame.pack(side="bottom", fill="x", padx=24, pady=(10, 24))
+        button_frame.pack(side="bottom", fill="x", padx=0, pady=0)
+        
+        button_container = ctk.CTkFrame(button_frame, fg_color="transparent")
+        button_container.pack(fill="x", padx=24, pady=16)
+        
         cancel_btn = ctk.CTkButton(
-            button_frame,
+            button_container,
             text="Cancel",
             fg_color="#D1D5DB",
             text_color="#222",
@@ -120,8 +200,9 @@ class EditCoursePopup(ctk.CTkToplevel):
             command=self.destroy
         )
         cancel_btn.pack(side="left", padx=(0, 8))
+        
         update_btn = ctk.CTkButton(
-            button_frame,
+            button_container,
             text="Update",
             fg_color="#1E3A8A",
             hover_color="#1D4ED8",
@@ -134,14 +215,68 @@ class EditCoursePopup(ctk.CTkToplevel):
         update_btn.pack(side="right", padx=(8, 0))
 
     def update_course(self):
-        # TODO: Implement update logic with database
-        print("Updating course...")
-        # Store parent reference before destroying
-        parent_ref = self.parent_view
-        
-        # Destroy this modal
-        self.destroy()
-        
-        # Refresh parent view and show success
-        parent_ref.after(100, lambda: parent_ref.refresh_courses())
-        parent_ref.after(200, lambda: SuccessModal(parent_ref))
+        """Update the course with database integration"""
+        try:
+            # Get values directly from widgets
+            subject = self.subject_entry.get().strip()
+            code = self.code_entry.get().strip()
+            selected_program = self.program_var.get()
+            description = self.description_textbox.get("1.0", "end-1c").strip()
+            
+            # Remove placeholder text
+            if description == "Enter course description...":
+                description = ""
+            
+            if not subject:
+                messagebox.showerror("Error", "Course subject is required")
+                return
+            
+            if not description:
+                messagebox.showerror("Error", "Course description is required")
+                return
+            
+            if selected_program == "Choose a program" or selected_program == "No programs available":
+                messagebox.showerror("Error", "Please select a program")
+                return
+            
+            # Find program ID
+            program_id = None
+            for program in self.programs_data:
+                if program["name"] == selected_program:
+                    program_id = program["id"]
+                    break
+            
+            if not program_id:
+                messagebox.showerror("Error", "Invalid program selected")
+                return
+            
+            # Prepare course data
+            course_data = {
+                'name': subject,
+                'code': code if code else None,
+                'description': description,
+                'program_id': program_id
+            }
+            
+            # Update course in database
+            if self.db_manager:
+                success, result = self.db_manager.update_course(self.course_data['id'], course_data)
+                
+                if success:
+                    # Store parent reference before destroying
+                    parent_ref = self.parent_view
+                    
+                    # Destroy this modal
+                    self.destroy()
+                    
+                    # Refresh parent view and show success
+                    parent_ref.after(100, lambda: parent_ref.refresh_courses())
+                    parent_ref.after(200, lambda: SuccessModal(parent_ref))
+                else:
+                    messagebox.showerror("Error", f"Failed to update course: {result}")
+            else:
+                messagebox.showerror("Error", "Database connection not available")
+                
+        except Exception as e:
+            print(f"Error updating course: {e}")
+            messagebox.showerror("Error", f"An error occurred: {str(e)}")

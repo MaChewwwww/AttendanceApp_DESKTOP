@@ -355,6 +355,7 @@ def seed_assigned_courses_and_attendance():
                 schedule_day TEXT,
                 schedule_time TEXT,
                 room TEXT,
+                isDeleted INTEGER DEFAULT 0,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
@@ -441,9 +442,9 @@ def seed_assigned_courses_and_attendance():
                     # Insert assigned course (using user_id instead of faculty_id)
                     cursor.execute("""
                         INSERT INTO assigned_courses 
-                        (user_id, course_id, section_id, academic_year, semester, schedule_day, schedule_time, room, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (faculty_user_id, course_id, section_id, academic_year, semester, schedule_day, schedule_time, room, current_time, current_time))
+                        (user_id, course_id, section_id, academic_year, semester, schedule_day, schedule_time, room, isDeleted, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (faculty_user_id, course_id, section_id, academic_year, semester, schedule_day, schedule_time, room, 0, current_time, current_time))
                     
                     assigned_course_id = cursor.lastrowid
                     assigned_course_ids.append(assigned_course_id)

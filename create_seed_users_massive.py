@@ -309,10 +309,13 @@ def seed_assigned_courses_and_attendance():
         
         logger.info("Creating comprehensive assigned courses and attendance logs...")
         
-        # First, let's check the existing table structure
+        # Check if isDeleted column exists in assigned_courses, if not add it
         cursor.execute("PRAGMA table_info(assigned_courses)")
-        table_info = cursor.fetchall()
-        logger.info(f"Assigned courses table structure: {table_info}")
+        columns = [column[1] for column in cursor.fetchall()]
+        if 'isDeleted' not in columns:
+            cursor.execute("ALTER TABLE assigned_courses ADD COLUMN isDeleted INTEGER DEFAULT 0")
+            logger.info("Added isDeleted column to assigned_courses table")
+            conn.commit()
         
         # Get all faculty and courses
         cursor.execute("""
@@ -343,7 +346,7 @@ def seed_assigned_courses_and_attendance():
         cursor.execute("DROP TABLE IF EXISTS assigned_courses")
         cursor.execute("DROP TABLE IF EXISTS attendance_logs")
         
-        # Create assigned_courses table with correct structure
+        # Create assigned_courses table with correct structure including isDeleted
         cursor.execute("""
             CREATE TABLE assigned_courses (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -355,6 +358,7 @@ def seed_assigned_courses_and_attendance():
                 schedule_day TEXT,
                 schedule_time TEXT,
                 room TEXT,
+                isDeleted INTEGER DEFAULT 0,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
@@ -481,9 +485,9 @@ def seed_assigned_courses_and_attendance():
                     # Insert assigned course
                     cursor.execute("""
                         INSERT INTO assigned_courses 
-                        (user_id, course_id, section_id, academic_year, semester, schedule_day, schedule_time, room, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (faculty_user_id, course_id, section_id, academic_year, semester, schedule_day, schedule_time, room, current_time, current_time))
+                        (user_id, course_id, section_id, academic_year, semester, schedule_day, schedule_time, room, isDeleted, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (faculty_user_id, course_id, section_id, academic_year, semester, schedule_day, schedule_time, room, 0, current_time, current_time))
                     
                     assigned_course_id = cursor.lastrowid
                     assigned_course_ids.append(assigned_course_id)
@@ -852,8 +856,7 @@ def seed_users():
             {'first_name': 'Prof. Jason', 'last_name': 'Aguilar', 'email': 'jason.aguilar@pup.edu.ph', 'birthday': '1990-02-28', 'password': 'faculty123', 'contact_number': '09567890125', 'role': 'Faculty', 'verified': 1, 'user_type': 'faculty', 'employee_number': 'EMP-2024-025', 'status': 'Active'},
             {'first_name': 'Dr. Jennifer', 'last_name': 'Vargas', 'email': 'jennifer.vargas@pup.edu.ph', 'birthday': '1985-10-21', 'password': 'faculty123', 'contact_number': '09678901236', 'role': 'Faculty', 'verified': 1, 'user_type': 'faculty', 'employee_number': 'EMP-2021-026', 'status': 'Active'},
             {'first_name': 'Prof. Ryan', 'last_name': 'Ortega', 'email': 'ryan.ortega@pup.edu.ph', 'birthday': '1988-07-16', 'password': 'faculty123', 'contact_number': '09789012347', 'role': 'Faculty', 'verified': 1, 'user_type': 'faculty', 'employee_number': 'EMP-2023-027', 'status': 'Probationary'},
-            {'first_name': 'Dr. Melissa', 'last_name': 'Gutierrez', 'email': 'melissa.gutierrez@pup.edu.ph', 'birthday': '1986-11-05', 'password': 'faculty123', 'contact_number': '09890123458', 'role': 'Faculty', 'verified': 1, 'user_type': 'faculty', 'employee_number': 'EMP-2022-028', 'status': 'Active'},
-            {'first_name': 'Prof. Brian', 'last_name': 'Medina', 'email': 'brian.medina@pup.edu.ph', 'birthday': '1991-04-13', 'password': 'faculty123', 'contact_number': '09901234569', 'role': 'Faculty', 'verified': 1, 'user_type': 'faculty', 'employee_number': 'EMP-2024-029', 'status': 'Active'},
+            {'first_name': 'Dr. Melissa', 'last_name': 'Gutierrez', 'email': 'melissa.gutierrez@pup.edu.ph', 'birthday': '1986-11-05', 'password': 'faculty123', 'contact_number': '09890123458', 'role': 'Faculty', 'verified': 1, 'user_type': 'faculty', 'employee_number': 'EMP-2024-029', 'status': 'Active'},
             {'first_name': 'Dr. Laura', 'last_name': 'Sandoval', 'email': 'laura.sandoval@pup.edu.ph', 'birthday': '1984-08-27', 'password': 'faculty123', 'contact_number': '09012345680', 'role': 'Faculty', 'verified': 1, 'user_type': 'faculty', 'employee_number': 'EMP-2021-030', 'status': 'Active'}
         ]
         
