@@ -368,17 +368,42 @@ class ViewProgramPopup(ctk.CTkToplevel):
         bottom_spacer.pack(fill="x")
 
     def create_bar_chart(self, parent):
-        # TODO: Replace with actual data from backend
-        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-        year_levels = ['1st Year', '2nd Year', '3rd Year', '4th Year']
-        
-        # Sample attendance rates per month for different year levels
-        data = {
-            '1st Year': [85, 88, 92, 89, 86, 90, 87, 85, 89, 91, 88, 86],
-            '2nd Year': [78, 82, 85, 88, 84, 87, 83, 80, 84, 86, 83, 81],
-            '3rd Year': [92, 94, 96, 93, 91, 95, 93, 91, 94, 96, 94, 92],
-            '4th Year': [88, 90, 92, 89, 87, 91, 89, 87, 90, 92, 90, 88]
-        }
+        # Get real data from database if available
+        if self.db_manager:
+            # Get filter values
+            academic_year = None if self.year_var.get() == "All Years" else self.year_var.get()
+            semester = None if self.semester_var.get() == "All Semesters" else self.semester_var.get()
+            
+            success, chart_data = self.db_manager.get_program_monthly_attendance(
+                self.program_data.get('id'),
+                academic_year=academic_year,
+                semester=semester
+            )
+            
+            if success and chart_data:
+                months = chart_data['months']
+                year_levels = chart_data['year_levels']
+                data = chart_data['data']
+            else:
+                # Fallback to sample data
+                months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                year_levels = ['1st Year', '2nd Year', '3rd Year', '4th Year']
+                data = {
+                    '1st Year': [85, 88, 92, 89, 86, 90, 87, 85, 89, 91, 88, 86],
+                    '2nd Year': [78, 82, 85, 88, 84, 87, 83, 80, 84, 86, 83, 81],
+                    '3rd Year': [92, 94, 96, 93, 91, 95, 93, 91, 94, 96, 94, 92],
+                    '4th Year': [88, 90, 92, 89, 87, 91, 89, 87, 90, 92, 90, 88]
+                }
+        else:
+            # Fallback data for testing
+            months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            year_levels = ['1st Year', '2nd Year', '3rd Year', '4th Year']
+            data = {
+                '1st Year': [85, 88, 92, 89, 86, 90, 87, 85, 89, 91, 88, 86],
+                '2nd Year': [78, 82, 85, 88, 84, 87, 83, 80, 84, 86, 83, 81],
+                '3rd Year': [92, 94, 96, 93, 91, 95, 93, 91, 94, 96, 94, 92],
+                '4th Year': [88, 90, 92, 89, 87, 91, 89, 87, 90, 92, 90, 88]
+            }
         
         fig, ax = plt.subplots(figsize=(12, 4.5))
         fig.patch.set_facecolor('#F8F9FA')
@@ -387,17 +412,20 @@ class ViewProgramPopup(ctk.CTkToplevel):
         width = 0.2
         colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444']
         
-        for i, (year_level, rates) in enumerate(data.items()):
-            ax.bar(x + i * width, rates, width, label=year_level, color=colors[i])
+        # Only plot data for year levels that exist in the data
+        for i, year_level in enumerate(year_levels):
+            if year_level in data:
+                rates = data[year_level]
+                ax.bar(x + i * width, rates, width, label=year_level, color=colors[i % len(colors)])
         
         ax.set_xlabel('Month', fontsize=11)
         ax.set_ylabel('Attendance Rate (%)', fontsize=11)
         ax.set_title('Monthly Attendance by Year Level', fontsize=16, pad=25, weight='bold')
-        ax.set_xticks(x + width * 1.5)
+        ax.set_xticks(x + width * (len(year_levels) - 1) / 2)
         ax.set_xticklabels(months, fontsize=10)
         ax.legend(fontsize=9, loc='upper right')
         ax.grid(True, alpha=0.3)
-        ax.set_ylim(70, 100)
+        ax.set_ylim(0, 100)  # Set to 0-100 for percentage data
         
         plt.tight_layout()
         

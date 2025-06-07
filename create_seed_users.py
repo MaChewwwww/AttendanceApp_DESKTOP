@@ -802,7 +802,7 @@ def seed_users():
             {'first_name': 'Dr. Laura', 'last_name': 'Sandoval', 'email': 'laura.sandoval@pup.edu.ph', 'birthday': '1984-08-27', 'password': 'faculty123', 'contact_number': '09012345680', 'role': 'Faculty', 'verified': 1, 'user_type': 'faculty', 'employee_number': 'EMP-2021-030', 'status': 'Active'}
         ]
         
-        # Generate 500+ comprehensive student data
+        # Generate 100 comprehensive student data
         programs = [
             'Bachelor of Science in Information Technology',
             'Bachelor of Science in Computer Science', 
@@ -811,30 +811,30 @@ def seed_users():
             'Bachelor of Science in Software Engineering'
         ]
         
-        # Define realistic section distributions per program
+        # Define realistic section distributions per program (adjusted for 100 students total)
         program_sections = {
-            'Bachelor of Science in Information Technology': ['1-1', '1-2', '1-3', '2-1', '2-2', '3-1', '3-2', '4-1'],  # Most popular
-            'Bachelor of Science in Computer Science': ['1-1', '1-2', '2-1', '2-2', '3-1', '4-1'],  # Second most popular
-            'Bachelor of Science in Information Systems': ['1-1', '2-1', '3-1', '4-1'],  # Moderate
-            'Bachelor of Science in Computer Engineering': ['1-1', '2-1', '3-1'],  # Smaller
-            'Bachelor of Science in Software Engineering': ['1-1', '2-1']  # Newest/smallest
+            'Bachelor of Science in Information Technology': ['1-1', '1-2', '2-1', '2-2', '3-1', '4-1'],  # Most popular - 30 students
+            'Bachelor of Science in Computer Science': ['1-1', '2-1', '3-1', '4-1'],  # Second most popular - 25 students
+            'Bachelor of Science in Information Systems': ['1-1', '2-1', '3-1'],  # Moderate - 20 students
+            'Bachelor of Science in Computer Engineering': ['1-1', '2-1'],  # Smaller - 15 students
+            'Bachelor of Science in Software Engineering': ['1-1']  # Newest/smallest - 10 students
         }
         
-        # Generate diverse student names
+        # Define realistic student name pools
         first_names = [
-            # Male names
-            'John', 'Michael', 'David', 'James', 'Robert', 'William', 'Richard', 'Joseph', 'Thomas', 'Charles',
-            'Christopher', 'Daniel', 'Matthew', 'Anthony', 'Mark', 'Donald', 'Steven', 'Paul', 'Andrew', 'Joshua',
-            'Kenneth', 'Kevin', 'Brian', 'George', 'Timothy', 'Ronald', 'Jason', 'Edward', 'Jeffrey', 'Ryan',
-            'Carlo', 'Miguel', 'Rafael', 'Gabriel', 'Adrian', 'Sebastian', 'Diego', 'Fernando', 'Antonio', 'Luis',
-            'Angelo', 'Christian', 'Jerome', 'Francis', 'Benedict', 'Patrick', 'Emmanuel', 'Joshua', 'Nathan', 'Samuel',
+            # Common male first names
+            'John', 'Robert', 'Michael', 'William', 'David', 'Richard', 'Joseph', 'Charles', 'Thomas', 'Daniel',
+            'Matthew', 'Anthony', 'Mark', 'Donald', 'Steven', 'Paul', 'Andrew', 'Joshua', 'Ryan', 'Kevin',
+            'Brian', 'George', 'Timothy', 'Ronald', 'Jason', 'Jeffrey', 'Jacob', 'Nicholas', 'Christian', 'Jordan',
+            'Eric', 'Aaron', 'Charles', 'Austin', 'Dylan', 'Jesse', 'Ethan', 'Adam', 'Gavin', 'Rafael',
+            'Luis', 'Miguel', 'Diego', 'Fernando', 'Antonio', 'Sebastian', 'Adrian', 'Gabriel', 'Oscar', 'Julian',
             
-            # Female names  
+            # Common female first names
             'Mary', 'Patricia', 'Jennifer', 'Linda', 'Elizabeth', 'Barbara', 'Susan', 'Jessica', 'Sarah', 'Karen',
             'Nancy', 'Lisa', 'Betty', 'Helen', 'Sandra', 'Donna', 'Carol', 'Ruth', 'Sharon', 'Michelle',
-            'Laura', 'Sarah', 'Kimberly', 'Deborah', 'Dorothy', 'Lisa', 'Nancy', 'Karen', 'Betty', 'Helen',
-            'Maria', 'Ana', 'Carmen', 'Rosa', 'Teresa', 'Luz', 'Esperanza', 'Concepcion', 'Remedios', 'Pilar',
-            'Angela', 'Cristina', 'Veronica', 'Monica', 'Claudia', 'Adriana', 'Beatriz', 'Cecilia', 'Diana', 'Elena'
+            'Laura', 'Kimberly', 'Deborah', 'Dorothy', 'Nancy', 'Helen', 'Maria', 'Ana', 'Carmen', 'Rosa',
+            'Teresa', 'Luz', 'Esperanza', 'Concepcion', 'Remedios', 'Pilar', 'Angela', 'Cristina', 'Veronica', 'Monica',
+            'Claudia', 'Adriana', 'Beatriz', 'Cecilia', 'Diana', 'Elena', 'Joy', 'Rose', 'Iris', 'Lily'
         ]
         
         last_names = [
@@ -849,25 +849,27 @@ def seed_users():
         student_data = []
         student_number = 1
         
-        # Generate students for each program and section
+        # Define exact student counts per program to total 100
+        program_student_counts = {
+            'Bachelor of Science in Information Technology': 30,
+            'Bachelor of Science in Computer Science': 25,
+            'Bachelor of Science in Information Systems': 20,
+            'Bachelor of Science in Computer Engineering': 15,
+            'Bachelor of Science in Software Engineering': 10
+        }
+        
+        # Generate students for each program
         for program in programs:
             sections = program_sections[program]
+            total_students_for_program = program_student_counts[program]
             
-            # Calculate students per section (realistic distribution)
-            if program == 'Bachelor of Science in Information Technology':
-                students_per_section = 45  # Most popular
-            elif program == 'Bachelor of Science in Computer Science':
-                students_per_section = 35  # Second most popular
-            elif program == 'Bachelor of Science in Information Systems':
-                students_per_section = 25  # Moderate
-            elif program == 'Bachelor of Science in Computer Engineering':
-                students_per_section = 20  # Smaller
-            else:  # Software Engineering
-                students_per_section = 15  # Newest/smallest
+            # Distribute students evenly across sections
+            students_per_section = total_students_for_program // len(sections)
+            remaining_students = total_students_for_program % len(sections)
             
-            for section in sections:
-                # Add some variation to section sizes
-                actual_students = students_per_section + random.randint(-5, 8)
+            for section_idx, section in enumerate(sections):
+                # Add remaining students to first sections
+                actual_students = students_per_section + (1 if section_idx < remaining_students else 0)
                 
                 for i in range(actual_students):
                     first_name = random.choice(first_names)
@@ -892,28 +894,28 @@ def seed_users():
                     contact_number = f"09{random.randint(100000000, 999999999)}"
                     
                     # Generate student number with year and sequence
-                    student_number_str = f"2024-{student_number:05d}"
+                    student_number_str = f"2024-{student_number:03d}"
                     
                     # Determine year level text
                     year_levels = {'1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year'}
                     year_text = year_levels[year_level]
                     
-                    # Realistic status distribution
+                    # Realistic status distribution (most students enrolled)
                     status_weights = [
-                        ('Enrolled', 85),     # 85% enrolled
-                        ('On Leave', 8),      # 8% on leave
-                        ('Suspended', 3),     # 3% suspended
+                        ('Enrolled', 90),     # 90% enrolled
+                        ('On Leave', 5),      # 5% on leave
+                        ('Suspended', 2),     # 2% suspended
                         ('Graduated', 2),     # 2% graduated (mostly 4th years)
-                        ('Dropout', 2)        # 2% dropout
+                        ('Dropout', 1)        # 1% dropout
                     ]
                     
                     # Adjust status based on year level
                     if year_level == '4':
                         # 4th years more likely to be graduated
-                        status_weights = [('Enrolled', 70), ('Graduated', 20), ('On Leave', 5), ('Suspended', 3), ('Dropout', 2)]
+                        status_weights = [('Enrolled', 75), ('Graduated', 20), ('On Leave', 3), ('Suspended', 1), ('Dropout', 1)]
                     elif year_level == '1':
                         # 1st years less likely to be suspended/dropout
-                        status_weights = [('Enrolled', 92), ('On Leave', 6), ('Suspended', 1), ('Graduated', 0), ('Dropout', 1)]
+                        status_weights = [('Enrolled', 95), ('On Leave', 3), ('Suspended', 1), ('Graduated', 0), ('Dropout', 1)]
                     
                     # Select status based on weights
                     statuses_list, weights = zip(*status_weights)

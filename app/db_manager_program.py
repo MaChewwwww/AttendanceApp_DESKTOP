@@ -654,3 +654,199 @@ class DatabaseProgramManager:
             return False, f"Failed to get program key metrics: {str(e)}"
         finally:
             conn.close()
+
+    def get_program_monthly_attendance(self, program_id, academic_year=None, semester=None):
+        """
+        Get monthly attendance data for bar chart visualization
+        
+        Args:
+            program_id (int): Program ID
+            academic_year (str): Optional academic year filter
+            semester (str): Optional semester filter
+        
+        Returns:
+            tuple: (success: bool, result: dict/str)
+        """
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            
+            # Get program sections
+            cursor.execute("""
+                SELECT id FROM sections 
+                WHERE program_id = ? AND isDeleted = 0
+            """, (program_id,))
+            program_sections = [row['id'] for row in cursor.fetchall()]
+            
+            if not program_sections:
+                return True, {
+                    'months': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    'year_levels': ['1st Year', '2nd Year', '3rd Year', '4th Year'],
+                    'data': {
+                        '1st Year': [0] * 12,
+                        '2nd Year': [0] * 12,
+                        '3rd Year': [0] * 12,
+                        '4th Year': [0] * 12
+                    }
+                }
+            
+            # Get students in this program with their year levels
+            cursor.execute("""
+                SELECT u.id, s.section
+                FROM users u
+                JOIN students s ON u.id = s.user_id
+                WHERE u.isDeleted = 0 AND u.role = 'Student' AND s.section IN ({})
+            """.format(','.join('?' * len(program_sections))), program_sections)
+            students_data = cursor.fetchall()
+            
+            # Map section IDs to year levels (assuming section names like "1-1", "2-1", etc.)
+            cursor.execute("""
+                SELECT id, name FROM sections 
+                WHERE program_id = ? AND isDeleted = 0
+            """, (program_id,))
+            sections_info = cursor.fetchall()
+            
+            section_to_year = {}
+            for section in sections_info:
+                section_name = section['name']
+                # Extract year level from section name (e.g., "1-1" -> "1st Year")
+                try:
+                    year_num = int(section_name.split('-')[0])
+                    if year_num == 1:
+                        year_level = '1st Year'
+                    elif year_num == 2:
+                        year_level = '2nd Year'
+                    elif year_num == 3:
+                        year_level = '3rd Year'
+                    elif year_num == 4:
+                        year_level = '4th Year'
+                    else:
+                        year_level = f'{year_num}th Year'
+                    
+                    section_to_year[section['id']] = year_level
+                except (ValueError, IndexError):
+                    section_to_year[section['id']] = 'Unknown Year'
+            
+            # Group students by year level
+            students_by_year = {
+                '1st Year': [],
+                '2nd Year': [],
+                '3rd Year': [],
+                '4th Year': []
+            }
+            
+            for student in students_data:
+                year_level = section_to_year.get(student['section'], 'Unknown Year')
+                if year_level in students_by_year:
+                    students_by_year[year_level].append(student['id'])
+            
+            # Filter assigned courses based on year/semester if provided
+            if academic_year or semester:
+                filter_conditions = ["1=1"]
+                filter_params = []
+                
+                if academic_year:
+                    filter_conditions.append("academic_year = ?")
+                    filter_params.append(academic_year)
+                
+                if semester:
+                    filter_conditions.append("semester = ?")
+                    filter_params.append(semester)
+                
+                cursor.execute(f"""
+                    SELECT id FROM assigned_courses 
+                    WHERE {' AND '.join(filter_conditions)}
+                """, filter_params)
+                
+                valid_assigned_course_ids = [row['id'] for row in cursor.fetchall()]
+                
+                if not valid_assigned_course_ids:
+                    return True, {
+                        'months': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                        'year_levels': ['1st Year', '2nd Year', '3rd Year', '4th Year'],
+                        'data': {
+                            '1st Year': [0] * 12,
+                            '2nd Year': [0] * 12,
+                            '3rd Year': [0] * 12,
+                            '4th Year': [0] * 12
+                        }
+                    }
+                
+                # Get attendance logs for filtered courses
+                cursor.execute("""
+                    SELECT al.user_id, al.status, al.date, al.assigned_course_id
+                    FROM attendance_logs al
+                    WHERE al.assigned_course_id IN ({})
+                """.format(','.join('?' * len(valid_assigned_course_ids))), valid_assigned_course_ids)
+                
+                attendance_data = cursor.fetchall()
+            else:
+                # Get all attendance logs
+                cursor.execute("""
+                    SELECT al.user_id, al.status, al.date
+                    FROM attendance_logs al
+                """)
+                attendance_data = cursor.fetchall()
+            
+            # Calculate monthly attendance rates by year level
+            from datetime import datetime
+            import calendar
+            
+            monthly_stats = {
+                '1st Year': [{'total': 0, 'present': 0} for _ in range(12)],
+                '2nd Year': [{'total': 0, 'present': 0} for _ in range(12)],
+                '3rd Year': [{'total': 0, 'present': 0} for _ in range(12)],
+                '4th Year': [{'total': 0, 'present': 0} for _ in range(12)]
+            }
+            
+            for log in attendance_data:
+                # Find which year level this student belongs to
+                student_year = None
+                for year_level, student_ids in students_by_year.items():
+                    if log['user_id'] in student_ids:
+                        student_year = year_level
+                        break
+                
+                if not student_year:
+                    continue
+                
+                try:
+                    log_date = datetime.strptime(log['date'], '%Y-%m-%d')
+                    month_index = log_date.month - 1  # Convert to 0-based index
+                    
+                    monthly_stats[student_year][month_index]['total'] += 1
+                    if log['status'] == 'present':
+                        monthly_stats[student_year][month_index]['present'] += 1
+                        
+                except ValueError:
+                    continue
+            
+            # Calculate percentages
+            monthly_percentages = {
+                '1st Year': [],
+                '2nd Year': [],
+                '3rd Year': [],
+                '4th Year': []
+            }
+            
+            for year_level in monthly_stats:
+                for month_stats in monthly_stats[year_level]:
+                    if month_stats['total'] > 0:
+                        percentage = round((month_stats['present'] / month_stats['total']) * 100, 1)
+                    else:
+                        percentage = 0
+                    monthly_percentages[year_level].append(percentage)
+            
+            result = {
+                'months': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                'year_levels': ['1st Year', '2nd Year', '3rd Year', '4th Year'],
+                'data': monthly_percentages
+            }
+            
+            return True, result
+            
+        except Exception as e:
+            print(f"Error getting program monthly attendance: {e}")
+            return False, f"Failed to get program monthly attendance: {str(e)}"
+        finally:
+            conn.close()

@@ -173,3 +173,6 @@ class DatabaseManager:
 
     def get_program_key_metrics(self, program_id, academic_year=None, semester=None):
         return self.programs.get_program_key_metrics(program_id, academic_year, semester)
+
+    def get_program_monthly_attendance(self, program_id, academic_year=None, semester=None):
+        return self.programs.get_program_monthly_attendance(program_id, academic_year, semester)

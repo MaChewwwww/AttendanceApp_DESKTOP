@@ -93,11 +93,50 @@ python create_db.py
 ```
 
 ### 7. Seed Initial Users (Optional but Recommended)
+
+#### Basic Seeding (Default)
 ```bash
 python create_seed_users.py
 ```
 
-This will create default admin and test users for easier setup and testing.
+This creates a comprehensive database with:
+- **5 Academic Programs** (BSIT, BSCS, BSIS, BSCpE, BSSE)
+- **30 Faculty Members** with realistic roles and status distribution
+- **100 Students** distributed across programs and year levels
+- **23+ Courses** specific to each program
+- **25+ Sections** with realistic enrollment distributions
+- **Course Assignments** for faculty with schedules and room assignments
+- **60 Days of Attendance Logs** with realistic attendance patterns:
+  - 55% of students have 90%+ attendance rate
+  - Realistic performance distribution (excellent, good, average, poor)
+  - 3 classes per week schedule for comprehensive analytics
+
+#### Student Distribution by Program:
+- **BSIT**: 30 students (most popular program)
+- **BSCS**: 25 students 
+- **BSIS**: 20 students
+- **BSCpE**: 15 students
+- **BSSE**: 10 students (newest program)
+
+#### Massive Seeding (For Testing/Demo)
+```bash
+python create_seed_users_massive.py
+```
+
+This creates an extensive database with:
+- **5 Academic Programs** with full course catalogs
+- **30 Faculty Members** with comprehensive assignments
+- **500+ Students** with realistic distribution across all programs and sections
+- **Enhanced Attendance Patterns** with 90+ days of historical data
+- **Advanced Analytics Data** for comprehensive testing of all dashboard features
+
+This seed data provides:
+- ✅ **Realistic analytics** with proper attendance trends
+- ✅ **Comprehensive program management** testing
+- ✅ **Faculty course assignments** with schedules
+- ✅ **Student performance categories** for meaningful statistics
+- ✅ **Multi-year data** for historical analysis
+- ✅ **Program filtering** by academic year and semester
 
 ### 8. Run the Application
 ```bash
