@@ -781,7 +781,7 @@ class DatabaseUserManager:
             cursor = conn.cursor()
             
             cursor.execute("""
-                SELECT id, name, description, acronym, color
+                SELECT id, name, description, acronym, code, color
                 FROM programs 
                 WHERE isDeleted = 0
                 ORDER BY name

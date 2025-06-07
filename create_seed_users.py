@@ -27,81 +27,141 @@ def seed_programs_and_courses():
         
         logger.info("Creating programs, courses, and sections...")
         
-        # Programs data
+        # Programs data with proper unique constraints
         programs_data = [
             {
                 'name': 'Bachelor of Science in Information Technology',
                 'acronym': 'BSIT',
-                'code': 'IT-001',
-                'description': 'BSIT - A comprehensive program focusing on information technology and computer systems',
+                'code': 'PROG-001',  # Updated to ensure uniqueness
+                'description': 'A comprehensive program focusing on information technology and computer systems, preparing students for careers in software development, network administration, and IT management.',
                 'color': '#3B82F6'  # Blue
             },
             {
                 'name': 'Bachelor of Science in Computer Science',
                 'acronym': 'BSCS',
-                'code': 'CS-001',
-                'description': 'BSCS - A program emphasizing theoretical foundations of computation and practical software engineering',
+                'code': 'PROG-002',  # Updated to ensure uniqueness
+                'description': 'A program emphasizing theoretical foundations of computation and practical software engineering, covering algorithms, data structures, and advanced computing concepts.',
                 'color': '#10B981'  # Green
             },
             {
                 'name': 'Bachelor of Science in Information Systems',
                 'acronym': 'BSIS',
-                'code': 'IS-001',
-                'description': 'BSIS - A program combining business processes with information technology solutions',
+                'code': 'PROG-003',  # Updated to ensure uniqueness
+                'description': 'A program combining business processes with information technology solutions, focusing on systems analysis, database management, and enterprise applications.',
                 'color': '#F59E0B'  # Orange
+            },
+            {
+                'name': 'Bachelor of Science in Computer Engineering',
+                'acronym': 'BSCpE',
+                'code': 'PROG-004',  # Additional program
+                'description': 'A program integrating computer science and electrical engineering principles, covering hardware design, embedded systems, and computer architecture.',
+                'color': '#8B5CF6'  # Purple
+            },
+            {
+                'name': 'Bachelor of Science in Software Engineering',
+                'acronym': 'BSSE',
+                'code': 'PROG-005',  # Additional program
+                'description': 'A specialized program focused on software development methodologies, project management, and large-scale system design and implementation.',
+                'color': '#EF4444'  # Red
             }
         ]
         
-        # Insert programs
+        # Insert programs with proper error handling for unique constraints
         program_ids = {}
         for program_data in programs_data:
-            cursor.execute("SELECT id FROM programs WHERE name = ?", (program_data['name'],))
+            # Check if program with same name, acronym, or code already exists
+            cursor.execute("""
+                SELECT id, name, acronym, code FROM programs 
+                WHERE (name = ? OR acronym = ? OR code = ?) AND isDeleted = 0
+            """, (program_data['name'], program_data['acronym'], program_data['code']))
             existing = cursor.fetchone()
             
             if existing:
                 program_ids[program_data['name']] = existing[0]
-                logger.info(f"Program {program_data['name']} already exists")
+                logger.info(f"Program already exists: {existing[1]} (ID: {existing[0]}, Acronym: {existing[2]}, Code: {existing[3]})")
                 continue
             
-            current_time = datetime.now().isoformat()
-            cursor.execute("""
-                INSERT INTO programs (name, acronym, code, description, color, isDeleted, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (program_data['name'], program_data['acronym'], program_data['code'], program_data['description'], program_data['color'], 0, current_time, current_time))
-            
-            program_id = cursor.lastrowid
-            program_ids[program_data['name']] = program_id
-            logger.info(f"Created program: {program_data['name']} ({program_data['acronym']}) - Code: {program_data['code']} (ID: {program_id})")
+            try:
+                current_time = datetime.now().isoformat()
+                cursor.execute("""
+                    INSERT INTO programs (name, acronym, code, description, color, isDeleted, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    program_data['name'], 
+                    program_data['acronym'], 
+                    program_data['code'], 
+                    program_data['description'], 
+                    program_data['color'], 
+                    0, 
+                    current_time, 
+                    current_time
+                ))
+                
+                program_id = cursor.lastrowid
+                program_ids[program_data['name']] = program_id
+                logger.info(f"✓ Created program: {program_data['name']}")
+                logger.info(f"  - Acronym: {program_data['acronym']}")
+                logger.info(f"  - Code: {program_data['code']}")
+                logger.info(f"  - Color: {program_data['color']}")
+                logger.info(f"  - ID: {program_id}")
+                
+            except sqlite3.IntegrityError as e:
+                logger.error(f"Failed to create program {program_data['name']}: {e}")
+                # Try to find existing program by name only as fallback
+                cursor.execute("SELECT id FROM programs WHERE name = ? AND isDeleted = 0", (program_data['name'],))
+                fallback = cursor.fetchone()
+                if fallback:
+                    program_ids[program_data['name']] = fallback[0]
+                    logger.info(f"Using existing program {program_data['name']} (ID: {fallback[0]})")
+                continue
         
-        # Courses data for each program
+        # Enhanced courses data for each program
         courses_data = [
-            # BSIT Courses
-            {'name': 'Programming Fundamentals', 'description': 'Introduction to programming concepts', 'program': 'Bachelor of Science in Information Technology'},
-            {'name': 'Data Structures and Algorithms', 'description': 'Advanced programming and algorithms', 'program': 'Bachelor of Science in Information Technology'},
-            {'name': 'Database Management Systems', 'description': 'Database design and management', 'program': 'Bachelor of Science in Information Technology'},
-            {'name': 'Web Development', 'description': 'Frontend and backend web technologies', 'program': 'Bachelor of Science in Information Technology'},
-            {'name': 'Network Administration', 'description': 'Computer networking and administration', 'program': 'Bachelor of Science in Information Technology'},
+            # BSIT Courses (5 core courses)
+            {'name': 'Programming Fundamentals', 'description': 'Introduction to programming concepts using modern languages', 'program': 'Bachelor of Science in Information Technology'},
+            {'name': 'Data Structures and Algorithms', 'description': 'Advanced programming concepts and algorithmic thinking', 'program': 'Bachelor of Science in Information Technology'},
+            {'name': 'Database Management Systems', 'description': 'Database design, implementation, and management', 'program': 'Bachelor of Science in Information Technology'},
+            {'name': 'Web Development Technologies', 'description': 'Frontend and backend web development frameworks', 'program': 'Bachelor of Science in Information Technology'},
+            {'name': 'Network Administration', 'description': 'Computer networking and system administration', 'program': 'Bachelor of Science in Information Technology'},
             
-            # BSCS Courses
-            {'name': 'Computer Programming', 'description': 'Core programming principles', 'program': 'Bachelor of Science in Computer Science'},
-            {'name': 'Software Engineering', 'description': 'Software development methodologies', 'program': 'Bachelor of Science in Computer Science'},
-            {'name': 'Machine Learning', 'description': 'AI and machine learning fundamentals', 'program': 'Bachelor of Science in Computer Science'},
-            {'name': 'Computer Graphics', 'description': 'Graphics programming and visualization', 'program': 'Bachelor of Science in Computer Science'},
-            {'name': 'Operating Systems', 'description': 'System software and OS concepts', 'program': 'Bachelor of Science in Computer Science'},
+            # BSCS Courses (5 core courses)
+            {'name': 'Computer Programming', 'description': 'Core programming principles and paradigms', 'program': 'Bachelor of Science in Computer Science'},
+            {'name': 'Software Engineering', 'description': 'Software development methodologies and practices', 'program': 'Bachelor of Science in Computer Science'},
+            {'name': 'Machine Learning', 'description': 'AI and machine learning fundamentals and applications', 'program': 'Bachelor of Science in Computer Science'},
+            {'name': 'Computer Graphics', 'description': 'Graphics programming and visualization techniques', 'program': 'Bachelor of Science in Computer Science'},
+            {'name': 'Operating Systems', 'description': 'System software and operating system concepts', 'program': 'Bachelor of Science in Computer Science'},
             
-            # BSIS Courses
-            {'name': 'Business Process Analysis', 'description': 'Analyzing business workflows', 'program': 'Bachelor of Science in Information Systems'},
-            {'name': 'Systems Analysis and Design', 'description': 'System development lifecycle', 'program': 'Bachelor of Science in Information Systems'},
-            {'name': 'Enterprise Resource Planning', 'description': 'ERP systems implementation', 'program': 'Bachelor of Science in Information Systems'},
-            {'name': 'IT Project Management', 'description': 'Managing technology projects', 'program': 'Bachelor of Science in Information Systems'},
-            {'name': 'Business Intelligence', 'description': 'Data analytics for business', 'program': 'Bachelor of Science in Information Systems'}
+            # BSIS Courses (5 core courses)
+            {'name': 'Business Process Analysis', 'description': 'Analyzing and optimizing business workflows', 'program': 'Bachelor of Science in Information Systems'},
+            {'name': 'Systems Analysis and Design', 'description': 'System development lifecycle and design patterns', 'program': 'Bachelor of Science in Information Systems'},
+            {'name': 'Enterprise Resource Planning', 'description': 'ERP systems implementation and management', 'program': 'Bachelor of Science in Information Systems'},
+            {'name': 'IT Project Management', 'description': 'Managing technology projects and teams', 'program': 'Bachelor of Science in Information Systems'},
+            {'name': 'Business Intelligence', 'description': 'Data analytics and business intelligence tools', 'program': 'Bachelor of Science in Information Systems'},
+            
+            # BSCpE Courses (4 core courses)
+            {'name': 'Digital Logic Design', 'description': 'Digital circuits and logic design principles', 'program': 'Bachelor of Science in Computer Engineering'},
+            {'name': 'Microprocessors and Microcontrollers', 'description': 'Embedded systems and processor architecture', 'program': 'Bachelor of Science in Computer Engineering'},
+            {'name': 'Computer Architecture', 'description': 'Hardware design and computer organization', 'program': 'Bachelor of Science in Computer Engineering'},
+            {'name': 'VLSI Design', 'description': 'Very Large Scale Integration circuit design', 'program': 'Bachelor of Science in Computer Engineering'},
+            
+            # BSSE Courses (4 core courses)
+            {'name': 'Software Architecture', 'description': 'Large-scale software system design patterns', 'program': 'Bachelor of Science in Software Engineering'},
+            {'name': 'Software Testing and Quality Assurance', 'description': 'Testing methodologies and quality control', 'program': 'Bachelor of Science in Software Engineering'},
+            {'name': 'DevOps and Deployment', 'description': 'Continuous integration and deployment practices', 'program': 'Bachelor of Science in Software Engineering'},
+            {'name': 'Agile Development Methodologies', 'description': 'Agile and Scrum development practices', 'program': 'Bachelor of Science in Software Engineering'}
         ]
         
-        # Insert courses
+        # Insert courses with proper error handling
         course_ids = {}
         for course_data in courses_data:
+            # Skip if program doesn't exist
+            if course_data['program'] not in program_ids:
+                logger.warning(f"Program {course_data['program']} not found, skipping course {course_data['name']}")
+                continue
+                
             program_id = program_ids[course_data['program']]
             
+            # Check if course already exists for this program
             cursor.execute("SELECT id FROM courses WHERE name = ? AND program_id = ?", 
                          (course_data['name'], program_id))
             existing = cursor.fetchone()
@@ -110,47 +170,70 @@ def seed_programs_and_courses():
                 course_ids[course_data['name']] = existing[0]
                 continue
             
-            current_time = datetime.now().isoformat()
-            cursor.execute("""
-                INSERT INTO courses (name, description, program_id, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?)
-            """, (course_data['name'], course_data['description'], program_id, current_time, current_time))
-            
-            course_id = cursor.lastrowid
-            course_ids[course_data['name']] = course_id
-            logger.info(f"Created course: {course_data['name']} (ID: {course_id})")
+            try:
+                current_time = datetime.now().isoformat()
+                cursor.execute("""
+                    INSERT INTO courses (name, description, program_id, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (course_data['name'], course_data['description'], program_id, current_time, current_time))
+                
+                course_id = cursor.lastrowid
+                course_ids[course_data['name']] = course_id
+                program_acronym = next((p['acronym'] for p in programs_data if p['name'] == course_data['program']), 'Unknown')
+                logger.info(f"✓ Created course: {course_data['name']} ({program_acronym}) - ID: {course_id}")
+                
+            except sqlite3.Error as e:
+                logger.error(f"Failed to create course {course_data['name']}: {e}")
+                continue
         
-        # Sections data
+        # Enhanced sections data with more realistic distribution
         sections_data = [
-            # Year 1 sections for each program
+            # BSIT sections (most popular program)
             {'name': '1-1', 'program': 'Bachelor of Science in Information Technology'},
             {'name': '1-2', 'program': 'Bachelor of Science in Information Technology'},
-            {'name': '1-1', 'program': 'Bachelor of Science in Computer Science'},
-            {'name': '1-2', 'program': 'Bachelor of Science in Computer Science'},
-            {'name': '1-1', 'program': 'Bachelor of Science in Information Systems'},
-            
-            # Year 2 sections
+            {'name': '1-3', 'program': 'Bachelor of Science in Information Technology'},
             {'name': '2-1', 'program': 'Bachelor of Science in Information Technology'},
             {'name': '2-2', 'program': 'Bachelor of Science in Information Technology'},
-            {'name': '2-1', 'program': 'Bachelor of Science in Computer Science'},
-            {'name': '2-1', 'program': 'Bachelor of Science in Information Systems'},
-            
-            # Year 3 sections
             {'name': '3-1', 'program': 'Bachelor of Science in Information Technology'},
             {'name': '3-2', 'program': 'Bachelor of Science in Information Technology'},
-            {'name': '3-1', 'program': 'Bachelor of Science in Computer Science'},
-            
-            # Year 4 sections
             {'name': '4-1', 'program': 'Bachelor of Science in Information Technology'},
-            {'name': '4-1', 'program': 'Bachelor of Science in Information Systems'}
+            
+            # BSCS sections (second most popular)
+            {'name': '1-1', 'program': 'Bachelor of Science in Computer Science'},
+            {'name': '1-2', 'program': 'Bachelor of Science in Computer Science'},
+            {'name': '2-1', 'program': 'Bachelor of Science in Computer Science'},
+            {'name': '2-2', 'program': 'Bachelor of Science in Computer Science'},
+            {'name': '3-1', 'program': 'Bachelor of Science in Computer Science'},
+            {'name': '4-1', 'program': 'Bachelor of Science in Computer Science'},
+            
+            # BSIS sections (moderate popularity)
+            {'name': '1-1', 'program': 'Bachelor of Science in Information Systems'},
+            {'name': '2-1', 'program': 'Bachelor of Science in Information Systems'},
+            {'name': '3-1', 'program': 'Bachelor of Science in Information Systems'},
+            {'name': '4-1', 'program': 'Bachelor of Science in Information Systems'},
+            
+            # BSCpE sections (smaller program)
+            {'name': '1-1', 'program': 'Bachelor of Science in Computer Engineering'},
+            {'name': '2-1', 'program': 'Bachelor of Science in Computer Engineering'},
+            {'name': '3-1', 'program': 'Bachelor of Science in Computer Engineering'},
+            
+            # BSSE sections (newer/smaller program)
+            {'name': '1-1', 'program': 'Bachelor of Science in Software Engineering'},
+            {'name': '2-1', 'program': 'Bachelor of Science in Software Engineering'}
         ]
         
-        # Insert sections
+        # Insert sections with proper error handling
         section_ids = {}
         for section_data in sections_data:
+            # Skip if program doesn't exist
+            if section_data['program'] not in program_ids:
+                logger.warning(f"Program {section_data['program']} not found, skipping section {section_data['name']}")
+                continue
+                
             program_id = program_ids[section_data['program']]
             section_key = f"{section_data['name']}-{section_data['program']}"
             
+            # Check if section already exists for this program
             cursor.execute("SELECT id FROM sections WHERE name = ? AND program_id = ?", 
                          (section_data['name'], program_id))
             existing = cursor.fetchone()
@@ -159,23 +242,60 @@ def seed_programs_and_courses():
                 section_ids[section_key] = existing[0]
                 continue
             
-            current_time = datetime.now().isoformat()
-            cursor.execute("""
-                INSERT INTO sections (name, program_id, created_at, updated_at)
-                VALUES (?, ?, ?, ?)
-            """, (section_data['name'], program_id, current_time, current_time))
-            
-            section_id = cursor.lastrowid
-            section_ids[section_key] = section_id
-            logger.info(f"Created section: {section_data['name']} for {section_data['program']} (ID: {section_id})")
+            try:
+                current_time = datetime.now().isoformat()
+                cursor.execute("""
+                    INSERT INTO sections (name, program_id, created_at, updated_at)
+                    VALUES (?, ?, ?, ?)
+                """, (section_data['name'], program_id, current_time, current_time))
+                
+                section_id = cursor.lastrowid
+                section_ids[section_key] = section_id
+                program_acronym = next((p['acronym'] for p in programs_data if p['name'] == section_data['program']), 'Unknown')
+                logger.info(f"✓ Created section: {section_data['name']} ({program_acronym}) - ID: {section_id}")
+                
+            except sqlite3.Error as e:
+                logger.error(f"Failed to create section {section_data['name']} for {section_data['program']}: {e}")
+                continue
         
         conn.commit()
+        
+        # Log summary statistics
+        cursor.execute("SELECT COUNT(*) FROM programs WHERE isDeleted = 0")
+        program_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM courses")
+        course_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM sections")
+        section_count = cursor.fetchone()[0]
+        
+        logger.info(f"\n✓ Database seeding summary:")
+        logger.info(f"  - Programs: {program_count}")
+        logger.info(f"  - Courses: {course_count}")
+        logger.info(f"  - Sections: {section_count}")
+        
+        # Show program details
+        cursor.execute("""
+            SELECT p.name, p.acronym, p.code, p.color, COUNT(s.id) as section_count
+            FROM programs p
+            LEFT JOIN sections s ON p.id = s.program_id
+            WHERE p.isDeleted = 0
+            GROUP BY p.id, p.name, p.acronym, p.code, p.color
+            ORDER BY p.acronym
+        """)
+        program_details = cursor.fetchall()
+        
+        logger.info(f"\nProgram details:")
+        for name, acronym, code, color, sections in program_details:
+            logger.info(f"  {acronym} ({code}): {sections} sections - {color}")
+        
         conn.close()
         
         return True, program_ids, section_ids
         
     except Exception as e:
         logger.error(f"Error creating programs and courses: {e}")
+        import traceback
+        traceback.print_exc()
         if conn:
             conn.rollback()
             conn.close()
