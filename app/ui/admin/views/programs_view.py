@@ -381,29 +381,64 @@ class ViewProgramPopup(ctk.CTkToplevel):
             )
             
             if success and chart_data:
-                months = chart_data['months']
-                year_levels = chart_data['year_levels']
-                data = chart_data['data']
+                # The database already returns filtered data based on semester selection
+                # So we use the data as-is without further filtering
+                months = chart_data.get('months', [])
+                year_levels = chart_data.get('year_levels', [])
+                data = chart_data.get('data', {})
+                
+                # If no data found for the selected filters, show appropriate message
+                if not months or not data:
+                    current_semester = self.semester_var.get()
+                    if current_semester != "All Semesters":
+                        months = [f'No data for {current_semester}']
+                    else:
+                        months = ['No data available']
+                    year_levels = ['No Data']
+                    data = {'No Data': [0]}
             else:
-                # Fallback to sample data
-                months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                # Fallback to sample data - these are just for demonstration
+                current_semester = self.semester_var.get()
+                
+                if current_semester == "1st Semester":
+                    months = ['Sep', 'Oct', 'Nov', 'Dec', 'Jan']
+                    data = {
+                        '1st Year': [89, 91, 88, 86, 85],
+                        '2nd Year': [84, 86, 83, 81, 78],
+                        '3rd Year': [94, 96, 94, 92, 92],
+                        '4th Year': [90, 92, 90, 88, 88]
+                    }
+                elif current_semester == "2nd Semester":
+                    months = ['Feb', 'Mar', 'Apr', 'May', 'Jun']
+                    data = {
+                        '1st Year': [88, 92, 89, 86, 90],
+                        '2nd Year': [82, 85, 88, 84, 87],
+                        '3rd Year': [94, 96, 93, 91, 95],
+                        '4th Year': [90, 92, 89, 87, 91]
+                    }
+                elif current_semester == "Summer":
+                    months = ['Jul', 'Aug']
+                    data = {
+                        '1st Year': [87, 85],
+                        '2nd Year': [83, 80],
+                        '3rd Year': [93, 91],
+                        '4th Year': [89, 87]
+                    }
+                else:  # All Semesters
+                    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                    data = {
+                        '1st Year': [85, 88, 92, 89, 86, 90, 87, 85, 89, 91, 88, 86],
+                        '2nd Year': [78, 82, 85, 88, 84, 87, 83, 80, 84, 86, 83, 81],
+                        '3rd Year': [92, 94, 96, 93, 91, 95, 93, 91, 94, 96, 94, 92],
+                        '4th Year': [88, 90, 92, 89, 87, 91, 89, 87, 90, 92, 90, 88]
+                    }
+                
                 year_levels = ['1st Year', '2nd Year', '3rd Year', '4th Year']
-                data = {
-                    '1st Year': [85, 88, 92, 89, 86, 90, 87, 85, 89, 91, 88, 86],
-                    '2nd Year': [78, 82, 85, 88, 84, 87, 83, 80, 84, 86, 83, 81],
-                    '3rd Year': [92, 94, 96, 93, 91, 95, 93, 91, 94, 96, 94, 92],
-                    '4th Year': [88, 90, 92, 89, 87, 91, 89, 87, 90, 92, 90, 88]
-                }
         else:
-            # Fallback data for testing
-            months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-            year_levels = ['1st Year', '2nd Year', '3rd Year', '4th Year']
-            data = {
-                '1st Year': [85, 88, 92, 89, 86, 90, 87, 85, 89, 91, 88, 86],
-                '2nd Year': [78, 82, 85, 88, 84, 87, 83, 80, 84, 86, 83, 81],
-                '3rd Year': [92, 94, 96, 93, 91, 95, 93, 91, 94, 96, 94, 92],
-                '4th Year': [88, 90, 92, 89, 87, 91, 89, 87, 90, 92, 90, 88]
-            }
+            # Fallback data for testing when no database connection
+            months = ['Dynamic months based on actual school calendar']
+            year_levels = ['Sample Data']
+            data = {'Sample Data': [85]}
         
         fig, ax = plt.subplots(figsize=(12, 4.5))
         fig.patch.set_facecolor('#F8F9FA')
@@ -413,17 +448,30 @@ class ViewProgramPopup(ctk.CTkToplevel):
         colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444']
         
         # Only plot data for year levels that exist in the data
+        plotted_levels = []
         for i, year_level in enumerate(year_levels):
-            if year_level in data:
+            if year_level in data and data[year_level]:
                 rates = data[year_level]
                 ax.bar(x + i * width, rates, width, label=year_level, color=colors[i % len(colors)])
+                plotted_levels.append(year_level)
         
         ax.set_xlabel('Month', fontsize=11)
         ax.set_ylabel('Attendance Rate (%)', fontsize=11)
-        ax.set_title('Monthly Attendance by Year Level', fontsize=16, pad=25, weight='bold')
-        ax.set_xticks(x + width * (len(year_levels) - 1) / 2)
+        
+        # Dynamic title based on semester
+        current_semester = self.semester_var.get()
+        if current_semester != "All Semesters":
+            title = f'Monthly Attendance by Year Level - {current_semester}'
+        else:
+            title = 'Monthly Attendance by Year Level'
+        
+        ax.set_title(title, fontsize=16, pad=25, weight='bold')
+        ax.set_xticks(x + width * (len(plotted_levels) - 1) / 2)
         ax.set_xticklabels(months, fontsize=10)
-        ax.legend(fontsize=9, loc='upper right')
+        
+        if plotted_levels and not months[0].startswith('No data'):
+            ax.legend(fontsize=9, loc='upper right')
+        
         ax.grid(True, alpha=0.3)
         ax.set_ylim(0, 100)  # Set to 0-100 for percentage data
         
@@ -434,41 +482,6 @@ class ViewProgramPopup(ctk.CTkToplevel):
         canvas.get_tk_widget().pack(pady=20, padx=20, fill="both", expand=True)
         
         plt.close(fig)
-
-    def create_line_chart(self, parent):
-        # TODO: Replace with actual data from backend
-        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
-        attendance_trend = [87, 89, 91, 88, 85, 90]
-        target_line = [90] * len(months)  # Target attendance rate
-        
-        fig, ax = plt.subplots(figsize=(2.2, 1.9))
-        fig.patch.set_facecolor('#F8F9FA')
-        
-        ax.plot(months, attendance_trend, marker='o', linewidth=2, markersize=3, 
-                color='#3B82F6', label='Actual')
-        ax.plot(months, target_line, '--', linewidth=1.5, color='#EF4444', 
-                label='Target (90%)')
-        
-        ax.set_xlabel('Month', fontsize=7)
-        ax.set_ylabel('Attendance (%)', fontsize=7)
-        ax.set_title('Attendance Trend', fontsize=8, pad=5)
-        ax.legend(fontsize=5.5)
-        ax.grid(True, alpha=0.3)
-        ax.set_ylim(80, 95)
-        
-        plt.xticks(fontsize=6)
-        plt.yticks(fontsize=6)
-        plt.tight_layout()
-        
-        canvas = FigureCanvasTkAgg(fig, parent)
-        canvas.draw()
-        canvas.get_tk_widget().pack(pady=3, padx=8)
-        
-        plt.close(fig)
-
-    def export_data(self):
-        # Method removed - export functionality no longer needed
-        pass
 
     def on_filter_change(self, value=None):
         """Called when year or semester selection changes"""
@@ -505,7 +518,7 @@ class ViewProgramPopup(ctk.CTkToplevel):
                 'total_students': 300,
                 'attendance_rate': '90%',
                 'total_courses': 15,
-                'total_absents': 99,
+                'total_absents': 0,
                 'total_present': 450,
                 'total_late': 51
             }

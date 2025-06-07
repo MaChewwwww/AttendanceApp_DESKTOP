@@ -616,12 +616,12 @@ class DatabaseCourseManager:
             conn.close()
 
     def get_course_monthly_attendance(self, course_id, academic_year=None, semester=None):
-        """Get monthly attendance data for a specific course grouped by sections"""
+        """Get monthly attendance data for a specific course grouped by sections - only months with actual data"""
         conn = self.get_connection()
         try:
             cursor = conn.cursor()
             
-            # Get monthly attendance data by section
+            # Get monthly attendance data by section - only for months that have actual attendance records
             monthly_query = """
             SELECT 
                 s.name as section_name,
@@ -640,19 +640,19 @@ class DatabaseCourseManager:
                     WHEN SUBSTR(al.date, 6, 2) = '12' THEN 'Dec'
                     ELSE 'Unknown'
                 END as month,
-                SUBSTR(al.date, 6, 2) as month_num,
+                SUBSTR(al.date, 1, 4) as year,
                 COUNT(al.id) as total_records,
                 SUM(CASE WHEN al.status = 'present' THEN 1 ELSE 0 END) as present_count
             FROM sections s
             JOIN assigned_courses ac ON s.id = ac.section_id
-            LEFT JOIN attendance_logs al ON al.assigned_course_id = ac.id
+            INNER JOIN attendance_logs al ON al.assigned_course_id = ac.id
             WHERE ac.course_id = ? AND ac.isDeleted = 0
             AND al.date IS NOT NULL
             """
             
             params = [course_id]
             
-            # Add filters if provided
+            # Apply filters if provided
             if academic_year:
                 monthly_query += " AND ac.academic_year = ?"
                 params.append(academic_year)
@@ -662,27 +662,40 @@ class DatabaseCourseManager:
                 params.append(semester)
             
             monthly_query += """
-            GROUP BY s.id, s.name, month_num, month
-            ORDER BY s.name, month_num
+            GROUP BY s.id, s.name, year, month
+            HAVING COUNT(al.id) > 0
+            ORDER BY s.name, year, SUBSTR(al.date, 6, 2)
             """
             
             cursor.execute(monthly_query, params)
             monthly_results = cursor.fetchall()
             
-            # Process the data into a structured format
-            months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            if not monthly_results:
+                # No data found for the selected filters
+                return True, {
+                    'months': [],
+                    'sections_data': {}
+                }
             
+            # Process the data into a structured format
             sections_data = {}
+            months_with_data = set()
             
             for row in monthly_results:
                 section_name = row['section_name']
                 month = row['month']
+                year = row['year']
                 total_records = row['total_records'] or 0
                 present_count = row['present_count'] or 0
                 
+                # Track months that have data
+                months_with_data.add((month, year))
+                
                 if section_name not in sections_data:
                     sections_data[section_name] = {}
+                
+                # Use year-month as key for more precise matching
+                month_key = f"{month}-{year}"
                 
                 # Calculate attendance rate for this month
                 if total_records > 0:
@@ -690,22 +703,70 @@ class DatabaseCourseManager:
                 else:
                     attendance_rate = 0
                 
-                sections_data[section_name][month] = round(attendance_rate, 1)
+                sections_data[section_name][month_key] = round(attendance_rate, 1)
             
-            # Fill missing months with 0 or interpolated values
-            for section_name in sections_data:
-                for month in months:
-                    if month not in sections_data[section_name]:
-                        sections_data[section_name][month] = 0
+            # Create ordered list of months that actually have data
+            month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
             
-            # Convert to the format expected by the chart
+            # Sort months chronologically by converting to sortable format
+            sorted_months_with_data = []
+            for month, year in months_with_data:
+                month_num = month_names.index(month) + 1
+                sorted_months_with_data.append((year, month_num, month))
+            
+            sorted_months_with_data.sort()  # Sort by year, then month
+            
+            # Extract the ordered month list
+            months_list = []
+            month_keys_list = []
+            for year, month_num, month in sorted_months_with_data:
+                months_list.append(month)
+                month_keys_list.append(f"{month}-{year}")
+            
+            # Create the final data structure with only months that have data
             chart_data = {}
-            for section_name, monthly_data in sections_data.items():
-                chart_data[section_name] = [monthly_data[month] for month in months]
+            
+            for section_name in sections_data.keys():
+                chart_data[section_name] = []
+                for month_key in month_keys_list:
+                    # Get attendance rate for this month or 0 if no data for this specific section
+                    rate = sections_data[section_name].get(month_key, 0)
+                    chart_data[section_name].append(rate)
+            
+            # Remove duplicate month names while preserving order and data alignment
+            unique_months = []
+            final_chart_data = {}
+            seen_months = {}
+            
+            for i, month in enumerate(months_list):
+                if month not in seen_months:
+                    # First occurrence of this month
+                    seen_months[month] = len(unique_months)
+                    unique_months.append(month)
+                    
+                    # Initialize data for this unique month
+                    for section_name in chart_data.keys():
+                        if section_name not in final_chart_data:
+                            final_chart_data[section_name] = []
+                        final_chart_data[section_name].append(chart_data[section_name][i])
+                else:
+                    # Duplicate month - average with existing data
+                    month_index = seen_months[month]
+                    for section_name in chart_data.keys():
+                        if section_name in final_chart_data:
+                            existing_rate = final_chart_data[section_name][month_index]
+                            new_rate = chart_data[section_name][i]
+                            # Average the rates if both have data
+                            if existing_rate > 0 and new_rate > 0:
+                                avg_rate = (existing_rate + new_rate) / 2
+                                final_chart_data[section_name][month_index] = round(avg_rate, 1)
+                            elif new_rate > 0:  # Use new rate if existing was 0
+                                final_chart_data[section_name][month_index] = new_rate
             
             result = {
-                'months': months,
-                'sections_data': chart_data
+                'months': unique_months,
+                'sections_data': final_chart_data
             }
             
             return True, result

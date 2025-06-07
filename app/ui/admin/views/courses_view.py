@@ -266,7 +266,7 @@ class ViewCoursePopup(ctk.CTkToplevel):
                     self.schedule_stats = self._get_fallback_schedule_stats()
                 
                 # Load monthly attendance data for line chart
-                success_monthly, monthly_stats = self.db_manager.get_course_monthly_attendance(
+                success_monthly, monthly_stats = self.db_manager.courses.get_course_monthly_attendance(
                     self.course_data['id'], 
                     academic_year=year_filter,
                     semester=semester_filter
@@ -563,17 +563,33 @@ class ViewCoursePopup(ctk.CTkToplevel):
         self.create_monthly_attendance_line_chart(line_container)
 
     def create_monthly_attendance_line_chart(self, parent):
-        """Create monthly attendance chart with real data from database"""
+        """Create monthly attendance chart with real data from database - completely dynamic date ranges"""
         # Get real monthly data from loaded statistics
         monthly_data = self.monthly_stats
-        months = monthly_data.get('months', ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
-        sections_data = monthly_data.get('sections_data', {})
+        all_months = monthly_data.get('months', [])
+        all_sections_data = monthly_data.get('sections_data', {})
         
-        # Use sample data if no real data available
-        if not sections_data:
+        # Check if we have any data
+        if not all_months or not all_sections_data:
+            # Show "No Data" message
+            months = ['No data available']
             sections_data = {
-                'No Data': [0] * 12
+                'No Data': [0]
             }
+        else:
+            # The monthly data is already filtered by the database query based on semester selection
+            # So we just use the data as returned from the database
+            months = all_months
+            sections_data = all_sections_data
+            
+            # If the database returned empty data for the selected filters, show appropriate message
+            if not months or not sections_data:
+                current_semester = self.semester_var.get()
+                if current_semester != "All Semesters":
+                    months = [f'No data for {current_semester}']
+                else:
+                    months = ['No data available']
+                sections_data = {'No Data': [0]}
         
         fig, ax = plt.subplots(figsize=(11.2, 4.4))
         fig.patch.set_facecolor('#F8F9FA')
@@ -639,11 +655,11 @@ class ViewCoursePopup(ctk.CTkToplevel):
         ax.tick_params(axis='x', colors='#6B7280', labelsize=10)
         
         # Legend positioning
-        if legend_entries:
+        if legend_entries and not months[0].startswith('No data'):
             ax.legend(fontsize=11, loc='upper left', frameon=False, bbox_to_anchor=(0.02, 0.98))
         
-        # Add annotations for real data peaks and lows
-        if sections_data and any(any(data) for data in sections_data.values()):
+        # Add annotations for real data peaks and lows (only if we have real data)
+        if sections_data and any(any(data) for data in sections_data.values()) and not months[0].startswith('No data'):
             # Find section with highest peak
             best_section = None
             best_value = 0
@@ -691,17 +707,51 @@ class ViewCoursePopup(ctk.CTkToplevel):
         
         plt.close(fig)
 
+    def _validate_semester_months(self, months, semester):
+        """Validate that the months match the expected semester pattern"""
+        if not months:
+            return False
+        
+        # Define expected month patterns for each semester
+        semester_patterns = {
+            "1st Semester": ['Sep', 'Oct', 'Nov', 'Dec', 'Jan'],
+            "2nd Semester": ['Feb', 'Mar', 'Apr', 'May', 'Jun'],
+            "Summer": ['Jul', 'Aug']
+        }
+        
+        expected_months = semester_patterns.get(semester, [])
+        if not expected_months:
+            return True  # If semester not recognized, allow all months
+        
+        # Check if any of the months in the data match the expected semester months
+        for month in months:
+            if month in expected_months:
+                return True
+        
+        return False
+
     def get_available_years(self):
         """Get available academic years from database"""
         try:
             if self.db_manager:
-                success, years = self.db_manager.get_available_academic_years()
+                # Use the course manager method directly
+                success, years = self.db_manager.courses.get_available_academic_years()
                 if success and years:
                     return years
             # Fallback to current and previous years if database query fails
             from datetime import datetime
             current_year = datetime.now().year
-            return [f"{current_year}-{current_year + 1}", f"{current_year - 1}-{current_year}"]
+            current_month = datetime.now().month
+            
+            # Academic year starts in September
+            if current_month >= 9:  # Sep-Dec = current academic year
+                academic_year = f"{current_year}-{current_year + 1}"
+                prev_academic_year = f"{current_year - 1}-{current_year}"
+            else:  # Jan-Aug = previous academic year ending
+                academic_year = f"{current_year - 1}-{current_year}"
+                prev_academic_year = f"{current_year - 2}-{current_year - 1}"
+            
+            return [academic_year, prev_academic_year]
         except Exception as e:
             print(f"Error fetching available years: {e}")
             # Fallback years
@@ -713,10 +763,11 @@ class ViewCoursePopup(ctk.CTkToplevel):
         """Get available semesters from database"""
         try:
             if self.db_manager:
-                success, semesters = self.db_manager.get_available_semesters()
+                # Use the course manager method directly
+                success, semesters = self.db_manager.courses.get_available_semesters()
                 if success and semesters:
                     return semesters
-            # Fallback semesters if database query fails
+            # Fallback semesters based on academic calendar
             return ["1st Semester", "2nd Semester", "Summer"]
         except Exception as e:
             print(f"Error fetching available semesters: {e}")

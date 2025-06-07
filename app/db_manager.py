@@ -214,11 +214,5 @@ class DatabaseManager:
     def get_course_schedule_statistics(self, course_id, academic_year=None, semester=None):
         return self.courses.get_course_schedule_statistics(course_id, academic_year, semester)
 
-    def get_available_academic_years(self):
-        return self.courses.get_available_academic_years()
-
-    def get_available_semesters(self):
-        return self.courses.get_available_semesters()
-
     def get_course_monthly_attendance(self, course_id, academic_year=None, semester=None):
         return self.courses.get_course_monthly_attendance(course_id, academic_year, semester)

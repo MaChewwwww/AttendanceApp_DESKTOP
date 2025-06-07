@@ -390,8 +390,31 @@ def seed_assigned_courses_and_attendance():
         """)
         
         current_time = datetime.now().isoformat()
-        current_year = datetime.now().year
-        academic_year = f"{current_year}-{current_year + 1}"
+        current_date = datetime.now()
+        current_year = current_date.year
+        current_month = current_date.month
+        
+        # Generate data for multiple academic years and semesters
+        academic_years_to_generate = []
+        
+        # Generate current academic year
+        if current_month >= 9:  # September onwards = new academic year
+            current_academic_year = f"{current_year}-{current_year + 1}"
+        else:  # January to August = previous academic year
+            current_academic_year = f"{current_year - 1}-{current_year}"
+        
+        # Generate previous academic year for historical data
+        if current_month >= 9:
+            previous_academic_year = f"{current_year - 1}-{current_year}"
+        else:
+            previous_academic_year = f"{current_year - 2}-{current_year - 1}"
+        
+        academic_years_to_generate = [previous_academic_year, current_academic_year]
+        
+        # Define all semesters
+        all_semesters = ["1st Semester", "2nd Semester", "Summer"]
+        
+        logger.info(f"Generating data for academic years: {academic_years_to_generate}")
         
         assigned_course_ids = []
         
@@ -401,89 +424,103 @@ def seed_assigned_courses_and_attendance():
             conn.close()
             return False
         
-        # Assign each faculty member to 2-3 courses
-        for faculty_user_id, first_name, last_name in faculty_list:
-            num_courses_to_assign = min(3, len(courses_list), random.randint(2, 3))
-            selected_courses = random.sample(courses_list, num_courses_to_assign)
-            
-            for course_id, course_name, program_name in selected_courses:
-                # Find matching sections for this program
-                matching_sections = [s for s in sections_list if s[2] == program_name]
+        # Generate course assignments for each academic year and semester
+        for academic_year in academic_years_to_generate:
+            for semester in all_semesters:
+                logger.info(f"Creating assignments for {academic_year} - {semester}")
                 
-                if matching_sections:
-                    section_id, section_name, _ = random.choice(matching_sections)
+                # Assign each faculty member to 2-3 courses per semester
+                for faculty_user_id, first_name, last_name in faculty_list:
+                    # Vary the number of courses per semester
+                    if semester == "Summer":
+                        num_courses_to_assign = min(2, len(courses_list), random.randint(1, 2))  # Fewer courses in summer
+                    else:
+                        num_courses_to_assign = min(3, len(courses_list), random.randint(2, 3))  # Regular semester load
                     
-                    rooms = ['Room 101', 'Room 102', 'Room 103', 'Lab 1', 'Lab 2', 'Conference Room']
-                    room = random.choice(rooms)
-                    semester = random.choice(['1st Semester', '2nd Semester'])
+                    selected_courses = random.sample(courses_list, num_courses_to_assign)
                     
-                    # Check if this assignment already exists
-                    cursor.execute("""
-                        SELECT id FROM assigned_courses 
-                        WHERE faculty_id = ? AND course_id = ? AND section_id = ? AND academic_year = ?
-                    """, (faculty_user_id, course_id, section_id, academic_year))
-                    
-                    existing = cursor.fetchone()
-                    if existing:
-                        assigned_course_ids.append(existing[0])
-                        continue
-                    
-                    # Insert assigned course (using faculty_id to match model)
-                    cursor.execute("""
-                        INSERT INTO assigned_courses 
-                        (faculty_id, course_id, section_id, academic_year, semester, room, isDeleted, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (faculty_user_id, course_id, section_id, academic_year, semester, room, 0, current_time, current_time))
-                    
-                    assigned_course_id = cursor.lastrowid
-                    assigned_course_ids.append(assigned_course_id)
-                    
-                    # Create schedule entries for this assigned course
-                    days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-                    time_slots = [
-                        ('08:00:00', '09:30:00'),
-                        ('09:30:00', '11:00:00'),
-                        ('11:00:00', '12:30:00'),
-                        ('13:30:00', '15:00:00'),
-                        ('15:00:00', '16:30:00'),
-                        ('16:30:00', '18:00:00')
-                    ]
-                    
-                    # Most courses meet 2-3 times per week
-                    num_meetings = random.choice([2, 3])
-                    selected_days = random.sample(days_of_week, num_meetings)
-                    
-                    for day in selected_days:
-                        start_time, end_time = random.choice(time_slots)
+                    for course_id, course_name, program_name in selected_courses:
+                        # Find matching sections for this program
+                        matching_sections = [s for s in sections_list if s[2] == program_name]
                         
-                        # Convert time strings to datetime objects for storage
-                        today = datetime.now().date()
-                        start_datetime = datetime.combine(today, datetime.strptime(start_time, '%H:%M:%S').time())
-                        end_datetime = datetime.combine(today, datetime.strptime(end_time, '%H:%M:%S').time())
-                        
-                        cursor.execute("""
-                            INSERT INTO schedules 
-                            (assigned_course_id, day_of_week, start_time, end_time, created_at, updated_at)
-                            VALUES (?, ?, ?, ?, ?, ?)
-                        """, (
-                            assigned_course_id,
-                            day,
-                            start_datetime.isoformat(),
-                            end_datetime.isoformat(),
-                            current_time,
-                            current_time
-                        ))
-                    
-                    logger.info(f"Assigned {first_name} {last_name} to teach {course_name} for section {section_name} with {num_meetings} weekly meetings (ID: {assigned_course_id})")
+                        if matching_sections:
+                            section_id, section_name, _ = random.choice(matching_sections)
+                            
+                            rooms = ['Room 101', 'Room 102', 'Room 103', 'Lab 1', 'Lab 2', 'Conference Room']
+                            room = random.choice(rooms)
+                            
+                            # Check if this assignment already exists
+                            cursor.execute("""
+                                SELECT id FROM assigned_courses 
+                                WHERE faculty_id = ? AND course_id = ? AND section_id = ? AND academic_year = ? AND semester = ?
+                            """, (faculty_user_id, course_id, section_id, academic_year, semester))
+                            
+                            existing = cursor.fetchone()
+                            if existing:
+                                assigned_course_ids.append(existing[0])
+                                continue
+                            
+                            # Insert assigned course (using faculty_id to match model)
+                            cursor.execute("""
+                                INSERT INTO assigned_courses 
+                                (faculty_id, course_id, section_id, academic_year, semester, room, isDeleted, created_at, updated_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """, (faculty_user_id, course_id, section_id, academic_year, semester, room, 0, current_time, current_time))
+                            
+                            assigned_course_id = cursor.lastrowid
+                            assigned_course_ids.append(assigned_course_id)
+                            
+                            # Create schedule entries for this assigned course
+                            days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+                            time_slots = [
+                                ('08:00:00', '09:30:00'),
+                                ('09:30:00', '11:00:00'),
+                                ('11:00:00', '12:30:00'),
+                                ('13:30:00', '15:00:00'),
+                                ('15:00:00', '16:30:00'),
+                                ('16:30:00', '18:00:00')
+                            ]
+                            
+                            # Most courses meet 2-3 times per week
+                            if semester == "Summer":
+                                num_meetings = random.choice([2, 3])  # Summer courses may be more intensive
+                            else:
+                                num_meetings = random.choice([2, 3])
+                            
+
+                            selected_days = random.sample(days_of_week, num_meetings)
+                            
+                            for day in selected_days:
+                                start_time, end_time = random.choice(time_slots)
+                                
+                                # Convert time strings to datetime objects for storage
+                                today = datetime.now().date()
+                                start_datetime = datetime.combine(today, datetime.strptime(start_time, '%H:%M:%S').time())
+                                end_datetime = datetime.combine(today, datetime.strptime(end_time, '%H:%M:%S').time())
+                                
+                                cursor.execute("""
+                                    INSERT INTO schedules 
+                                    (assigned_course_id, day_of_week, start_time, end_time, created_at, updated_at)
+                                    VALUES (?, ?, ?, ?, ?, ?)
+                                """, (
+                                    assigned_course_id,
+                                    day,
+                                    start_datetime.isoformat(),
+                                    end_datetime.isoformat(),
+                                    current_time,
+                                    current_time
+                                ))
+                            
+                            logger.info(f"Assigned {first_name} {last_name} to teach {course_name} for section {section_name} in {academic_year} {semester} with {num_meetings} weekly meetings")
         
-        logger.info(f"Created {len(assigned_course_ids)} course assignments")
+        logger.info(f"Created {len(assigned_course_ids)} course assignments across all semesters")
         
         # Get total schedule count
         cursor.execute("SELECT COUNT(*) FROM schedules")
         schedule_count = cursor.fetchone()[0]
         logger.info(f"Created {schedule_count} schedule entries")
         
-        # Now seed attendance logs with realistic distributions
+        # Now seed attendance logs with realistic academic calendar data for each semester
         if assigned_course_ids:
             # Get all students
             cursor.execute("""
@@ -538,13 +575,12 @@ def seed_assigned_courses_and_attendance():
             
             logger.info(f"Student distribution: {excellent_students} excellent, {very_good_students} very good, {good_students} good, {average_students} average, {poor_students} poor")
             
-            # Generate attendance logs for the past 60 days
-            start_date = datetime.now() - timedelta(days=60)
-            
+            # Generate attendance for each assigned course
             for assigned_course_id in assigned_course_ids:
-                # Get course and section info for this assignment
+                # Get course assignment details
                 cursor.execute("""
-                    SELECT ac.section_id, c.name as course_name, s.name as section_name
+                    SELECT ac.section_id, c.name as course_name, s.name as section_name, 
+                           ac.academic_year, ac.semester
                     FROM assigned_courses ac
                     JOIN courses c ON ac.course_id = c.id
                     JOIN sections s ON ac.section_id = s.id
@@ -555,7 +591,7 @@ def seed_assigned_courses_and_attendance():
                 if not course_info:
                     continue
                 
-                section_id, course_name, section_name = course_info
+                section_id, course_name, section_name, academic_year, semester = course_info
                 
                 # Find students in this section
                 section_students = [s for s in students_list if s[3] == section_id]
@@ -563,14 +599,60 @@ def seed_assigned_courses_and_attendance():
                 if not section_students:
                     continue
                 
-                # Generate class schedule (3 times per week for each course)
-                class_days = []
-                for day_offset in range(60):
-                    attendance_date = start_date + timedelta(days=day_offset)
+                # Determine semester date ranges
+                year_parts = academic_year.split('-')
+                start_year = int(year_parts[0])
+                end_year = int(year_parts[1])
+                
+                if semester == "1st Semester":
+                    # September to January
+                    start_date = datetime(start_year, 9, 1)
+                    end_date = datetime(end_year, 1, 31)
+                elif semester == "2nd Semester":
+                    # February to June
+                    start_date = datetime(end_year, 2, 1)
+                    end_date = datetime(end_year, 6, 30)
+                else:  # Summer
+                    # July to August
+                    start_date = datetime(end_year, 7, 1)
+                    end_date = datetime(end_year, 8, 31)
+                
+                # Only generate data for completed semesters or up to current date for current semester
+                if start_date > current_date:
+                    continue  # Skip future semesters
                     
-                    # Skip weekends and schedule classes 3 times per week
-                    if attendance_date.weekday() in [0, 2, 4] and attendance_date.weekday() < 5:  # Mon, Wed, Fri
-                        class_days.append(attendance_date)
+                # Limit end date to current date for ongoing semesters
+                if end_date > current_date:
+                    end_date = current_date
+                
+                # Get the schedule for this course to determine class days
+                cursor.execute("""
+                    SELECT day_of_week FROM schedules 
+                    WHERE assigned_course_id = ?
+                """, (assigned_course_id,))
+                schedule_days = [row[0] for row in cursor.fetchall()]
+                
+                if not schedule_days:
+                    continue
+                
+                # Map day names to weekday numbers
+                day_mapping = {
+                    'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 
+                    'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6
+                }
+                class_weekdays = [day_mapping[day] for day in schedule_days if day in day_mapping]
+                
+                # Generate class schedule based on actual academic calendar
+                class_days = []
+                current_check_date = start_date
+                
+                while current_check_date <= end_date:
+                    # Check if this date falls on a scheduled class day
+                    if current_check_date.weekday() in class_weekdays:
+                        class_days.append(current_check_date)
+                    current_check_date += timedelta(days=1)
+                
+                logger.info(f"Course {course_name} section {section_name} ({academic_year} {semester}): {len(class_days)} class days from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
                 
                 # Generate attendance for each class day
                 for class_date in class_days:
@@ -584,7 +666,23 @@ def seed_assigned_courses_and_attendance():
                         base_rate = perf['attendance_rate']
                         consistency = perf['consistency']
                         
-                        attendance_probability = base_rate + (random.uniform(-0.1, 0.1) * (1 - consistency))
+                        # Add seasonal variations
+                        month = class_date.month
+                        seasonal_modifier = 1.0
+                        
+                        # Holiday periods tend to have lower attendance
+                        if month == 12:  # December - holiday season
+                            seasonal_modifier = 0.85
+                        elif month == 6:  # June - end of semester fatigue
+                            seasonal_modifier = 0.90
+                        elif month in [1, 2]:  # January-February - post-holiday motivation
+                            seasonal_modifier = 1.05
+                        elif month in [9, 10]:  # September-October - start of semester enthusiasm
+                            seasonal_modifier = 1.1
+                        elif month in [7, 8]:  # July-August - summer semester (more focused)
+                            seasonal_modifier = 0.95
+                        
+                        attendance_probability = base_rate * seasonal_modifier + (random.uniform(-0.1, 0.1) * (1 - consistency))
                         attendance_probability = max(0, min(1, attendance_probability))
                         
                         # Determine attendance status
@@ -630,9 +728,38 @@ def seed_assigned_courses_and_attendance():
         cursor.execute("SELECT COUNT(*) FROM attendance_logs")
         attendance_count = cursor.fetchone()[0]
         
-        logger.info(f"✓ Created {course_count} assigned courses")
+        # Show attendance by academic year, semester, and month
+        cursor.execute("""
+            SELECT 
+                ac.academic_year,
+                ac.semester,
+                substr(al.date, 1, 7) as month,
+                COUNT(*) as total_records,
+                SUM(CASE WHEN al.status = 'present' THEN 1 ELSE 0 END) as present,
+                SUM(CASE WHEN al.status = 'late' THEN 1 ELSE 0 END) as late,
+                SUM(CASE WHEN al.status = 'absent' THEN 1 ELSE 0 END) as absent
+            FROM attendance_logs al
+            JOIN assigned_courses ac ON al.assigned_course_id = ac.id
+            GROUP BY ac.academic_year, ac.semester, month 
+            ORDER BY ac.academic_year, ac.semester, month
+        """)
+        detailed_stats = cursor.fetchall()
+        
+        logger.info(f"✓ Created {course_count} assigned courses across all semesters")
         logger.info(f"✓ Created {schedule_count} schedule entries")
         logger.info(f"✓ Created {attendance_count} attendance logs")
+        
+        logger.info("Detailed attendance distribution by semester:")
+        current_ay = None
+        current_sem = None
+        for academic_year, semester, month, total, present, late, absent in detailed_stats:
+            if academic_year != current_ay or semester != current_sem:
+                logger.info(f"\n{academic_year} - {semester}:")
+                current_ay = academic_year
+                current_sem = semester
+            
+            rate = (present / total * 100) if total > 0 else 0
+            logger.info(f"  {month}: {total} records, {present} present ({rate:.1f}%), {late} late, {absent} absent")
         
         conn.close()
         return True
