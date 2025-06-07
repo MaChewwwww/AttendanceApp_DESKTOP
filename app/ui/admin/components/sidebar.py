@@ -51,13 +51,13 @@ class Sidebar(ctk.CTkFrame):
         separator = ctk.CTkFrame(self, height=1, fg_color="#ffffff", corner_radius=0)
         separator.pack(fill="x", padx=10, pady=10)
         
-        # Menu options with corresponding icons
+        # Menu options with corresponding icons - Updated order
         menu_items = [
             {"name": "Dashboard", "view": "dashboard", "icon": self.icons.get("dashboard", "■")},
-            {"name": "Users", "view": "users", "icon": self.icons.get("users", "■")},
+            {"name": "Programs", "view": "programs", "icon": self.icons.get("book_open", "■")},
             {"name": "Courses", "view": "courses", "icon": self.icons.get("graduation_cap", "■")},
             {"name": "Sections", "view": "sections", "icon": self.icons.get("folder", "■")},
-            {"name": "Programs", "view": "programs", "icon": self.icons.get("book_open", "■")}
+            {"name": "Users", "view": "users", "icon": self.icons.get("users", "■")}
         ]
         
         # Menu buttons container
