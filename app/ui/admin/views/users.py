@@ -408,20 +408,20 @@ class UsersView(ctk.CTkFrame):
         self.student_search_entry.bind('<Return>', lambda e: self.on_search_change('student', self.student_search_entry.get()))
         self.student_search_entry.bind('<KeyRelease>', lambda e: self.update_search_clear_button('student'))
 
-        # Filter button container for active state detection
-        filter_container = ctk.CTkFrame(search_bar_container, fg_color="transparent")
-        filter_container.pack(side="left", padx=0, pady=0)
+        # Filter and Sort button container
+        filter_sort_container = ctk.CTkFrame(search_bar_container, fg_color="transparent")
+        filter_sort_container.pack(side="left", padx=0, pady=0)
         
         # Check if filters are active OR if there's a search term
         has_active_filters = any(v != "All" and v != "" for v in self.current_filters.get('student', {}).values())
         has_search = bool(self.current_search.get('student', "").strip())
         is_active = has_active_filters or has_search
         
-        # Filter button (flush, no corner radius, border on all sides, same height)
+        # Filter button (second position)
         filter_btn = ctk.CTkButton(
-            filter_container,
-            text="Filters",
-            width=80,
+            filter_sort_container,
+            text="Filters 🔽",
+            width=95,
             height=36,
             fg_color="#1E3A8A" if is_active else "#fff",
             text_color="#fff" if is_active else "#757575",
@@ -432,12 +432,57 @@ class UsersView(ctk.CTkFrame):
             font=ctk.CTkFont(size=13),
             command=lambda: FilterPopup(self, "student")
         )
-        filter_btn.pack(side="left")
+        filter_btn.pack(side="left", padx=(0, 0))
         
-        # Clear filters button (x icon) - show if filters are active OR search is active
+        # Check if sort is active (not default icon)
+        is_sort_active = hasattr(self, 'student_sort_var') and self.student_sort_var.get() != "↕"
+        
+        # Sort dropdown container (third position) - change color based on sort state
+        sort_container = ctk.CTkFrame(
+            filter_sort_container,
+            fg_color="#1E3A8A" if is_sort_active else "#fff",
+            border_width=1,
+            border_color="#1E3A8A" if is_sort_active else "#BDBDBD",
+            corner_radius=0,
+            height=36,
+            width=40
+        )
+        sort_container.pack(side="left", padx=(0, 0))
+        sort_container.pack_propagate(False)
+        
+        # Sort dropdown button with better icon
+        self.student_sort_var = tk.StringVar(value="↕")
+        student_sort_options = [
+            "None",
+            "Sort by Name (A-Z)", "Sort by Name (Z-A)",
+            "Sort by Section (A-Z)", "Sort by Section (Z-A)",
+            "Sort by Program (A-Z)", "Sort by Program (Z-A)",
+            "Sort by Status (A-Z)", "Sort by Status (Z-A)"
+        ]
+        
+        sort_btn = ctk.CTkOptionMenu(
+            sort_container,
+            values=student_sort_options,
+            variable=self.student_sort_var,
+            width=38,
+            height=34,
+            fg_color="#1E3A8A" if is_sort_active else "#fff",
+            text_color="#fff" if is_sort_active else "#757575",
+            button_color="#1E3A8A" if is_sort_active else "#fff",
+            button_hover_color="#1D4ED8" if is_sort_active else "#F3F4F6",
+            dropdown_fg_color="#fff",
+            dropdown_hover_color="#E5E7EB",
+            dropdown_text_color="#222",
+            corner_radius=0,
+            font=ctk.CTkFont(size=14),
+            command=lambda choice: self.apply_student_sort(choice)
+        )
+        sort_btn.pack(padx=0, pady=1, fill="both", expand=True)
+        
+        # Clear filters button (fourth position) - show if filters are active OR search is active
         if is_active:
             clear_filters_btn = ctk.CTkButton(
-                filter_container,
+                filter_sort_container,
                 text="✕",
                 width=20,
                 height=20,
@@ -639,20 +684,20 @@ class UsersView(ctk.CTkFrame):
         self.faculty_search_entry.bind('<Return>', lambda e: self.on_search_change('faculty', self.faculty_search_entry.get()))
         self.faculty_search_entry.bind('<KeyRelease>', lambda e: self.update_search_clear_button('faculty'))
         
-        # Filter button container for active state detection
-        filter_container = ctk.CTkFrame(search_bar_container, fg_color="transparent")
-        filter_container.pack(side="left", padx=0, pady=0)
-        
+        # Filter and Sort button container
+        filter_sort_container = ctk.CTkFrame(search_bar_container, fg_color="transparent")
+        filter_sort_container.pack(side="left", padx=0, pady=0)
+
         # Check if filters are active OR if there's a search term
         has_active_filters = any(v != "All" and v != "" for v in self.current_filters.get('faculty', {}).values())
         has_search = bool(self.current_search.get('faculty', "").strip())
         is_active = has_active_filters or has_search
         
-        # Filter button (flush, no corner radius, border on all sides, same height)
+        # Filter button (second position)
         filter_btn = ctk.CTkButton(
-            filter_container,
-            text="Filters",
-            width=80,
+            filter_sort_container,
+            text="Filters 🔽",
+            width=95,
             height=36,
             fg_color="#1E3A8A" if is_active else "#fff",
             text_color="#fff" if is_active else "#757575",
@@ -663,12 +708,58 @@ class UsersView(ctk.CTkFrame):
             font=ctk.CTkFont(size=13),
             command=lambda: FilterPopup(self, "faculty")
         )
-        filter_btn.pack(side="left")
+        filter_btn.pack(side="left", padx=(0, 0))
+
+        # Check if sort is active (not default icon)
+        is_sort_active = hasattr(self, 'faculty_sort_var') and self.faculty_sort_var.get() != "↕"
+
+        # Sort dropdown container (third position) - change color based on sort state
+        sort_container = ctk.CTkFrame(
+            filter_sort_container,
+            fg_color="#1E3A8A" if is_sort_active else "#fff",
+            border_width=1,
+            border_color="#1E3A8A" if is_sort_active else "#BDBDBD",
+            corner_radius=0,
+            height=36,
+            width=40
+        )
+        sort_container.pack(side="left", padx=(0, 0))
+        sort_container.pack_propagate(False)
         
-        # Clear filters button (x icon) - show if filters are active OR search is active
+        # Sort dropdown button with better icon
+        self.faculty_sort_var = tk.StringVar(value="↕")
+        faculty_sort_options = [
+            "None",
+            "Sort by Name (A-Z)", "Sort by Name (Z-A)",
+            "Sort by Employee Number (A-Z)", "Sort by Employee Number (Z-A)",
+            "Sort by Email (A-Z)", "Sort by Email (Z-A)",
+            "Sort by Role (A-Z)", "Sort by Role (Z-A)",
+            "Sort by Status (A-Z)", "Sort by Status (Z-A)"
+        ]
+        
+        sort_btn = ctk.CTkOptionMenu(
+            sort_container,
+            values=faculty_sort_options,
+            variable=self.faculty_sort_var,
+            width=38,
+            height=34,
+            fg_color="#1E3A8A" if is_sort_active else "#fff",
+            text_color="#fff" if is_sort_active else "#757575",
+            button_color="#1E3A8A" if is_sort_active else "#fff",
+            button_hover_color="#1D4ED8" if is_sort_active else "#F3F4F6",
+            dropdown_fg_color="#fff",
+            dropdown_hover_color="#E5E7EB",
+            dropdown_text_color="#222",
+            corner_radius=0,
+            font=ctk.CTkFont(size=14),
+            command=lambda choice: self.apply_faculty_sort(choice)
+        )
+        sort_btn.pack(padx=0, pady=1, fill="both", expand=True)
+
+        # Clear filters button (fourth position) - show if filters are active OR search is active
         if is_active:
             clear_filters_btn = ctk.CTkButton(
-                filter_container,
+                filter_sort_container,
                 text="✕",
                 width=20,
                 height=20,
@@ -873,6 +964,12 @@ class UsersView(ctk.CTkFrame):
         """Reset filters for the specified user type"""
         self.current_filters[user_type] = {}
         self.current_search[user_type] = ""
+        
+        # Reset sort dropdown to default
+        if user_type == 'student' and hasattr(self, 'student_sort_var'):
+            self.student_sort_var.set("↕")
+        elif user_type == 'faculty' and hasattr(self, 'faculty_sort_var'):
+            self.faculty_sort_var.set("↕")
         
         # Reset to first page
         if user_type == 'student':
@@ -1216,3 +1313,75 @@ class UsersView(ctk.CTkFrame):
             import traceback
             traceback.print_exc()
             messagebox.showerror("Export Error", f"Failed to export faculty data:\n{str(e)}")
+
+    def apply_student_sort(self, sort_choice):
+        """Apply sorting to students data"""
+        if not self.students_data or sort_choice == "None":
+            # If "None" is selected, reload data without sorting
+            if sort_choice == "None":
+                self.student_sort_var.set("↕")
+                self.load_filtered_data()
+            return
+            
+        # Create a copy of the data to sort
+        sorted_data = self.students_data.copy()
+        
+        if sort_choice == "Sort by Name (A-Z)":
+            sorted_data.sort(key=lambda x: f"{x.get('first_name', '')} {x.get('last_name', '')}")
+        elif sort_choice == "Sort by Name (Z-A)":
+            sorted_data.sort(key=lambda x: f"{x.get('first_name', '')} {x.get('last_name', '')}", reverse=True)
+        elif sort_choice == "Sort by Section (A-Z)":
+            sorted_data.sort(key=lambda x: x.get('section_name', '') or 'zzz')
+        elif sort_choice == "Sort by Section (Z-A)":
+            sorted_data.sort(key=lambda x: x.get('section_name', '') or '', reverse=True)
+        elif sort_choice == "Sort by Program (A-Z)":
+            sorted_data.sort(key=lambda x: x.get('program_name', '') or 'zzz')
+        elif sort_choice == "Sort by Program (Z-A)":
+            sorted_data.sort(key=lambda x: x.get('program_name', '') or '', reverse=True)
+        elif sort_choice == "Sort by Status (A-Z)":
+            sorted_data.sort(key=lambda x: x.get('status_name', '') or 'zzz')
+        elif sort_choice == "Sort by Status (Z-A)":
+            sorted_data.sort(key=lambda x: x.get('status_name', '') or '', reverse=True)
+        
+        # Update the data and refresh the table
+        self.students_data = sorted_data
+        self.current_students_page = 1  # Reset to first page
+        self.refresh_students_table()
+
+    def apply_faculty_sort(self, sort_choice):
+        """Apply sorting to faculty data"""
+        if not self.faculty_data or sort_choice == "None":
+            # If "None" is selected, reload data without sorting
+            if sort_choice == "None":
+                self.faculty_sort_var.set("↕")
+                self.load_filtered_data()
+            return
+            
+        # Create a copy of the data to sort
+        sorted_data = self.faculty_data.copy()
+        
+        if sort_choice == "Sort by Name (A-Z)":
+            sorted_data.sort(key=lambda x: f"{x.get('first_name', '')} {x.get('last_name', '')}")
+        elif sort_choice == "Sort by Name (Z-A)":
+            sorted_data.sort(key=lambda x: f"{x.get('first_name', '')} {x.get('last_name', '')}", reverse=True)
+        elif sort_choice == "Sort by Employee Number (A-Z)":
+            sorted_data.sort(key=lambda x: x.get('employee_number', '') or 'zzz')
+        elif sort_choice == "Sort by Employee Number (Z-A)":
+            sorted_data.sort(key=lambda x: x.get('employee_number', '') or '', reverse=True)
+        elif sort_choice == "Sort by Email (A-Z)":
+            sorted_data.sort(key=lambda x: x.get('email', '') or 'zzz')
+        elif sort_choice == "Sort by Email (Z-A)":
+            sorted_data.sort(key=lambda x: x.get('email', '') or '', reverse=True)
+        elif sort_choice == "Sort by Role (A-Z)":
+            sorted_data.sort(key=lambda x: x.get('role', '') or 'zzz')
+        elif sort_choice == "Sort by Role (Z-A)":
+            sorted_data.sort(key=lambda x: x.get('role', '') or '', reverse=True)
+        elif sort_choice == "Sort by Status (A-Z)":
+            sorted_data.sort(key=lambda x: x.get('status_name', '') or 'zzz')
+        elif sort_choice == "Sort by Status (Z-A)":
+            sorted_data.sort(key=lambda x: x.get('status_name', '') or '', reverse=True)
+        
+        # Update the data and refresh the table
+        self.faculty_data = sorted_data
+        self.current_faculty_page = 1  # Reset to first page
+        self.refresh_faculty_table()
