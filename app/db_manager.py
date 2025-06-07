@@ -10,6 +10,7 @@ from .email_service import EmailService
 from .db_manager_auth import DatabaseAuthManager
 from .db_manager_init import DatabaseInitManager
 from .db_manager_user_management import DatabaseUserManager
+from .db_manager_program import DatabaseProgramManager
 
 class DatabaseManager:
     def __init__(self):
@@ -20,6 +21,8 @@ class DatabaseManager:
         self.init = DatabaseInitManager(self)
         # Initialize user management manager with reference to this instance
         self.users = DatabaseUserManager(self)
+        # Initialize program management manager with reference to this instance
+        self.programs = DatabaseProgramManager(self)
         # Initialize database tables on first run
         self.init.initialize_database()
     
@@ -145,3 +148,16 @@ class DatabaseManager:
 
     def _get_program_abbreviation(self, program_name):
         return self.users._get_program_abbreviation(program_name)
+
+    # Delegate program management methods to program manager
+    def create_program(self, program_data):
+        return self.programs.create_program(program_data)
+
+    def update_program(self, program_id, program_data):
+        return self.programs.update_program(program_id, program_data)
+
+    def delete_program(self, program_id):
+        return self.programs.delete_program(program_id)
+
+    def check_program_in_use(self, program_id):
+        return self.programs.check_program_in_use(program_id)

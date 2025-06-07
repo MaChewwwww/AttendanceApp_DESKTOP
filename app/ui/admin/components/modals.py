@@ -1,5 +1,6 @@
 import customtkinter as ctk
 import tkinter as tk
+import winsound  # For Windows system sounds
 
 class CautionModal(ctk.CTkToplevel):
     def __init__(self, parent, on_continue=None):
@@ -11,22 +12,39 @@ class CautionModal(ctk.CTkToplevel):
         self.transient(parent)
         self.grab_set()
         self.on_continue = on_continue
+        self._is_destroyed = False
+        
+        # Use simple centering like other modals
+        self._center_window(340, 210)
+        self.setup_ui()
+
+    def _center_window(self, width, height):
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry(f"{width}x{height}+{x}+{y}")
+
+    def setup_ui(self):
         # Card frame for rounded corners, responsive
         card = ctk.CTkFrame(self, fg_color="#fff", corner_radius=16)
         card.pack(expand=True, fill="both", padx=16, pady=16)
         card.pack_propagate(True)
+        
         # Draw yellow circle with exclamation mark
         canvas = tk.Canvas(card, width=56, height=56, bg="#fff", highlightthickness=0)
         canvas.create_oval(4, 4, 52, 52, outline="#FBBF24", width=3)
         canvas.create_text(28, 28, text="!", font=("Segoe UI", 28, "bold"), fill="#FBBF24")
         canvas.pack(pady=(8, 0))
+        
         # Title
         ctk.CTkLabel(card, text="Caution", font=ctk.CTkFont(size=16, weight="bold"), text_color="#222", fg_color="#fff").pack(pady=(4, 0))
+        
         # Subtitle
         ctk.CTkLabel(card, text="Do you want to make changes to this?", font=ctk.CTkFont(size=13), text_color="#888", fg_color="#fff").pack(pady=(0, 8))
+        
         # Buttons
         btns_frame = ctk.CTkFrame(card, fg_color="#fff")
         btns_frame.pack(side="bottom", fill="x", pady=(0, 16), padx=0)
+        
         ctk.CTkButton(
             btns_frame,
             text="Cancel",
@@ -35,8 +53,9 @@ class CautionModal(ctk.CTkToplevel):
             hover_color="#BDBDBD",
             height=38,
             corner_radius=8,
-            command=self.destroy
+            command=self._on_close
         ).pack(side="left", expand=True, fill="x", padx=(0, 8))
+        
         ctk.CTkButton(
             btns_frame,
             text="Continue",
@@ -49,9 +68,26 @@ class CautionModal(ctk.CTkToplevel):
         ).pack(side="left", expand=True, fill="x", padx=(8, 0))
 
     def _handle_continue(self):
-        if self.on_continue:
-            self.on_continue()
-        self.destroy()
+        if not self._is_destroyed:
+            try:
+                if self.on_continue:
+                    self.on_continue()
+            except Exception as e:
+                print(f"Error in continue handler: {e}")
+            finally:
+                self._on_close()
+
+    def _on_close(self):
+        if not self._is_destroyed:
+            self._is_destroyed = True
+            try:
+                self.grab_release()
+            except:
+                pass
+            try:
+                self.destroy()
+            except:
+                pass
 
 class DeleteModal(ctk.CTkToplevel):
     def __init__(self, parent, on_delete=None):
@@ -63,44 +99,43 @@ class DeleteModal(ctk.CTkToplevel):
         self.transient(parent)
         self.grab_set()
         self.on_delete = on_delete
+        self._is_destroyed = False
         
         # Bind close event
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         
+        # Use the same centering approach as CautionModal
+        self._center_window(340, 210)
+        self.setup_ui()
+
+    def _center_window(self, width, height):
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry(f"{width}x{height}+{x}+{y}")
+
+    def setup_ui(self):
         # Card frame for rounded corners, responsive
         card = ctk.CTkFrame(self, fg_color="#fff", corner_radius=16)
         card.pack(expand=True, fill="both", padx=16, pady=16)
         card.pack_propagate(True)
         
-        # Circle + Trash icon (centered)
-        import os
-        from PIL import Image, ImageTk, ImageOps
-        icon_dir = os.path.join(os.path.dirname(__file__), '../../../assets/icons')
-        circle_path = os.path.join(icon_dir, 'circle.png')
-        trash_path = os.path.join(icon_dir, 'trash-2.png')
-        try:
-            circle_img = Image.open(circle_path).convert('RGBA').resize((56, 56))
-            r, g, b = (248, 113, 113)
-            tint = Image.new('RGBA', circle_img.size, (r, g, b, 255))
-            circle_img = Image.blend(circle_img, tint, 0.5)
-            trash_img = Image.open(trash_path).convert('RGBA').resize((32, 32))
-            combined = circle_img.copy()
-            combined.paste(trash_img, ((56-32)//2, (56-32)//2), trash_img)
-            icon = ImageTk.PhotoImage(combined)
-            icon_label = tk.Label(card, image=icon, bg="#fff")
-            icon_label.image = icon
-            icon_label.pack(pady=(8, 0))
-        except Exception:
-            icon_label = ctk.CTkLabel(card, text="\U0001F5D1", font=ctk.CTkFont(size=40), text_color="#F87171", fg_color="#fff")
-            icon_label.pack(pady=(8, 0))
+        # Circle + Trash icon (centered) - use same approach as CautionModal
+        canvas = tk.Canvas(card, width=56, height=56, bg="#fff", highlightthickness=0)
+        canvas.create_oval(4, 4, 52, 52, outline="#F87171", width=3, fill="#FEF2F2")
+        # Use a simple "X" character instead of emoji for better centering
+        canvas.create_text(28, 28, text="🗑", font=("Segoe UI", 18), fill="#F87171", anchor="center")
+        canvas.pack(pady=(8, 0))
         
         # Title
         ctk.CTkLabel(card, text="Delete", font=ctk.CTkFont(size=16, weight="bold"), text_color="#222", fg_color="#fff").pack(pady=(4, 0))
+        
         # Subtitle
         ctk.CTkLabel(card, text="Are you sure you want to delete?", font=ctk.CTkFont(size=13), text_color="#888", fg_color="#fff").pack(pady=(0, 8))
+        
         # Buttons
         btns_frame = ctk.CTkFrame(card, fg_color="#fff")
         btns_frame.pack(side="bottom", fill="x", pady=(0, 16), padx=0)
+        
         ctk.CTkButton(
             btns_frame,
             text="Cancel",
@@ -111,6 +146,7 @@ class DeleteModal(ctk.CTkToplevel):
             corner_radius=8,
             command=self._on_close
         ).pack(side="left", expand=True, fill="x", padx=(0, 8))
+        
         ctk.CTkButton(
             btns_frame,
             text="Delete",
@@ -123,17 +159,26 @@ class DeleteModal(ctk.CTkToplevel):
         ).pack(side="left", expand=True, fill="x", padx=(8, 0))
 
     def _on_close(self):
-        self.grab_release()
-        self.destroy()
+        if not self._is_destroyed:
+            self._is_destroyed = True
+            try:
+                self.grab_release()
+            except:
+                pass
+            try:
+                self.destroy()
+            except:
+                pass
 
     def _handle_delete(self):
-        try:
-            if self.on_delete:
-                self.on_delete()
-        except Exception as e:
-            print(f"Error in delete handler: {e}")
-        finally:
-            self._on_close()
+        if not self._is_destroyed:
+            try:
+                if self.on_delete:
+                    self.on_delete()
+            except Exception as e:
+                print(f"Error in delete handler: {e}")
+            finally:
+                self._on_close()
 
 class SuccessModal(ctk.CTkToplevel):
     def __init__(self, parent, on_continue=None):
@@ -145,10 +190,38 @@ class SuccessModal(ctk.CTkToplevel):
         self.transient(parent)
         self.grab_set()
         self.on_continue = on_continue
+        self._is_destroyed = False
+        
+        # Play success sound
+        self.play_success_sound()
         
         # Bind close event
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         
+        # Use the same centering approach as other modals
+        self._center_window(340, 210)
+        
+        self.setup_ui()
+
+    def _center_window(self, width, height):
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry(f"{width}x{height}+{x}+{y}")
+
+    def play_success_sound(self):
+        """Play a success sound notification"""
+        try:
+            # Use Windows system sound for success/information
+            winsound.MessageBeep(winsound.MB_OK)
+        except Exception as e:
+            print(f"Could not play sound: {e}")
+            # Fallback: try system bell
+            try:
+                self.bell()
+            except:
+                pass  # Silent fallback if no sound is available
+
+    def setup_ui(self):
         # Card frame for rounded corners, responsive and matching other modals
         card = ctk.CTkFrame(self, fg_color="#fff", corner_radius=16)
         card.pack(expand=True, fill="both", padx=16, pady=16)
@@ -181,14 +254,23 @@ class SuccessModal(ctk.CTkToplevel):
         ).pack(expand=True, fill="both", padx=0)
 
     def _on_close(self):
-        self.grab_release()
-        self.destroy()
+        if not self._is_destroyed:
+            self._is_destroyed = True
+            try:
+                self.grab_release()
+            except:
+                pass
+            try:
+                self.destroy()
+            except:
+                pass
 
     def _handle_continue(self):
-        try:
-            if self.on_continue:
-                self.on_continue()
-        except Exception as e:
-            print(f"Error in continue handler: {e}")
-        finally:
-            self._on_close() 
+        if not self._is_destroyed:
+            try:
+                if self.on_continue:
+                    self.on_continue()
+            except Exception as e:
+                print(f"Error in continue handler: {e}")
+            finally:
+                self._on_close()

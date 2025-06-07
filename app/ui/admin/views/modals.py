@@ -1,5 +1,6 @@
 import customtkinter as ctk
 import tkinter as tk
+import winsound  # For Windows system sounds
 
 class FilterPopup(ctk.CTkToplevel):
     def __init__(self, parent):
@@ -196,15 +197,53 @@ class SuccessModal(ctk.CTkToplevel):
         self.configure(fg_color="#FAFAFA")
         self.transient(parent)
         self.grab_set()
-        self.update_idletasks()
-        self._center_window(340, 210)
+        
+        # Play success sound
+        self.play_success_sound()
+        
+        # Properly center the window on the actual screen
+        self.update_idletasks()  # Ensure window is fully created
+        self._center_window_on_screen()
+        
         self._parent_modal = parent
         self.setup_ui()
 
-    def _center_window(self, width, height):
-        x = (self.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.winfo_screenheight() // 2) - (height // 2)
-        self.geometry(f"{width}x{height}+{x}+{y}")
+    def play_success_sound(self):
+        """Play a success sound notification"""
+        try:
+            # Use Windows system sound for success/information
+            winsound.MessageBeep(winsound.MB_OK)
+        except Exception as e:
+            print(f"Could not play sound: {e}")
+            # Fallback: try system bell
+            try:
+                self.bell()
+            except:
+                pass  # Silent fallback if no sound is available
+
+    def _center_window_on_screen(self):
+        """Center the window on the actual screen, not relative to parent"""
+        # Wait for window to be fully created
+        self.update_idletasks()
+        
+        # Get actual screen dimensions (not parent window dimensions)
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        
+        # Get window dimensions
+        window_width = 340
+        window_height = 210
+        
+        # Calculate absolute center position on screen
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+        
+        # Set absolute position on screen using +x+y format
+        self.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        
+        # Force window to be on top and centered
+        self.lift()
+        self.focus_force()
 
     def setup_ui(self):
         # Card frame for rounded corners, responsive and matching other modals

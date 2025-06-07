@@ -17,7 +17,7 @@ class ProgramsView(ctk.CTkFrame):
         self.setup_ui()
 
     def load_programs_data(self):
-        # Load from database instead of hardcoded data
+        # Load from database using main DatabaseManager
         try:
             from app.db_manager import DatabaseManager
             db = DatabaseManager()
@@ -39,26 +39,6 @@ class ProgramsView(ctk.CTkFrame):
                     'code': 'IT-001',
                     'description': 'A comprehensive program focusing on information technology and computer systems',
                     'color': '#3B82F6',
-                    'created_at': '2024-01-01T00:00:00',
-                    'updated_at': '2024-01-01T00:00:00'
-                },
-                {
-                    'id': 2,
-                    'name': 'Bachelor of Science in Computer Science',
-                    'acronym': 'BSCS',
-                    'code': 'CS-001',
-                    'description': 'A program emphasizing theoretical foundations of computation and practical software engineering',
-                    'color': '#10B981',
-                    'created_at': '2024-01-01T00:00:00',
-                    'updated_at': '2024-01-01T00:00:00'
-                },
-                {
-                    'id': 3,
-                    'name': 'Bachelor of Science in Information Systems',
-                    'acronym': 'BSIS',
-                    'code': 'IS-001',
-                    'description': 'A program combining business processes with information technology solutions',
-                    'color': '#F59E0B',
                     'created_at': '2024-01-01T00:00:00',
                     'updated_at': '2024-01-01T00:00:00'
                 }
@@ -228,8 +208,54 @@ class ProgramsView(ctk.CTkFrame):
         def delete_program():
             close_menu()
             def on_delete():
-                # TODO: Implement actual deletion
-                SuccessModal(self)
+                try:
+                    from app.db_manager import DatabaseManager
+                    db = DatabaseManager()
+                    
+                    # Get program data
+                    program_data = card.program_data
+                    program_id = program_data.get('id')
+                    
+                    if not program_id:
+                        print("Error: No program ID found")
+                        return
+                    
+                    # Check if program is in use
+                    success, usage_info = db.check_program_in_use(program_id)
+                    if success and usage_info.get('in_use', False):
+                        from tkinter import messagebox
+                        student_count = usage_info.get('student_count', 0)
+                        section_count = usage_info.get('section_count', 0)
+                        
+                        message = f"Cannot delete this program because it is currently in use:\n"
+                        if student_count > 0:
+                            message += f"• {student_count} student(s) enrolled\n"
+                        if section_count > 0:
+                            message += f"• {section_count} section(s) assigned\n"
+                        message += "\nPlease reassign or remove these dependencies before deleting."
+                        
+                        messagebox.showerror("Cannot Delete Program", message, parent=self.winfo_toplevel())
+                        return
+                    
+                    # Perform delete
+                    success, result = db.delete_program(program_id)
+                    
+                    if success:
+                        # Store parent reference for delayed operations
+                        parent_ref = self
+                        
+                        # Add longer delays to ensure proper cleanup
+                        parent_ref.after(200, lambda: parent_ref.refresh_programs())
+                        parent_ref.after(400, lambda: SuccessModal(parent_ref))
+                    else:
+                        from tkinter import messagebox
+                        messagebox.showerror("Delete Error", f"Failed to delete program: {result}", parent=self.winfo_toplevel())
+                        
+                except Exception as e:
+                    print(f"Error deleting program: {e}")
+                    from tkinter import messagebox
+                    messagebox.showerror("Error", f"An unexpected error occurred: {str(e)}", parent=self.winfo_toplevel())
+            
             DeleteModal(self, on_delete=on_delete)
         
         ctk.CTkButton(menu, text="Edit", fg_color="#fff", text_color="#222", hover_color="#F3F4F6", width=80, height=28, command=edit_program).pack(fill="x")
@@ -243,6 +269,59 @@ class ProgramsView(ctk.CTkFrame):
         CreateProgramPopup(self)
 
     def refresh_programs(self):
-        # TODO: Reload programs data and refresh UI
+        """Reload programs data and refresh UI"""
+        # Reload data from database
         self.programs_data = self.load_programs_data()
-        # Refresh the UI components
+        
+        # Find the card grid frame and rebuild it
+        for widget in self.winfo_children():
+            widget_info = widget.grid_info()
+            if widget_info or (hasattr(widget, 'winfo_children') and any(hasattr(child, 'program_data') for child in widget.winfo_children())):
+                # This is likely our card grid frame
+                for child in widget.winfo_children():
+                    if hasattr(child, 'program_data'):
+                        child.destroy()
+                
+                # Rebuild cards
+                cols = 4
+                for c in range(cols):
+                    widget.grid_columnconfigure(c, weight=1)
+
+                # Create cards from updated programs data
+                for idx, program in enumerate(self.programs_data):
+                    row = idx // cols
+                    col = idx % cols
+                    card = ctk.CTkFrame(widget, fg_color="#fff", width=175, height=175, corner_radius=12)
+                    card.grid(row=row, column=col, padx=16, pady=16)
+                    card.pack_propagate(False)
+                    card.grid_propagate(False)
+                    
+                    # Store program data in card for reference
+                    card.program_data = program
+                    
+                    # Add program image or placeholder
+                    self._add_program_image(card, program)
+                    
+                    # Program acronym at the bottom
+                    ctk.CTkLabel(
+                        card, 
+                        text=program.get('acronym', 'N/A'), 
+                        font=ctk.CTkFont(size=13, weight="bold"), 
+                        text_color="#222"
+                    ).pack(side="bottom", anchor="w", padx=16, pady=12)
+                    
+                    # 3-dot menu top right
+                    menu_btn = ctk.CTkButton(
+                        card, 
+                        text="⋮", 
+                        width=24, 
+                        height=24, 
+                        fg_color="#fff", 
+                        text_color="#222", 
+                        hover_color="#F3F4F6", 
+                        border_width=0, 
+                        font=ctk.CTkFont(size=18), 
+                        command=lambda c=card: self.show_card_menu(c)
+                    )
+                    menu_btn.place(relx=1.0, rely=0.0, anchor="ne", x=-8, y=8)
+                break
