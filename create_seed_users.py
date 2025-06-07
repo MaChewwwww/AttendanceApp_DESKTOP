@@ -307,12 +307,7 @@ def seed_assigned_courses_and_attendance():
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        logger.info("Creating assigned courses and attendance logs...")
-        
-        # First, let's check the existing table structure
-        cursor.execute("PRAGMA table_info(assigned_courses)")
-        table_info = cursor.fetchall()
-        logger.info(f"Assigned courses table structure: {table_info}")
+        logger.info("Creating assigned courses, schedules, and attendance logs...")
         
         # Get all faculty and courses
         cursor.execute("""
@@ -339,32 +334,46 @@ def seed_assigned_courses_and_attendance():
         
         logger.info(f"Found {len(faculty_list)} faculty, {len(courses_list)} courses, {len(sections_list)} sections")
         
-        # Drop and recreate assigned_courses table with correct structure
-        cursor.execute("DROP TABLE IF EXISTS assigned_courses")
+        # Drop and recreate tables with correct structure
+        cursor.execute("DROP TABLE IF EXISTS schedules")
         cursor.execute("DROP TABLE IF EXISTS attendance_logs")
+        cursor.execute("DROP TABLE IF EXISTS assigned_courses")
         
-        # Create assigned_courses table with correct structure
+        # Create assigned_courses table (note: using faculty_id to match model)
         cursor.execute("""
             CREATE TABLE assigned_courses (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
+                faculty_id INTEGER NOT NULL,
                 course_id INTEGER NOT NULL,
                 section_id INTEGER NOT NULL,
-                academic_year TEXT NOT NULL,
-                semester TEXT NOT NULL,
-                schedule_day TEXT,
+                academic_year TEXT,
+                semester TEXT,
                 schedule_time TEXT,
                 room TEXT,
                 isDeleted INTEGER DEFAULT 0,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
-                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                FOREIGN KEY (faculty_id) REFERENCES users (id) ON DELETE CASCADE,
                 FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE,
                 FOREIGN KEY (section_id) REFERENCES sections (id) ON DELETE CASCADE
             )
         """)
         
-        # Create attendance_logs table with correct structure
+        # Create schedules table to match the Schedule model
+        cursor.execute("""
+            CREATE TABLE schedules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                assigned_course_id INTEGER NOT NULL,
+                day_of_week TEXT NOT NULL,
+                start_time TEXT NOT NULL,
+                end_time TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (assigned_course_id) REFERENCES assigned_courses (id) ON DELETE CASCADE
+            )
+        """)
+        
+        # Create attendance_logs table
         cursor.execute("""
             CREATE TABLE attendance_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -384,28 +393,16 @@ def seed_assigned_courses_and_attendance():
         current_year = datetime.now().year
         academic_year = f"{current_year}-{current_year + 1}"
         
-        # Sample assigned courses data
         assigned_course_ids = []
         
         # Ensure we have data to work with
-        if not faculty_list:
-            logger.warning("No faculty found to assign courses")
-            conn.close()
-            return False
-            
-        if not courses_list:
-            logger.warning("No courses found to assign")
-            conn.close()
-            return False
-            
-        if not sections_list:
-            logger.warning("No sections found to assign")
+        if not faculty_list or not courses_list or not sections_list:
+            logger.warning("Missing required data for course assignments")
             conn.close()
             return False
         
         # Assign each faculty member to 2-3 courses
         for faculty_user_id, first_name, last_name in faculty_list:
-            # Randomly select 2-3 courses for this faculty (ensure we don't exceed available courses)
             num_courses_to_assign = min(3, len(courses_list), random.randint(2, 3))
             selected_courses = random.sample(courses_list, num_courses_to_assign)
             
@@ -414,44 +411,77 @@ def seed_assigned_courses_and_attendance():
                 matching_sections = [s for s in sections_list if s[2] == program_name]
                 
                 if matching_sections:
-                    # Select a random section
                     section_id, section_name, _ = random.choice(matching_sections)
                     
-                    # Generate random schedule
-                    days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-                    times = ['8:00-9:30', '9:30-11:00', '11:00-12:30', '1:30-3:00', '3:00-4:30']
                     rooms = ['Room 101', 'Room 102', 'Room 103', 'Lab 1', 'Lab 2', 'Conference Room']
-                    
-                    schedule_day = random.choice(days)
-                    schedule_time = random.choice(times)
                     room = random.choice(rooms)
                     semester = random.choice(['1st Semester', '2nd Semester'])
                     
                     # Check if this assignment already exists
                     cursor.execute("""
                         SELECT id FROM assigned_courses 
-                        WHERE user_id = ? AND course_id = ? AND section_id = ? AND academic_year = ?
+                        WHERE faculty_id = ? AND course_id = ? AND section_id = ? AND academic_year = ?
                     """, (faculty_user_id, course_id, section_id, academic_year))
                     
                     existing = cursor.fetchone()
                     if existing:
                         assigned_course_ids.append(existing[0])
-                        logger.info(f"Course assignment already exists for {first_name} {last_name} - {course_name}")
                         continue
                     
-                    # Insert assigned course (using user_id instead of faculty_id)
+                    # Insert assigned course (using faculty_id to match model)
                     cursor.execute("""
                         INSERT INTO assigned_courses 
-                        (user_id, course_id, section_id, academic_year, semester, schedule_day, schedule_time, room, isDeleted, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (faculty_user_id, course_id, section_id, academic_year, semester, schedule_day, schedule_time, room, 0, current_time, current_time))
+                        (faculty_id, course_id, section_id, academic_year, semester, room, isDeleted, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (faculty_user_id, course_id, section_id, academic_year, semester, room, 0, current_time, current_time))
                     
                     assigned_course_id = cursor.lastrowid
                     assigned_course_ids.append(assigned_course_id)
                     
-                    logger.info(f"Assigned {first_name} {last_name} to teach {course_name} for section {section_name} (ID: {assigned_course_id})")
+                    # Create schedule entries for this assigned course
+                    days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+                    time_slots = [
+                        ('08:00:00', '09:30:00'),
+                        ('09:30:00', '11:00:00'),
+                        ('11:00:00', '12:30:00'),
+                        ('13:30:00', '15:00:00'),
+                        ('15:00:00', '16:30:00'),
+                        ('16:30:00', '18:00:00')
+                    ]
+                    
+                    # Most courses meet 2-3 times per week
+                    num_meetings = random.choice([2, 3])
+                    selected_days = random.sample(days_of_week, num_meetings)
+                    
+                    for day in selected_days:
+                        start_time, end_time = random.choice(time_slots)
+                        
+                        # Convert time strings to datetime objects for storage
+                        today = datetime.now().date()
+                        start_datetime = datetime.combine(today, datetime.strptime(start_time, '%H:%M:%S').time())
+                        end_datetime = datetime.combine(today, datetime.strptime(end_time, '%H:%M:%S').time())
+                        
+                        cursor.execute("""
+                            INSERT INTO schedules 
+                            (assigned_course_id, day_of_week, start_time, end_time, created_at, updated_at)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        """, (
+                            assigned_course_id,
+                            day,
+                            start_datetime.isoformat(),
+                            end_datetime.isoformat(),
+                            current_time,
+                            current_time
+                        ))
+                    
+                    logger.info(f"Assigned {first_name} {last_name} to teach {course_name} for section {section_name} with {num_meetings} weekly meetings (ID: {assigned_course_id})")
         
         logger.info(f"Created {len(assigned_course_ids)} course assignments")
+        
+        # Get total schedule count
+        cursor.execute("SELECT COUNT(*) FROM schedules")
+        schedule_count = cursor.fetchone()[0]
+        logger.info(f"Created {schedule_count} schedule entries")
         
         # Now seed attendance logs with realistic distributions
         if assigned_course_ids:
@@ -473,7 +503,6 @@ def seed_assigned_courses_and_attendance():
                 return True
             
             # Define student performance categories with realistic distributions
-            # Adjust to ensure more students have 90%+ attendance
             excellent_students = int(len(students_list) * 0.30)   # 30% excellent (95%+ attendance)
             very_good_students = int(len(students_list) * 0.25)   # 25% very good (90-94% attendance)
             good_students = int(len(students_list) * 0.25)        # 25% good (80-89% attendance)
@@ -487,62 +516,30 @@ def seed_assigned_courses_and_attendance():
             student_performance = {}
             idx = 0
             
-            # Assign excellent students (95-99% attendance)
-            for i in range(excellent_students):
-                student_id = shuffled_students[idx][0]
-                student_performance[student_id] = {
-                    'category': 'excellent',
-                    'attendance_rate': random.uniform(0.95, 0.99),
-                    'consistency': random.uniform(0.9, 1.0)  # Very consistent
-                }
-                idx += 1
+            # Assign performance categories
+            categories = [
+                ('excellent', excellent_students, (0.95, 0.99), (0.9, 1.0)),
+                ('very_good', very_good_students, (0.90, 0.94), (0.85, 0.95)),
+                ('good', good_students, (0.80, 0.89), (0.75, 0.85)),
+                ('average', average_students, (0.70, 0.79), (0.6, 0.75)),
+                ('poor', poor_students, (0.40, 0.69), (0.3, 0.6))
+            ]
             
-            # Assign very good students (90-94% attendance)
-            for i in range(very_good_students):
-                student_id = shuffled_students[idx][0]
-                student_performance[student_id] = {
-                    'category': 'very_good',
-                    'attendance_rate': random.uniform(0.90, 0.94),
-                    'consistency': random.uniform(0.85, 0.95)  # Very consistent
-                }
-                idx += 1
+            for category, count, attendance_range, consistency_range in categories:
+                for i in range(count):
+                    if idx < len(shuffled_students):
+                        student_id = shuffled_students[idx][0]
+                        student_performance[student_id] = {
+                            'category': category,
+                            'attendance_rate': random.uniform(*attendance_range),
+                            'consistency': random.uniform(*consistency_range)
+                        }
+                        idx += 1
             
-            # Assign good students (80-89% attendance)
-            for i in range(good_students):
-                student_id = shuffled_students[idx][0]
-                student_performance[student_id] = {
-                    'category': 'good',
-                    'attendance_rate': random.uniform(0.80, 0.89),
-                    'consistency': random.uniform(0.75, 0.85)  # Fairly consistent
-                }
-                idx += 1
+            logger.info(f"Student distribution: {excellent_students} excellent, {very_good_students} very good, {good_students} good, {average_students} average, {poor_students} poor")
             
-            # Assign average students (70-79% attendance)
-            for i in range(average_students):
-                student_id = shuffled_students[idx][0]
-                student_performance[student_id] = {
-                    'category': 'average',
-                    'attendance_rate': random.uniform(0.70, 0.79),
-                    'consistency': random.uniform(0.6, 0.75)  # Moderately consistent
-                }
-                idx += 1
-            
-            # Assign poor students (<70% attendance)
-            for i in range(poor_students):
-                student_id = shuffled_students[idx][0]
-                student_performance[student_id] = {
-                    'category': 'poor',
-                    'attendance_rate': random.uniform(0.40, 0.69),
-                    'consistency': random.uniform(0.3, 0.6)  # Inconsistent
-                }
-                idx += 1
-            
-            logger.info(f"Student distribution: {excellent_students} excellent (95%+), {very_good_students} very good (90-94%), {good_students} good (80-89%), {average_students} average (70-79%), {poor_students} poor (<70%)")
-            logger.info(f"Total students with 90%+ attendance: {excellent_students + very_good_students} ({((excellent_students + very_good_students) / len(students_list)) * 100:.1f}%)")
-            
-            # Generate attendance logs for the past 60 days (more data for better statistics)
+            # Generate attendance logs for the past 60 days
             start_date = datetime.now() - timedelta(days=60)
-            total_attendance_logs = 0
             
             for assigned_course_id in assigned_course_ids:
                 # Get course and section info for this assignment
@@ -556,7 +553,6 @@ def seed_assigned_courses_and_attendance():
                 
                 course_info = cursor.fetchone()
                 if not course_info:
-                    logger.warning(f"Could not find course info for assigned course {assigned_course_id}")
                     continue
                 
                 section_id, course_name, section_name = course_info
@@ -565,65 +561,48 @@ def seed_assigned_courses_and_attendance():
                 section_students = [s for s in students_list if s[3] == section_id]
                 
                 if not section_students:
-                    logger.warning(f"No students found for section {section_name} (ID: {section_id})")
                     continue
-                
-                logger.info(f"Generating attendance for {len(section_students)} students in {course_name} - {section_name}")
                 
                 # Generate class schedule (3 times per week for each course)
                 class_days = []
                 for day_offset in range(60):
                     attendance_date = start_date + timedelta(days=day_offset)
                     
-                    # Skip weekends
-                    if attendance_date.weekday() >= 5:  # Saturday = 5, Sunday = 6
-                        continue
-                    
-                    # Schedule classes 3 times per week (Monday, Wednesday, Friday pattern)
-                    if attendance_date.weekday() in [0, 2, 4]:  # Monday, Wednesday, Friday
+                    # Skip weekends and schedule classes 3 times per week
+                    if attendance_date.weekday() in [0, 2, 4] and attendance_date.weekday() < 5:  # Mon, Wed, Fri
                         class_days.append(attendance_date)
                 
                 # Generate attendance for each class day
                 for class_date in class_days:
-                    # Generate attendance for each student in this section
                     for student_id, student_first, student_last, _ in section_students:
                         if student_id not in student_performance:
                             continue
                         
                         perf = student_performance[student_id]
                         
-                        # Determine if student attends based on their profile
+                        # Determine attendance based on student profile
                         base_rate = perf['attendance_rate']
                         consistency = perf['consistency']
                         
-                        # Add some randomness but weighted by consistency
                         attendance_probability = base_rate + (random.uniform(-0.1, 0.1) * (1 - consistency))
-                        attendance_probability = max(0, min(1, attendance_probability))  # Clamp between 0 and 1
+                        attendance_probability = max(0, min(1, attendance_probability))
                         
                         # Determine attendance status
                         if random.random() < attendance_probability:
                             # Student attends - determine if present or late
-                            if perf['category'] == 'excellent':
-                                status = 'present' if random.random() < 0.96 else 'late'
-                            elif perf['category'] == 'very_good':
-                                status = 'present' if random.random() < 0.93 else 'late'
-                            elif perf['category'] == 'good':
-                                status = 'present' if random.random() < 0.88 else 'late'
-                            elif perf['category'] == 'average':
-                                status = 'present' if random.random() < 0.82 else 'late'
-                            else:  # poor
-                                status = 'present' if random.random() < 0.75 else 'late'
+                            late_probability = {'excellent': 0.04, 'very_good': 0.07, 'good': 0.12, 'average': 0.18, 'poor': 0.25}
+                            status = 'late' if random.random() < late_probability[perf['category']] else 'present'
                         else:
                             status = 'absent'
                         
-                        # Check if attendance already exists for this date/student/course
+                        # Check if attendance already exists
                         cursor.execute("""
                             SELECT id FROM attendance_logs 
                             WHERE user_id = ? AND assigned_course_id = ? AND date = ?
                         """, (student_id, assigned_course_id, class_date.strftime('%Y-%m-%d')))
                         
                         if cursor.fetchone():
-                            continue  # Skip if already exists
+                            continue
                         
                         # Insert attendance log
                         cursor.execute("""
@@ -638,89 +617,22 @@ def seed_assigned_courses_and_attendance():
                             current_time, 
                             current_time
                         ))
-                        
-                        total_attendance_logs += 1
-                
-                logger.info(f"Generated attendance logs for course {course_name} - {section_name}")
         
         conn.commit()
         
-        # Log final statistics with detailed breakdown
+        # Log final statistics
         cursor.execute("SELECT COUNT(*) FROM assigned_courses")
         course_count = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM schedules")
+        schedule_count = cursor.fetchone()[0]
         
         cursor.execute("SELECT COUNT(*) FROM attendance_logs")
         attendance_count = cursor.fetchone()[0]
         
-        cursor.execute("""
-            SELECT status, COUNT(*) 
-            FROM attendance_logs 
-            GROUP BY status
-        """)
-        status_counts = cursor.fetchall()
-        
-        # Calculate attendance statistics per student
-        cursor.execute("""
-            SELECT 
-                u.first_name || ' ' || u.last_name as student_name,
-                COUNT(al.id) as total_classes,
-                SUM(CASE WHEN al.status = 'present' THEN 1 ELSE 0 END) as present_count,
-                SUM(CASE WHEN al.status = 'late' THEN 1 ELSE 0 END) as late_count,
-                SUM(CASE WHEN al.status = 'absent' THEN 1 ELSE 0 END) as absent_count,
-                ROUND((SUM(CASE WHEN al.status = 'present' THEN 1 ELSE 0 END) * 100.0 / COUNT(al.id)), 2) as attendance_percentage
-            FROM users u
-            JOIN attendance_logs al ON u.id = al.user_id
-            WHERE u.role = 'Student'
-            GROUP BY u.id, u.first_name, u.last_name
-            ORDER BY attendance_percentage DESC
-        """)
-        student_stats = cursor.fetchall()
-        
-        # Count students by attendance ranges
-        excellent_count = len([s for s in student_stats if s[5] >= 95])
-        very_good_count = len([s for s in student_stats if 90 <= s[5] < 95])
-        good_count = len([s for s in student_stats if 80 <= s[5] < 90])
-        average_count = len([s for s in student_stats if 70 <= s[5] < 80])
-        poor_count = len([s for s in student_stats if s[5] < 70])
-        
         logger.info(f"✓ Created {course_count} assigned courses")
+        logger.info(f"✓ Created {schedule_count} schedule entries")
         logger.info(f"✓ Created {attendance_count} attendance logs")
-        
-        if status_counts:
-            logger.info("Overall attendance distribution:")
-            total_logs = sum(count for _, count in status_counts)
-            for status, count in status_counts:
-                percentage = (count / total_logs) * 100 if total_logs > 0 else 0
-                logger.info(f"  {status}: {count} ({percentage:.1f}%)")
-        
-        logger.info(f"\nStudent attendance distribution:")
-        logger.info(f"  Excellent (95%+): {excellent_count} students")
-        logger.info(f"  Very Good (90-94%): {very_good_count} students")
-        logger.info(f"  Good (80-89%): {good_count} students")
-        logger.info(f"  Average (70-79%): {average_count} students")
-        logger.info(f"  Poor (<70%): {poor_count} students")
-        
-        # Calculate 90%+ and 80%+ totals
-        ninety_plus = excellent_count + very_good_count
-        eighty_plus = excellent_count + very_good_count + good_count
-        total_students_with_attendance = len(student_stats)
-        
-        if total_students_with_attendance > 0:
-            ninety_plus_percent = (ninety_plus / total_students_with_attendance) * 100
-            eighty_plus_percent = (eighty_plus / total_students_with_attendance) * 100
-            logger.info(f"\nSummary:")
-            logger.info(f"  Students with 90%+ attendance: {ninety_plus} ({ninety_plus_percent:.1f}%)")
-            logger.info(f"  Students with 80%+ attendance: {eighty_plus} ({eighty_plus_percent:.1f}%)")
-
-        # Show top and bottom performers
-        if student_stats:
-            logger.info(f"\nTop 3 performers:")
-            for i, (name, total, present, late, absent, percentage) in enumerate(student_stats[:3]):
-                logger.info(f"  {i+1}. {name}: {percentage}% ({present}/{total} present)")
-            
-            logger.info(f"\nBottom 3 performers:")
-            for i, (name, total, present, late, absent, percentage) in enumerate(student_stats[-3:]):
-                logger.info(f"  {i+1}. {name}: {percentage}% ({present}/{total} present)")
         
         conn.close()
         return True
@@ -803,7 +715,7 @@ def seed_users():
             {'first_name': 'Dr. Laura', 'last_name': 'Sandoval', 'email': 'laura.sandoval@pup.edu.ph', 'birthday': '1984-08-27', 'password': 'faculty123', 'contact_number': '09012345680', 'role': 'Faculty', 'verified': 1, 'user_type': 'faculty', 'employee_number': 'EMP-2021-030', 'status': 'Active'}
         ]
         
-        # Generate 100 comprehensive student data
+        # Generate 50 comprehensive student data
         programs = [
             'Bachelor of Science in Information Technology',
             'Bachelor of Science in Computer Science', 
@@ -812,13 +724,13 @@ def seed_users():
             'Bachelor of Science in Software Engineering'
         ]
         
-        # Define realistic section distributions per program (adjusted for 100 students total)
+        # Define realistic section distributions per program (adjusted for 50 students total)
         program_sections = {
-            'Bachelor of Science in Information Technology': ['1-1', '1-2', '2-1', '2-2', '3-1', '4-1'],  # Most popular - 30 students
-            'Bachelor of Science in Computer Science': ['1-1', '2-1', '3-1', '4-1'],  # Second most popular - 25 students
-            'Bachelor of Science in Information Systems': ['1-1', '2-1', '3-1'],  # Moderate - 20 students
-            'Bachelor of Science in Computer Engineering': ['1-1', '2-1'],  # Smaller - 15 students
-            'Bachelor of Science in Software Engineering': ['1-1']  # Newest/smallest - 10 students
+            'Bachelor of Science in Information Technology': ['1-1', '1-2', '2-1', '2-2', '3-1', '4-1'],  # Most popular - 15 students
+            'Bachelor of Science in Computer Science': ['1-1', '2-1', '3-1', '4-1'],  # Second most popular - 12 students
+            'Bachelor of Science in Information Systems': ['1-1', '2-1', '3-1'],  # Moderate - 10 students
+            'Bachelor of Science in Computer Engineering': ['1-1', '2-1'],  # Smaller - 8 students
+            'Bachelor of Science in Software Engineering': ['1-1']  # Newest/smallest - 5 students
         }
         
         # Define realistic student name pools
@@ -850,13 +762,13 @@ def seed_users():
         student_data = []
         student_number = 1
         
-        # Define exact student counts per program to total 100
+        # Define exact student counts per program to total 50
         program_student_counts = {
-            'Bachelor of Science in Information Technology': 30,
-            'Bachelor of Science in Computer Science': 25,
-            'Bachelor of Science in Information Systems': 20,
-            'Bachelor of Science in Computer Engineering': 15,
-            'Bachelor of Science in Software Engineering': 10
+            'Bachelor of Science in Information Technology': 15,
+            'Bachelor of Science in Computer Science': 12,
+            'Bachelor of Science in Information Systems': 10,
+            'Bachelor of Science in Computer Engineering': 8,
+            'Bachelor of Science in Software Engineering': 5
         }
         
         # Generate students for each program
@@ -901,7 +813,7 @@ def seed_users():
                     year_levels = {'1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year'}
                     year_text = year_levels[year_level]
                     
-                    # Realistic status distribution (most students enrolled)
+                    # Realistic status distribution
                     status_weights = [
                         ('Enrolled', 90),     # 90% enrolled
                         ('On Leave', 5),      # 5% on leave
@@ -912,10 +824,8 @@ def seed_users():
                     
                     # Adjust status based on year level
                     if year_level == '4':
-                        # 4th years more likely to be graduated
                         status_weights = [('Enrolled', 75), ('Graduated', 20), ('On Leave', 3), ('Suspended', 1), ('Dropout', 1)]
                     elif year_level == '1':
-                        # 1st years less likely to be suspended/dropout
                         status_weights = [('Enrolled', 95), ('On Leave', 3), ('Suspended', 1), ('Graduated', 0), ('Dropout', 1)]
                     
                     # Select status based on weights

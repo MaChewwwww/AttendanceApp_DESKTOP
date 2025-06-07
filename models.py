@@ -111,7 +111,6 @@ class Schedule(Base):
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
-
 class AttendanceLog(Base):
     __tablename__ = "attendance_logs"
     id = Column(Integer, primary_key=True, index=True)

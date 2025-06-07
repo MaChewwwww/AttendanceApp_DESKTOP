@@ -524,7 +524,8 @@ class CoursesView(ctk.CTkFrame):
     def handle_action(self, action, data):
         """Handle action selection for courses"""
         if action == "View":
-            ViewCoursePopup(self, data)
+            # Pass the database manager to the course view popup
+            ViewCoursePopup(self, data, db_manager=self.db_manager)
         elif action == "Edit":
             EditCoursePopup(self, data)
         elif action == "Delete":
@@ -634,80 +635,95 @@ class CoursesView(ctk.CTkFrame):
         self.apply_filters_and_search()
 
     def apply_filters_and_search(self):
-        """Apply current filters and search to the data"""
+        """Apply current filters and search to the data using Python processing"""
+        # Start with all courses data
         filtered_data = self.courses_data.copy()
         
-        # Apply search filter
+        # Apply search filter using Python string operations
         if self.current_search.strip():
-            search_term = self.current_search.lower()
+            search_term = self.current_search.lower().strip()
+            new_filtered_data = []
+            
+            for course in filtered_data:
+                # Check each field for search term
+                course_name = course.get('name', '').lower()
+                course_code = course.get('code', '').lower()
+                program_name = course.get('program_name', '').lower()
+                description = course.get('description', '').lower()
+                
+                # Use Python 'in' operator for simple string matching
+                if (search_term in course_name or 
+                    search_term in course_code or 
+                    search_term in program_name or 
+                    search_term in description):
+                    new_filtered_data.append(course)
+            
+            filtered_data = new_filtered_data
+        
+        # Apply program filter using Python
+        if self.current_filters.get('program') and self.current_filters['program'] != 'All':
+            program_filter = self.current_filters['program']
             filtered_data = [
                 course for course in filtered_data
-                if (search_term in course.get('name', '').lower() or
-                    search_term in course.get('code', '').lower() or
-                    search_term in course.get('program_name', '').lower() or
-                    search_term in course.get('description', '').lower())
+                if course.get('program_name', '') == program_filter
             ]
         
-        # Apply filter criteria
-        if self.current_filters:
-            if self.current_filters.get('program') and self.current_filters['program'] != 'All':
-                filtered_data = [
-                    course for course in filtered_data
-                    if course.get('program_name', '') == self.current_filters['program']
-                ]
+        # Apply year filter using Python
+        if self.current_filters.get('year') and self.current_filters['year'] != 'All':
+            year_filter = self.current_filters['year']
+            year_number = self.extract_year_number(year_filter)
             
-            if self.current_filters.get('year') and self.current_filters['year'] != 'All':
-                # Filter by year - extract year from course assignments
-                year_filter = self.current_filters['year']
-                year_number = self.extract_year_number(year_filter)
-                
-                if year_number:
-                    # Get courses that are assigned to sections matching this year
-                    filtered_data = self.filter_courses_by_year(filtered_data, year_number)
-            
-            if self.current_filters.get('section') and self.current_filters['section'] != 'All':
-                # Filter by section - get courses assigned to this specific section
-                section_filter = self.current_filters['section']
-                filtered_data = self.filter_courses_by_section(filtered_data, section_filter)
+            if year_number:
+                filtered_data = self.filter_courses_by_year(filtered_data, year_number)
+        
+        # Apply section filter using Python
+        if self.current_filters.get('section') and self.current_filters['section'] != 'All':
+            section_filter = self.current_filters['section']
+            filtered_data = self.filter_courses_by_section(filtered_data, section_filter)
         
         # Update filtered data and refresh table
         self.filtered_courses_data = filtered_data
         self.refresh_table()
 
     def extract_year_number(self, year_display):
-        """Extract year number from display format (e.g., '1st Year' -> 1)"""
+        """Extract year number from display format using simple Python logic"""
         try:
-            # Extract the first digit from year display
-            year_mapping = {
+            # Simple mapping using Python dictionary
+            year_mappings = {
                 '1st Year': 1, '2nd Year': 2, '3rd Year': 3, '4th Year': 4,
-                '5th Year': 5, '6th Year': 6, '7th Year': 7, '8th Year': 8,
-                '9th Year': 9, '10th Year': 10
+                '5th Year': 5, '6th Year': 6, '7th Year': 7, '8th Year': 8
             }
-            return year_mapping.get(year_display)
-        except:
+            
+            # Use Python dict.get() for safe lookup
+            return year_mappings.get(year_display, None)
+        except Exception as e:
+            print(f"Error extracting year number: {e}")
             return None
 
     def filter_courses_by_year(self, courses, year_number):
-        """Filter courses by year level using database query"""
+        """Filter courses by year level using simple database query and Python processing"""
         try:
             if not self.db_manager:
                 return courses
             
-            # Get course IDs that are assigned to sections matching the year
+            # Get simple assignment data and process in Python
             success, assigned_courses = self.db_manager.get_courses_by_year(year_number)
             
             if success and assigned_courses:
-                # Extract course IDs from assignments
-                course_ids = [ac.get('course_id') for ac in assigned_courses if ac.get('course_id')]
+                # Extract course IDs using Python
+                course_ids = []
+                for assignment in assigned_courses:
+                    course_id = assignment.get('course_id')
+                    if course_id and course_id not in course_ids:
+                        course_ids.append(course_id)
                 
-                # Filter courses that have these IDs
-                filtered = [
+                # Filter courses using Python list comprehension
+                filtered_courses = [
                     course for course in courses 
                     if course.get('id') in course_ids
                 ]
-                return filtered
+                return filtered_courses
             else:
-                # If no assignments found or error, return empty list
                 return []
                 
         except Exception as e:
@@ -715,26 +731,29 @@ class CoursesView(ctk.CTkFrame):
             return courses
 
     def filter_courses_by_section(self, courses, section_name):
-        """Filter courses by specific section using database query"""
+        """Filter courses by specific section using simple database query and Python processing"""
         try:
             if not self.db_manager:
                 return courses
             
-            # Get course IDs that are assigned to this specific section
+            # Get simple assignment data and process in Python
             success, assigned_courses = self.db_manager.get_courses_by_section(section_name)
             
             if success and assigned_courses:
-                # Extract course IDs from assignments
-                course_ids = [ac.get('course_id') for ac in assigned_courses if ac.get('course_id')]
+                # Extract course IDs using Python
+                course_ids = []
+                for assignment in assigned_courses:
+                    course_id = assignment.get('course_id')
+                    if course_id and course_id not in course_ids:
+                        course_ids.append(course_id)
                 
-                # Filter courses that have these IDs
-                filtered = [
+                # Filter courses using Python list comprehension
+                filtered_courses = [
                     course for course in courses 
                     if course.get('id') in course_ids
                 ]
-                return filtered
+                return filtered_courses
             else:
-                # If no assignments found or error, return empty list
                 return []
                 
         except Exception as e:

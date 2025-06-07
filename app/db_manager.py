@@ -207,3 +207,15 @@ class DatabaseManager:
 
     def get_courses_by_section(self, section_name):
         return self.courses.get_courses_by_section(section_name)
+
+    def get_course_section_statistics(self, course_id, academic_year=None, semester=None):
+        return self.courses.get_course_section_statistics(course_id, academic_year, semester)
+
+    def get_course_schedule_statistics(self, course_id, academic_year=None, semester=None):
+        return self.courses.get_course_schedule_statistics(course_id, academic_year, semester)
+
+    def get_available_academic_years(self):
+        return self.courses.get_available_academic_years()
+
+    def get_available_semesters(self):
+        return self.courses.get_available_semesters()

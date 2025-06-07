@@ -200,15 +200,78 @@ class DatabaseCourseManager:
 
     def get_course_statistics(self, course_id, academic_year=None, semester=None):
         """Get comprehensive statistics for a specific course"""
-        # TODO: Implement course statistics
-        return True, {
-            'total_students': 0,
-            'total_classes': 0,
-            'attendance_rate': '0%',
-            'total_absents': 0,
-            'total_present': 0,
-            'total_late': 0
-        }
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            
+            # Build base query for course statistics
+            base_query = """
+            SELECT 
+                COUNT(DISTINCT al.user_id) as total_students,
+                COUNT(al.id) as total_records,
+                SUM(CASE WHEN al.status = 'present' THEN 1 ELSE 0 END) as total_present,
+                SUM(CASE WHEN al.status = 'late' THEN 1 ELSE 0 END) as total_late,
+                SUM(CASE WHEN al.status = 'absent' THEN 1 ELSE 0 END) as total_absents,
+                COUNT(DISTINCT DATE(al.date)) as total_classes
+            FROM attendance_logs al
+            JOIN assigned_courses ac ON al.assigned_course_id = ac.id
+            WHERE ac.course_id = ? AND ac.isDeleted = 0
+            """
+            
+            params = [course_id]
+            
+            # Add filters if provided - academic_year is used here
+            if academic_year:
+                base_query += " AND ac.academic_year = ?"
+                params.append(academic_year)
+            
+            if semester:
+                base_query += " AND ac.semester = ?"
+                params.append(semester)
+            
+            cursor.execute(base_query, params)
+            result = cursor.fetchone()
+            
+            if result:
+                total_students = result['total_students'] or 0
+                total_records = result['total_records'] or 0
+                total_present = result['total_present'] or 0
+                total_late = result['total_late'] or 0
+                total_absents = result['total_absents'] or 0
+                total_classes = result['total_classes'] or 0
+                
+                # Calculate attendance rate
+                if total_records > 0:
+                    attendance_rate = round((total_present / total_records) * 100, 1)
+                else:
+                    attendance_rate = 0
+                
+                stats = {
+                    'total_students': total_students,
+                    'attendance_rate': f"{attendance_rate}%",
+                    'total_classes': total_classes,
+                    'total_absents': total_absents,
+                    'total_present': total_present,
+                    'total_late': total_late
+                }
+                
+                return True, stats
+            else:
+                # Return empty stats if no data found
+                return True, {
+                    'total_students': 0,
+                    'attendance_rate': '0%',
+                    'total_classes': 0,
+                    'total_absents': 0,
+                    'total_present': 0,
+                    'total_late': 0
+                }
+            
+        except Exception as e:
+            print(f"Error getting course statistics: {e}")
+            return False, str(e)
+        finally:
+            conn.close()
 
     def get_available_programs_for_courses(self):
         """Get list of available programs for course assignment"""
@@ -235,20 +298,23 @@ class DatabaseCourseManager:
         try:
             cursor = conn.cursor()
             
-            # Get courses assigned to sections that match the year (first character of section name)
+            # Simple query to get all assigned courses and sections
             query = """
-            SELECT DISTINCT ac.course_id
+            SELECT DISTINCT ac.course_id, s.name as section_name
             FROM assigned_courses ac
             JOIN sections s ON ac.section_id = s.id
-            WHERE ac.isDeleted = 0 
-            AND s.isDeleted = 0 
-            AND SUBSTR(s.name, 1, 1) = ?
+            WHERE ac.isDeleted = 0 AND s.isDeleted = 0
             """
             
-            cursor.execute(query, (str(year_number),))
+            cursor.execute(query)
             results = cursor.fetchall()
             
-            assigned_courses = [{'course_id': row['course_id']} for row in results]
+            # Filter in Python - check if section name starts with the year number
+            assigned_courses = []
+            for row in results:
+                section_name = row['section_name']
+                if section_name and str(section_name)[0] == str(year_number):
+                    assigned_courses.append({'course_id': row['course_id']})
             
             return True, assigned_courses
             
@@ -264,20 +330,22 @@ class DatabaseCourseManager:
         try:
             cursor = conn.cursor()
             
-            # Get courses assigned to the specific section
+            # Simple query to get all assigned courses and sections
             query = """
-            SELECT DISTINCT ac.course_id
+            SELECT DISTINCT ac.course_id, s.name as section_name
             FROM assigned_courses ac
             JOIN sections s ON ac.section_id = s.id
-            WHERE ac.isDeleted = 0 
-            AND s.isDeleted = 0 
-            AND s.name = ?
+            WHERE ac.isDeleted = 0 AND s.isDeleted = 0
             """
             
-            cursor.execute(query, (section_name,))
+            cursor.execute(query)
             results = cursor.fetchall()
             
-            assigned_courses = [{'course_id': row['course_id']} for row in results]
+            # Filter in Python - exact section name match
+            assigned_courses = []
+            for row in results:
+                if row['section_name'] == section_name:
+                    assigned_courses.append({'course_id': row['course_id']})
             
             return True, assigned_courses
             
@@ -293,15 +361,14 @@ class DatabaseCourseManager:
         try:
             cursor = conn.cursor()
             
-            # Check if course is assigned to any classes
+            # Simple query to get all assignments for this course
             cursor.execute("""
-                SELECT COUNT(*) as assignment_count
-                FROM assigned_courses 
+                SELECT id FROM assigned_courses 
                 WHERE course_id = ? AND isDeleted = 0
             """, (course_id,))
             
-            result = cursor.fetchone()
-            assignment_count = result['assignment_count'] if result else 0
+            assignments = cursor.fetchall()
+            assignment_count = len(assignments)
             
             return True, {
                 'in_use': assignment_count > 0,
@@ -314,466 +381,236 @@ class DatabaseCourseManager:
         finally:
             conn.close()
 
-    def get_course_statistics(self, course_id, academic_year=None, semester=None):
-        """Get comprehensive statistics for a specific course"""
-        # TODO: Implement course statistics
-        return True, {
-            'total_students': 0,
-            'total_classes': 0,
-            'attendance_rate': '0%',
-            'total_absents': 0,
-            'total_present': 0,
-            'total_late': 0
-        }
+    def get_course_section_statistics(self, course_id, academic_year=None, semester=None):
+        """Get section-based statistics for a specific course"""
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            
+            # Get section statistics
+            section_query = """
+            SELECT 
+                s.name as section_name,
+                COUNT(DISTINCT al.user_id) as total_students,
+                COUNT(al.id) as total_records,
+                SUM(CASE WHEN al.status = 'present' THEN 1 ELSE 0 END) as present_count
+            FROM sections s
+            JOIN assigned_courses ac ON s.id = ac.section_id
+            LEFT JOIN attendance_logs al ON al.assigned_course_id = ac.id
+            WHERE ac.course_id = ? AND ac.isDeleted = 0
+            """
+            
+            params = [course_id]
+            
+            # academic_year filtering is used here too
+            if academic_year:
+                section_query += " AND ac.academic_year = ?"
+                params.append(academic_year)
+            
+            if semester:
+                section_query += " AND ac.semester = ?"
+                params.append(semester)
+            
+            section_query += " GROUP BY s.id, s.name"
+            
+            cursor.execute(section_query, params)
+            section_results = cursor.fetchall()
+            
+            section_stats = {}
+            best_section = None
+            worst_section = None
+            best_rate = 0
+            worst_rate = 100
+            
+            for row in section_results:
+                section_name = row['section_name']
+                total_students = row['total_students'] or 0
+                total_records = row['total_records'] or 0
+                present_count = row['present_count'] or 0
+                
+                if total_records > 0:
+                    attendance_rate = (present_count / total_records) * 100
+                else:
+                    attendance_rate = 0
+                
+                section_stats[section_name] = {
+                    'attendance_rate': round(attendance_rate, 1),
+                    'total_students': total_students,
+                    'total_records': total_records,
+                    'present_count': present_count
+                }
+                
+                # Track best and worst sections
+                if attendance_rate > best_rate:
+                    best_rate = attendance_rate
+                    best_section = {'name': section_name, 'rate': round(attendance_rate, 1)}
+                
+                if attendance_rate < worst_rate:
+                    worst_rate = attendance_rate
+                    worst_section = {'name': section_name, 'rate': round(attendance_rate, 1)}
+            
+            result = {
+                'section_stats': section_stats,
+                'best_section': best_section,
+                'worst_section': worst_section
+            }
+            
+            return True, result
+            
+        except Exception as e:
+            print(f"Error getting course section statistics: {e}")
+            return False, str(e)
+        finally:
+            conn.close()
 
-    def get_available_programs_for_courses(self):
-        """Get list of available programs for course assignment"""
+    def get_course_schedule_statistics(self, course_id, academic_year=None, semester=None):
+        """Get schedule-based statistics for a specific course"""
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            
+            # Get schedule data from schedules table with attendance data
+            schedule_query = """
+            SELECT DISTINCT 
+                s.day_of_week,
+                s.start_time,
+                s.end_time,
+                ac.academic_year, 
+                ac.semester, 
+                al.status
+            FROM schedules s
+            JOIN assigned_courses ac ON s.assigned_course_id = ac.id
+            LEFT JOIN attendance_logs al ON al.assigned_course_id = ac.id
+            WHERE ac.course_id = ? AND ac.isDeleted = 0
+            """
+            
+            cursor.execute(schedule_query, [course_id])
+            schedule_data = cursor.fetchall()
+            
+            # Filter by academic year and semester in Python
+            filtered_schedules = []
+            for schedule in schedule_data:
+                include_schedule = True
+                
+                # academic_year filtering happens here
+                if academic_year and academic_year != "All Years":
+                    if schedule['academic_year'] != academic_year:
+                        include_schedule = False
+                
+                if semester and semester != "All Semesters":
+                    if schedule['semester'] != semester:
+                        include_schedule = False
+                
+                if include_schedule:
+                    filtered_schedules.append(schedule)
+            
+            # Process schedule statistics using Python
+            schedule_stats = {}
+            
+            for schedule in filtered_schedules:
+                day_of_week = schedule['day_of_week']
+                start_time = schedule['start_time']
+                end_time = schedule['end_time']
+                
+                if not day_of_week or not start_time or not end_time:
+                    continue
+                
+                # Format the schedule time as "Monday : 9:00 - 10:00"
+                try:
+                    # Extract time from datetime strings
+                    if isinstance(start_time, str):
+                        # Parse the datetime string and extract time
+                        from datetime import datetime
+                        start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+                        end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
+                        start_time_str = start_dt.strftime('%H:%M')
+                        end_time_str = end_dt.strftime('%H:%M')
+                    else:
+                        # If it's already a datetime object
+                        start_time_str = start_time.strftime('%H:%M')
+                        end_time_str = end_time.strftime('%H:%M')
+                    
+                    schedule_time = f"{day_of_week} : {start_time_str} - {end_time_str}"
+                except Exception as e:
+                    print(f"Error formatting schedule time: {e}")
+                    # Fallback to basic format
+                    schedule_time = f"{day_of_week} : Schedule"
+                
+                if schedule_time not in schedule_stats:
+                    schedule_stats[schedule_time] = {
+                        'total_records': 0,
+                        'present_count': 0
+                    }
+                
+                if schedule['status']:
+                    schedule_stats[schedule_time]['total_records'] += 1
+                    if schedule['status'].lower() == 'present':
+                        schedule_stats[schedule_time]['present_count'] += 1
+            
+            # Find best performing schedule
+            best_schedule = None
+            best_rate = 0
+            
+            for schedule_time, stats in schedule_stats.items():
+                if stats['total_records'] > 0:
+                    rate = (stats['present_count'] / stats['total_records']) * 100
+                    if rate > best_rate:
+                        best_rate = rate
+                        best_schedule = schedule_time
+            
+            result = {
+                'best_schedule': {
+                    'time': best_schedule,
+                    'rate': round(best_rate, 1)
+                } if best_schedule else None
+            }
+            
+            return True, result
+            
+        except Exception as e:
+            print(f"Error getting course schedule statistics: {e}")
+            return False, str(e)
+        finally:
+            conn.close()
+
+    def get_available_academic_years(self):
+        """Get list of available academic years from assigned courses"""
         conn = self.get_connection()
         try:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT id, name, acronym 
-                FROM programs 
-                WHERE isDeleted = 0
-                ORDER BY name
+                SELECT DISTINCT academic_year 
+                FROM assigned_courses 
+                WHERE academic_year IS NOT NULL 
+                AND academic_year != ''
+                AND isDeleted = 0
+                ORDER BY academic_year DESC
             """)
-            programs = [dict(row) for row in cursor.fetchall()]
-            return True, programs
+            years = [row[0] for row in cursor.fetchall()]
+            return True, years
         except Exception as e:
-            print(f"Error getting programs for courses: {e}")
+            print(f"Error getting available academic years: {e}")
             return False, str(e)
         finally:
             conn.close()
 
-    def get_courses_by_year(self, year_number):
-        """Get courses assigned to sections matching a specific year level"""
+    def get_available_semesters(self):
+        """Get list of available semesters from assigned courses"""
         conn = self.get_connection()
         try:
             cursor = conn.cursor()
-            
-            # Get courses assigned to sections that match the year (first character of section name)
-            query = """
-            SELECT DISTINCT ac.course_id
-            FROM assigned_courses ac
-            JOIN sections s ON ac.section_id = s.id
-            WHERE ac.isDeleted = 0 
-            AND s.isDeleted = 0 
-            AND SUBSTR(s.name, 1, 1) = ?
-            """
-            
-            cursor.execute(query, (str(year_number),))
-            results = cursor.fetchall()
-            
-            assigned_courses = [{'course_id': row['course_id']} for row in results]
-            
-            return True, assigned_courses
-            
-        except Exception as e:
-            print(f"Error getting courses by year: {e}")
-            return False, str(e)
-        finally:
-            conn.close()
-
-    def get_courses_by_section(self, section_name):
-        """Get courses assigned to a specific section"""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            
-            # Get courses assigned to the specific section
-            query = """
-            SELECT DISTINCT ac.course_id
-            FROM assigned_courses ac
-            JOIN sections s ON ac.section_id = s.id
-            WHERE ac.isDeleted = 0 
-            AND s.isDeleted = 0 
-            AND s.name = ?
-            """
-            
-            cursor.execute(query, (section_name,))
-            results = cursor.fetchall()
-            
-            assigned_courses = [{'course_id': row['course_id']} for row in results]
-            
-            return True, assigned_courses
-            
-        except Exception as e:
-            print(f"Error getting courses by section: {e}")
-            return False, str(e)
-        finally:
-            conn.close()
-
-    def check_course_in_use(self, course_id):
-        """Check if a course is being used in assigned_courses"""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            
-            # Check if course is assigned to any classes
             cursor.execute("""
-                SELECT COUNT(*) as assignment_count
+                SELECT DISTINCT semester 
                 FROM assigned_courses 
-                WHERE course_id = ? AND isDeleted = 0
-            """, (course_id,))
-            
-            result = cursor.fetchone()
-            assignment_count = result['assignment_count'] if result else 0
-            
-            return True, {
-                'in_use': assignment_count > 0,
-                'assignment_count': assignment_count
-            }
-            
-        except Exception as e:
-            print(f"Error checking course usage: {e}")
-            return False, str(e)
-        finally:
-            conn.close()
-
-    def get_course_statistics(self, course_id, academic_year=None, semester=None):
-        """Get comprehensive statistics for a specific course"""
-        # TODO: Implement course statistics
-        return True, {
-            'total_students': 0,
-            'total_classes': 0,
-            'attendance_rate': '0%',
-            'total_absents': 0,
-            'total_present': 0,
-            'total_late': 0
-        }
-
-    def get_available_programs_for_courses(self):
-        """Get list of available programs for course assignment"""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT id, name, acronym 
-                FROM programs 
-                WHERE isDeleted = 0
-                ORDER BY name
+                WHERE semester IS NOT NULL 
+                AND semester != ''
+                AND isDeleted = 0
+                ORDER BY semester
             """)
-            programs = [dict(row) for row in cursor.fetchall()]
-            return True, programs
+            semesters = [row[0] for row in cursor.fetchall()]
+            return True, semesters
         except Exception as e:
-            print(f"Error getting programs for courses: {e}")
-            return False, str(e)
-        finally:
-            conn.close()
-
-    def get_courses_by_year(self, year_number):
-        """Get courses assigned to sections matching a specific year level"""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            
-            # Get courses assigned to sections that match the year (first character of section name)
-            query = """
-            SELECT DISTINCT ac.course_id
-            FROM assigned_courses ac
-            JOIN sections s ON ac.section_id = s.id
-            WHERE ac.isDeleted = 0 
-            AND s.isDeleted = 0 
-            AND SUBSTR(s.name, 1, 1) = ?
-            """
-            
-            cursor.execute(query, (str(year_number),))
-            results = cursor.fetchall()
-            
-            assigned_courses = [{'course_id': row['course_id']} for row in results]
-            
-            return True, assigned_courses
-            
-        except Exception as e:
-            print(f"Error getting courses by year: {e}")
-            return False, str(e)
-        finally:
-            conn.close()
-
-    def get_courses_by_section(self, section_name):
-        """Get courses assigned to a specific section"""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            
-            # Get courses assigned to the specific section
-            query = """
-            SELECT DISTINCT ac.course_id
-            FROM assigned_courses ac
-            JOIN sections s ON ac.section_id = s.id
-            WHERE ac.isDeleted = 0 
-            AND s.isDeleted = 0 
-            AND s.name = ?
-            """
-            
-            cursor.execute(query, (section_name,))
-            results = cursor.fetchall()
-            
-            assigned_courses = [{'course_id': row['course_id']} for row in results]
-            
-            return True, assigned_courses
-            
-        except Exception as e:
-            print(f"Error getting courses by section: {e}")
-            return False, str(e)
-        finally:
-            conn.close()
-
-    def check_course_in_use(self, course_id):
-        """Check if a course is being used in assigned_courses"""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            
-            # Check if course is assigned to any classes
-            cursor.execute("""
-                SELECT COUNT(*) as assignment_count
-                FROM assigned_courses 
-                WHERE course_id = ? AND isDeleted = 0
-            """, (course_id,))
-            
-            result = cursor.fetchone()
-            assignment_count = result['assignment_count'] if result else 0
-            
-            return True, {
-                'in_use': assignment_count > 0,
-                'assignment_count': assignment_count
-            }
-            
-        except Exception as e:
-            print(f"Error checking course usage: {e}")
-            return False, str(e)
-        finally:
-            conn.close()
-
-    def get_course_statistics(self, course_id, academic_year=None, semester=None):
-        """Get comprehensive statistics for a specific course"""
-        # TODO: Implement course statistics
-        return True, {
-            'total_students': 0,
-            'total_classes': 0,
-            'attendance_rate': '0%',
-            'total_absents': 0,
-            'total_present': 0,
-            'total_late': 0
-        }
-
-    def get_available_programs_for_courses(self):
-        """Get list of available programs for course assignment"""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT id, name, acronym 
-                FROM programs 
-                WHERE isDeleted = 0
-                ORDER BY name
-            """)
-            programs = [dict(row) for row in cursor.fetchall()]
-            return True, programs
-        except Exception as e:
-            print(f"Error getting programs for courses: {e}")
-            return False, str(e)
-        finally:
-            conn.close()
-
-    def get_courses_by_year(self, year_number):
-        """Get courses assigned to sections matching a specific year level"""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            
-            # Get courses assigned to sections that match the year (first character of section name)
-            query = """
-            SELECT DISTINCT ac.course_id
-            FROM assigned_courses ac
-            JOIN sections s ON ac.section_id = s.id
-            WHERE ac.isDeleted = 0 
-            AND s.isDeleted = 0 
-            AND SUBSTR(s.name, 1, 1) = ?
-            """
-            
-            cursor.execute(query, (str(year_number),))
-            results = cursor.fetchall()
-            
-            assigned_courses = [{'course_id': row['course_id']} for row in results]
-            
-            return True, assigned_courses
-            
-        except Exception as e:
-            print(f"Error getting courses by year: {e}")
-            return False, str(e)
-        finally:
-            conn.close()
-
-    def get_courses_by_section(self, section_name):
-        """Get courses assigned to a specific section"""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            
-            # Get courses assigned to the specific section
-            query = """
-            SELECT DISTINCT ac.course_id
-            FROM assigned_courses ac
-            JOIN sections s ON ac.section_id = s.id
-            WHERE ac.isDeleted = 0 
-            AND s.isDeleted = 0 
-            AND s.name = ?
-            """
-            
-            cursor.execute(query, (section_name,))
-            results = cursor.fetchall()
-            
-            assigned_courses = [{'course_id': row['course_id']} for row in results]
-            
-            return True, assigned_courses
-            
-        except Exception as e:
-            print(f"Error getting courses by section: {e}")
-            return False, str(e)
-        finally:
-            conn.close()
-
-    def check_course_in_use(self, course_id):
-        """Check if a course is being used in assigned_courses"""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            
-            # Check if course is assigned to any classes
-            cursor.execute("""
-                SELECT COUNT(*) as assignment_count
-                FROM assigned_courses 
-                WHERE course_id = ? AND isDeleted = 0
-            """, (course_id,))
-            
-            result = cursor.fetchone()
-            assignment_count = result['assignment_count'] if result else 0
-            
-            return True, {
-                'in_use': assignment_count > 0,
-                'assignment_count': assignment_count
-            }
-            
-        except Exception as e:
-            print(f"Error checking course usage: {e}")
-            return False, str(e)
-        finally:
-            conn.close()
-
-    def get_course_statistics(self, course_id, academic_year=None, semester=None):
-        """Get comprehensive statistics for a specific course"""
-        # TODO: Implement course statistics
-        return True, {
-            'total_students': 0,
-            'total_classes': 0,
-            'attendance_rate': '0%',
-            'total_absents': 0,
-            'total_present': 0,
-            'total_late': 0
-        }
-
-    def get_available_programs_for_courses(self):
-        """Get list of available programs for course assignment"""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT id, name, acronym 
-                FROM programs 
-                WHERE isDeleted = 0
-                ORDER BY name
-            """)
-            programs = [dict(row) for row in cursor.fetchall()]
-            return True, programs
-        except Exception as e:
-            print(f"Error getting programs for courses: {e}")
-            return False, str(e)
-        finally:
-            conn.close()
-
-    def get_courses_by_year(self, year_number):
-        """Get courses assigned to sections matching a specific year level"""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            
-            # Get courses assigned to sections that match the year (first character of section name)
-            query = """
-            SELECT DISTINCT ac.course_id
-            FROM assigned_courses ac
-            JOIN sections s ON ac.section_id = s.id
-            WHERE ac.isDeleted = 0 
-            AND s.isDeleted = 0 
-            AND SUBSTR(s.name, 1, 1) = ?
-            """
-            
-            cursor.execute(query, (str(year_number),))
-            results = cursor.fetchall()
-            
-            assigned_courses = [{'course_id': row['course_id']} for row in results]
-            
-            return True, assigned_courses
-            
-        except Exception as e:
-            print(f"Error getting courses by year: {e}")
-            return False, str(e)
-        finally:
-            conn.close()
-
-    def get_courses_by_section(self, section_name):
-        """Get courses assigned to a specific section"""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            
-            # Get courses assigned to the specific section
-            query = """
-            SELECT DISTINCT ac.course_id
-            FROM assigned_courses ac
-            JOIN sections s ON ac.section_id = s.id
-            WHERE ac.isDeleted = 0 
-            AND s.isDeleted = 0 
-            AND s.name = ?
-            """
-            
-            cursor.execute(query, (section_name,))
-            results = cursor.fetchall()
-            
-            assigned_courses = [{'course_id': row['course_id']} for row in results]
-            
-            return True, assigned_courses
-            
-        except Exception as e:
-            print(f"Error getting courses by section: {e}")
-            return False, str(e)
-        finally:
-            conn.close()
-
-    def check_course_in_use(self, course_id):
-        """Check if a course is being used in assigned_courses"""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            
-            # Check if course is assigned to any classes
-            cursor.execute("""
-                SELECT COUNT(*) as assignment_count
-                FROM assigned_courses 
-                WHERE course_id = ? AND isDeleted = 0
-            """, (course_id,))
-            
-            result = cursor.fetchone()
-            assignment_count = result['assignment_count'] if result else 0
-            
-            return True, {
-                'in_use': assignment_count > 0,
-                'assignment_count': assignment_count
-            }
-            
-        except Exception as e:
-            print(f"Error checking course usage: {e}")
+            print(f"Error getting available semesters: {e}")
             return False, str(e)
         finally:
             conn.close()
