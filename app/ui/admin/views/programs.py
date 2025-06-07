@@ -203,7 +203,15 @@ class ProgramsView(ctk.CTkFrame):
         
         def view_program():
             close_menu()
-            ViewProgramPopup(self, card.program_data)
+            # Get database manager instance
+            try:
+                from app.db_manager import DatabaseManager
+                db = DatabaseManager()
+                ViewProgramPopup(self, card.program_data, db_manager=db)
+            except Exception as e:
+                print(f"Error loading database manager: {e}")
+                # Fallback without db_manager
+                ViewProgramPopup(self, card.program_data)
         
         def delete_program():
             close_menu()

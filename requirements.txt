@@ -9,3 +9,4 @@ pydantic
 numpy
 bcrypt
 customtkinter
+matplotlib

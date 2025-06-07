@@ -302,12 +302,12 @@ def seed_programs_and_courses():
         return False, {}, {}
 
 def seed_assigned_courses_and_attendance():
-    """Seed assigned courses and attendance logs"""
+    """Seed assigned courses and attendance logs with enhanced realism"""
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        logger.info("Creating assigned courses and attendance logs...")
+        logger.info("Creating comprehensive assigned courses and attendance logs...")
         
         # First, let's check the existing table structure
         cursor.execute("PRAGMA table_info(assigned_courses)")
@@ -402,43 +402,83 @@ def seed_assigned_courses_and_attendance():
             conn.close()
             return False
         
-        # Assign each faculty member to 2-3 courses
+        # Enhanced course assignment strategy
         for faculty_user_id, first_name, last_name in faculty_list:
-            # Randomly select 2-3 courses for this faculty (ensure we don't exceed available courses)
-            num_courses_to_assign = min(3, len(courses_list), random.randint(2, 3))
+            # Senior faculty (tenured) get more courses and premium assignments
+            cursor.execute("SELECT u.status_id, s.name FROM users u JOIN statuses s ON u.status_id = s.id WHERE u.id = ?", (faculty_user_id,))
+            status_info = cursor.fetchone()
+            faculty_status = status_info[1] if status_info else 'Active'
+            
+            # Determine course load based on status
+            if faculty_status in ['Tenured', 'Tenure Track']:
+                num_courses_to_assign = random.randint(3, 5)  # Senior faculty: 3-5 courses
+            elif faculty_status == 'Active':
+                num_courses_to_assign = random.randint(2, 4)  # Regular faculty: 2-4 courses
+            else:  # Probationary, new faculty
+                num_courses_to_assign = random.randint(2, 3)  # Junior faculty: 2-3 courses
+            
+            # Ensure we don't exceed available courses
+            num_courses_to_assign = min(num_courses_to_assign, len(courses_list))
             selected_courses = random.sample(courses_list, num_courses_to_assign)
             
             for course_id, course_name, program_name in selected_courses:
-                # Find matching sections for this program
+                # Find all sections for this program
                 matching_sections = [s for s in sections_list if s[2] == program_name]
                 
                 if matching_sections:
-                    # Select a random section
-                    section_id, section_name, _ = random.choice(matching_sections)
+                    # Senior faculty get preference for advanced year sections
+                    if faculty_status in ['Tenured', 'Tenure Track']:
+                        # Prefer 3rd and 4th year sections
+                        advanced_sections = [s for s in matching_sections if s[1].startswith(('3-', '4-'))]
+                        if advanced_sections:
+                            section_id, section_name, _ = random.choice(advanced_sections)
+                        else:
+                            section_id, section_name, _ = random.choice(matching_sections)
+                    else:
+                        # Regular assignment for other faculty
+                        section_id, section_name, _ = random.choice(matching_sections)
                     
-                    # Generate random schedule
-                    days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-                    times = ['8:00-9:30', '9:30-11:00', '11:00-12:30', '1:30-3:00', '3:00-4:30']
-                    rooms = ['Room 101', 'Room 102', 'Room 103', 'Lab 1', 'Lab 2', 'Conference Room']
+                    # Generate realistic schedules
+                    schedules = [
+                        ('Monday', '7:30-9:00'), ('Monday', '9:00-10:30'), ('Monday', '10:30-12:00'),
+                        ('Monday', '1:00-2:30'), ('Monday', '2:30-4:00'), ('Monday', '4:00-5:30'),
+                        ('Tuesday', '7:30-9:00'), ('Tuesday', '9:00-10:30'), ('Tuesday', '10:30-12:00'),
+                        ('Tuesday', '1:00-2:30'), ('Tuesday', '2:30-4:00'), ('Tuesday', '4:00-5:30'),
+                        ('Wednesday', '7:30-9:00'), ('Wednesday', '9:00-10:30'), ('Wednesday', '10:30-12:00'),
+                        ('Wednesday', '1:00-2:30'), ('Wednesday', '2:30-4:00'), ('Wednesday', '4:00-5:30'),
+                        ('Thursday', '7:30-9:00'), ('Thursday', '9:00-10:30'), ('Thursday', '10:30-12:00'),
+                        ('Thursday', '1:00-2:30'), ('Thursday', '2:30-4:00'), ('Thursday', '4:00-5:30'),
+                        ('Friday', '7:30-9:00'), ('Friday', '9:00-10:30'), ('Friday', '10:30-12:00'),
+                        ('Friday', '1:00-2:30'), ('Friday', '2:30-4:00'), ('Friday', '4:00-5:30')
+                    ]
                     
-                    schedule_day = random.choice(days)
-                    schedule_time = random.choice(times)
+                    schedule_day, schedule_time = random.choice(schedules)
+                    
+                    rooms = [
+                        'Room 101', 'Room 102', 'Room 103', 'Room 104', 'Room 105',
+                        'Lab 1', 'Lab 2', 'Lab 3', 'Computer Lab A', 'Computer Lab B',
+                        'Conference Room A', 'Conference Room B', 'Auditorium', 'Library Hall',
+                        'Engineering Lab', 'Physics Lab', 'Chemistry Lab'
+                    ]
                     room = random.choice(rooms)
                     semester = random.choice(['1st Semester', '2nd Semester'])
+                    
+                    # Multiple academic years for historical data
+                    academic_years = ['2023-2024', '2024-2025']
+                    academic_year = random.choice(academic_years)
                     
                     # Check if this assignment already exists
                     cursor.execute("""
                         SELECT id FROM assigned_courses 
-                        WHERE user_id = ? AND course_id = ? AND section_id = ? AND academic_year = ?
-                    """, (faculty_user_id, course_id, section_id, academic_year))
+                        WHERE user_id = ? AND course_id = ? AND section_id = ? AND academic_year = ? AND semester = ?
+                    """, (faculty_user_id, course_id, section_id, academic_year, semester))
                     
                     existing = cursor.fetchone()
                     if existing:
                         assigned_course_ids.append(existing[0])
-                        logger.info(f"Course assignment already exists for {first_name} {last_name} - {course_name}")
                         continue
                     
-                    # Insert assigned course (using user_id instead of faculty_id)
+                    # Insert assigned course
                     cursor.execute("""
                         INSERT INTO assigned_courses 
                         (user_id, course_id, section_id, academic_year, semester, schedule_day, schedule_time, room, created_at, updated_at)
@@ -448,11 +488,11 @@ def seed_assigned_courses_and_attendance():
                     assigned_course_id = cursor.lastrowid
                     assigned_course_ids.append(assigned_course_id)
                     
-                    logger.info(f"Assigned {first_name} {last_name} to teach {course_name} for section {section_name} (ID: {assigned_course_id})")
+                    logger.info(f"Assigned {first_name} {last_name} ({faculty_status}) to teach {course_name} for section {section_name} (ID: {assigned_course_id})")
         
         logger.info(f"Created {len(assigned_course_ids)} course assignments")
         
-        # Now seed attendance logs with realistic distributions
+        # Enhanced attendance generation with more realistic patterns
         if assigned_course_ids:
             # Get all students
             cursor.execute("""
@@ -473,11 +513,12 @@ def seed_assigned_courses_and_attendance():
             
             # Define student performance categories with realistic distributions
             # Adjust to ensure more students have 90%+ attendance
-            excellent_students = int(len(students_list) * 0.30)   # 30% excellent (95%+ attendance)
-            very_good_students = int(len(students_list) * 0.25)   # 25% very good (90-94% attendance)
-            good_students = int(len(students_list) * 0.25)        # 25% good (80-89% attendance)
-            average_students = int(len(students_list) * 0.15)     # 15% average (70-79% attendance)
-            poor_students = len(students_list) - excellent_students - very_good_students - good_students - average_students  # Remaining poor (<70% attendance)
+            excellent_students = int(len(students_list) * 0.20)   # 20% excellent (95%+ attendance)
+            very_good_students = int(len(students_list) * 0.30)   # 30% very good (85-94% attendance)  
+            good_students = int(len(students_list) * 0.25)        # 25% good (75-84% attendance)
+            average_students = int(len(students_list) * 0.15)     # 15% average (65-74% attendance)
+            poor_students = int(len(students_list) * 0.07)        # 7% poor (50-64% attendance)
+            very_poor_students = len(students_list) - excellent_students - very_good_students - good_students - average_students - poor_students  # 3% very poor (<50% attendance)
             
             # Shuffle students and assign performance categories
             shuffled_students = students_list.copy()
@@ -536,11 +577,11 @@ def seed_assigned_courses_and_attendance():
                 }
                 idx += 1
             
-            logger.info(f"Student distribution: {excellent_students} excellent (95%+), {very_good_students} very good (90-94%), {good_students} good (80-89%), {average_students} average (70-79%), {poor_students} poor (<70%)")
+            logger.info(f"Student distribution: {excellent_students} excellent (95%+), {very_good_students} very good (90-94%), {good_students} good (75-84%), {average_students} average (65-74%), {poor_students} poor (<70%)")
             logger.info(f"Total students with 90%+ attendance: {excellent_students + very_good_students} ({((excellent_students + very_good_students) / len(students_list)) * 100:.1f}%)")
             
-            # Generate attendance logs for the past 60 days (more data for better statistics)
-            start_date = datetime.now() - timedelta(days=60)
+            # Generate attendance logs for the past 90 days (full semester)
+            start_date = datetime.now() - timedelta(days=90)
             total_attendance_logs = 0
             
             for assigned_course_id in assigned_course_ids:
@@ -569,17 +610,31 @@ def seed_assigned_courses_and_attendance():
                 
                 logger.info(f"Generating attendance for {len(section_students)} students in {course_name} - {section_name}")
                 
-                # Generate class schedule (3 times per week for each course)
+                # Generate more realistic class schedule (2-3 times per week per course)
                 class_days = []
-                for day_offset in range(60):
+                for day_offset in range(90):
                     attendance_date = start_date + timedelta(days=day_offset)
                     
                     # Skip weekends
-                    if attendance_date.weekday() >= 5:  # Saturday = 5, Sunday = 6
+                    if attendance_date.weekday() >= 5:
                         continue
                     
-                    # Schedule classes 3 times per week (Monday, Wednesday, Friday pattern)
-                    if attendance_date.weekday() in [0, 2, 4]:  # Monday, Wednesday, Friday
+                    # More varied class schedules
+                    weekday = attendance_date.weekday()
+                    
+                    # Each course meets 2-3 times per week on different patterns
+                    course_patterns = [
+                        [0, 2, 4],  # Mon-Wed-Fri
+                        [1, 3],     # Tue-Thu  
+                        [0, 3],     # Mon-Thu
+                        [1, 4],     # Tue-Fri
+                        [0, 2],     # Mon-Wed
+                        [2, 4]      # Wed-Fri
+                    ]
+                    
+                    pattern = course_patterns[assigned_course_id % len(course_patterns)]
+                    
+                    if weekday in pattern:
                         class_days.append(attendance_date)
                 
                 # Generate attendance for each class day
@@ -695,8 +750,8 @@ def seed_assigned_courses_and_attendance():
         logger.info(f"\nStudent attendance distribution:")
         logger.info(f"  Excellent (95%+): {excellent_count} students")
         logger.info(f"  Very Good (90-94%): {very_good_count} students")
-        logger.info(f"  Good (80-89%): {good_count} students")
-        logger.info(f"  Average (70-79%): {average_count} students")
+        logger.info(f"  Good (75-84%): {good_count} students")
+        logger.info(f"  Average (65-74%): {average_count} students")
         logger.info(f"  Poor (<70%): {poor_count} students")
         
         # Calculate 90%+ and 80%+ totals

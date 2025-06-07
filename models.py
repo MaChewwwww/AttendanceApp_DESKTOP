@@ -73,6 +73,7 @@ class Course(Base):
     name = Column(String(100), nullable=False)
     description = Column(String(255), nullable=True)
     program_id = Column(Integer, ForeignKey("programs.id"), nullable=False)
+    isDeleted = Column(Integer, nullable=False, default=0)  # 0 for False, 1 for True
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
@@ -81,6 +82,7 @@ class Section(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
     program_id = Column(Integer, ForeignKey("programs.id"), nullable=False)
+    isDeleted = Column(Integer, nullable=False, default=0)  # 0 for False, 1 for True
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 

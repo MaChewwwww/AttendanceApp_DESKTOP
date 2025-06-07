@@ -1,5 +1,5 @@
 from sqlalchemy import create_engine
-from models import Base, User, Student, Faculty  # Import all model classes
+from models import Base, User, Student, Faculty, Program, Course, Section, Status, OTP_Request, Assigned_Course, Schedule, AttendanceLog  # Import all model classes
 import os
 from pathlib import Path
 from dotenv import load_dotenv

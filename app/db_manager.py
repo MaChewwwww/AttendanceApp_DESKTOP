@@ -161,3 +161,12 @@ class DatabaseManager:
 
     def check_program_in_use(self, program_id):
         return self.programs.check_program_in_use(program_id)
+
+    def get_program_statistics(self, program_id, academic_year=None, semester=None):
+        return self.programs.get_program_statistics(program_id, academic_year, semester)
+
+    def get_available_academic_years(self):
+        return self.programs.get_available_academic_years()
+
+    def get_available_semesters(self):
+        return self.programs.get_available_semesters()

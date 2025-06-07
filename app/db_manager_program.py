@@ -237,21 +237,30 @@ class DatabaseProgramManager:
         try:
             cursor = conn.cursor()
             
-            # Check if any students are enrolled in this program
+            # Get all students and their sections
             cursor.execute("""
-                SELECT COUNT(*) as student_count FROM users 
-                WHERE program_id = ? AND isDeleted = 0 AND role = 'student'
-            """, (program_id,))
+                SELECT u.id, s.section 
+                FROM users u
+                JOIN students s ON u.id = s.user_id
+                WHERE u.isDeleted = 0 AND u.role = 'Student'
+            """)
+            students_data = cursor.fetchall()
             
-            student_count = cursor.fetchone()['student_count']
-            
-            # Check if any sections belong to this program
+            # Get all sections for this program
             cursor.execute("""
-                SELECT COUNT(*) as section_count FROM sections 
+                SELECT id FROM sections 
                 WHERE program_id = ? AND isDeleted = 0
             """, (program_id,))
+            program_sections = [row['id'] for row in cursor.fetchall()]
             
-            section_count = cursor.fetchone()['section_count']
+            # Filter students in Python
+            student_count = 0
+            for student in students_data:
+                if student['section'] in program_sections:
+                    student_count += 1
+            
+            # Count sections directly
+            section_count = len(program_sections)
             
             usage_info = {
                 'in_use': student_count > 0 or section_count > 0,
@@ -264,5 +273,175 @@ class DatabaseProgramManager:
         except Exception as e:
             print(f"Error checking program usage: {e}")
             return False, f"Failed to check program usage: {str(e)}"
+        finally:
+            conn.close()
+
+    def get_program_statistics(self, program_id, academic_year=None, semester=None):
+        """
+        Get comprehensive statistics for a specific program
+        
+        Args:
+            program_id (int): Program ID
+            academic_year (str): Optional academic year filter (e.g., "2024-2025")
+            semester (str): Optional semester filter (e.g., "1st Semester")
+        
+        Returns:
+            tuple: (success: bool, result: dict/str)
+        """
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            
+            # Get all students and their sections
+            cursor.execute("""
+                SELECT u.id, s.section 
+                FROM users u
+                JOIN students s ON u.id = s.user_id
+                WHERE u.isDeleted = 0 AND u.role = 'Student'
+            """)
+            students_data = cursor.fetchall()
+            
+            # Get all sections for this program
+            cursor.execute("""
+                SELECT id FROM sections 
+                WHERE program_id = ? AND isDeleted = 0
+            """, (program_id,))
+            program_sections = [row['id'] for row in cursor.fetchall()]
+            
+            # Filter students in Python
+            program_student_ids = []
+            for student in students_data:
+                if student['section'] in program_sections:
+                    program_student_ids.append(student['id'])
+            
+            total_students = len(program_student_ids)
+            
+            # Get total courses in the program
+            cursor.execute("""
+                SELECT COUNT(*) as total_courses 
+                FROM courses 
+                WHERE program_id = ? AND isDeleted = 0
+            """, (program_id,))
+            total_courses = cursor.fetchone()['total_courses']
+            
+            # Get total sections
+            total_sections = len(program_sections)
+            
+            # Get attendance logs with academic year and semester filtering
+            if academic_year or semester:
+                # Get assigned courses that match the filters
+                filter_conditions = ["1=1"]
+                filter_params = []
+                
+                if academic_year:
+                    filter_conditions.append("academic_year = ?")
+                    filter_params.append(academic_year)
+                
+                if semester:
+                    filter_conditions.append("semester = ?")
+                    filter_params.append(semester)
+                
+                cursor.execute(f"""
+                    SELECT id FROM assigned_courses 
+                    WHERE {' AND '.join(filter_conditions)}
+                """, filter_params)
+                
+                valid_assigned_course_ids = [row['id'] for row in cursor.fetchall()]
+                
+                # Get attendance logs only for these assigned courses
+                cursor.execute("""
+                    SELECT user_id, status, assigned_course_id
+                    FROM attendance_logs
+                """)
+                all_attendance_data = cursor.fetchall()
+                
+                # Filter in Python
+                attendance_data = []
+                for log in all_attendance_data:
+                    if log['assigned_course_id'] in valid_assigned_course_ids:
+                        attendance_data.append(log)
+            else:
+                # Get all attendance logs
+                cursor.execute("""
+                    SELECT user_id, status 
+                    FROM attendance_logs
+                """)
+                attendance_data = cursor.fetchall()
+            
+            # Filter attendance logs for students in this program
+            total_present = 0
+            total_absents = 0
+            total_late = 0
+            total_records = 0
+            
+            for log in attendance_data:
+                if log['user_id'] in program_student_ids:
+                    total_records += 1
+                    if log['status'] == 'present':
+                        total_present += 1
+                    elif log['status'] == 'absent':
+                        total_absents += 1
+                    elif log['status'] == 'late':
+                        total_late += 1
+            
+            # Calculate attendance rate
+            attendance_rate = 0
+            if total_records > 0:
+                attendance_rate = round((total_present / total_records) * 100, 1)
+            
+            statistics = {
+                'total_students': total_students,
+                'total_courses': total_courses,
+                'total_sections': total_sections,
+                'total_absents': total_absents,
+                'total_present': total_present,
+                'total_late': total_late,
+                'attendance_rate': f"{attendance_rate}%",
+                'total_attendance_records': total_records,
+                'academic_year': academic_year or 'All Years',
+                'semester': semester or 'All Semesters'
+            }
+            
+            return True, statistics
+            
+        except Exception as e:
+            print(f"Error getting program statistics: {e}")
+            return False, f"Failed to get program statistics: {str(e)}"
+        finally:
+            conn.close()
+
+    def get_available_academic_years(self):
+        """Get list of available academic years from assigned_courses"""
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT DISTINCT academic_year 
+                FROM assigned_courses 
+                ORDER BY academic_year DESC
+            """)
+            years = [row['academic_year'] for row in cursor.fetchall()]
+            return True, years
+        except Exception as e:
+            print(f"Error getting academic years: {e}")
+            return False, []
+        finally:
+            conn.close()
+
+    def get_available_semesters(self):
+        """Get list of available semesters from assigned_courses"""
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT DISTINCT semester 
+                FROM assigned_courses 
+                ORDER BY semester
+            """)
+            semesters = [row['semester'] for row in cursor.fetchall()]
+            return True, semesters
+        except Exception as e:
+            print(f"Error getting semesters: {e}")
+            return False, []
         finally:
             conn.close()
