@@ -31,8 +31,9 @@
 - **Smart Filtering System**: Academic year and semester-based data filtering
 - **Visual Data Cards**: Professional metric cards with color-coded icons and comprehensive data
 - **Attendance Distribution Analysis**: Pie charts showing present/late/absent ratios
-- **Monthly Trend Analysis**: Bar charts tracking year-level performance over time
+- **Monthly Trend Analysis**: Bar charts tracking year-level performance over time with real database data
 - **Day-of-Week Analytics**: Most active day identification based on attendance patterns
+- **Real-time Chart Updates**: Dynamic chart regeneration based on filter selections
 
 ### 🛠️ **Database Integration & Management**
 - **Program Statistics Integration**: Real-time calculation of student counts, course numbers, attendance rates
@@ -41,13 +42,26 @@
 - **Comprehensive Program Profiles**: Full program details with acronyms, codes, and descriptions
 - **Data Integrity Checks**: Validation of relationships between programs, students, and attendance
 - **Performance Optimization**: Efficient database queries for complex statistical calculations
+- **Monthly Attendance Queries**: New database methods for year-level attendance tracking by month
 
-### 🔄 **Real-time Data Synchronization**
-- **Live Dashboard Updates**: Automatic refresh of statistics when filters change
-- **Dynamic Chart Rendering**: On-demand chart generation with proper cleanup
-- **Efficient Database Queries**: Optimized SQL queries for complex analytics
-- **Memory Management**: Proper matplotlib figure cleanup to prevent memory leaks
-- **Performance Optimization**: Cached data where appropriate for smooth user experience
+### 📊 **Advanced Database Querying & Filtering Process**
+- **Multi-step Data Pipeline**: Complex SQL queries combined with Python filtering for optimal performance
+- **Program-Student Mapping**: First retrieve all program sections, then filter students by section membership
+- **Academic Period Filtering**: Dynamic query building based on academic year/semester selections
+- **Section-to-Year Level Parsing**: Intelligent extraction of year levels from section naming conventions (e.g., "1-1" → "1st Year")
+- **Attendance Log Correlation**: Cross-reference attendance logs with filtered assigned courses for accurate statistics
+- **Performance-Optimized Queries**: Separate database calls for different data types to minimize query complexity
+- **Python-based Statistical Calculations**: Post-query processing for percentage calculations and data aggregation
+- **Fallback Data Handling**: Graceful degradation when filters return no results or database errors occur
+
+**Query Flow Process:**
+1. **Program Section Retrieval**: Get all sections belonging to the selected program
+2. **Student Filtering**: Match students to program sections using foreign key relationships
+3. **Academic Filter Application**: Apply year/semester filters to assigned_courses table
+4. **Attendance Data Correlation**: Join attendance logs with filtered courses and students
+5. **Year-Level Classification**: Parse section names to determine student year levels
+6. **Statistical Aggregation**: Calculate monthly/daily statistics using Python data processing
+7. **Chart Data Formatting**: Transform raw statistics into chart-ready data structures
 
 ---
 
@@ -90,11 +104,12 @@
 
 ### 📊 **Program Analytics Dashboard**
 - **Statistics Overview**: Total students, attendance rate, course count, absence tracking
-- **Visual Data Representation**: Professional pie charts and bar graphs
+- **Visual Data Representation**: Professional pie charts and bar graphs with real database data
 - **Time-based Analysis**: Monthly and daily attendance pattern recognition
 - **Performance Benchmarking**: Best and worst month identification with percentages
 - **Interactive Filtering**: Real-time data updates based on academic year and semester selection
 - **Key Metrics Cards**: Current month, previous month, best month, lowest month, most active day
+- **Monthly Attendance Bar Chart**: Year-level attendance tracking by month with dynamic data loading
 
 ### 🎨 **Enhanced User Interface**
 - **Modern Card Design**: Clean, professional program cards with visual hierarchy
@@ -106,10 +121,12 @@
 
 ### 📱 **Data Visualization**
 - **Attendance Pie Charts**: Visual breakdown of present, late, and absent students
-- **Monthly Bar Charts**: Year-level performance tracking across academic periods
+- **Monthly Bar Charts**: Year-level performance tracking across academic periods with real data
 - **Key Metrics Cards**: Important statistics with professional styling and icons
 - **Real-time Updates**: Dynamic chart regeneration when filters change
 - **Export-ready Visuals**: High-quality charts suitable for reporting and presentations
+- **Section-to-Year Mapping**: Intelligent parsing of section names to determine year levels
+- **Percentage-based Analytics**: Accurate attendance percentage calculations for each year level
 
 ---
 
@@ -163,8 +180,9 @@
 - **Monthly Trends**: Track attendance patterns over academic periods with detailed charts
 - **Performance Metrics**: Identify best and worst performing months with percentages
 - **Day Analysis**: Determine most active days of the week based on attendance data
-- **Year-level Breakdown**: Compare performance across different academic levels
+- **Year-level Breakdown**: Compare performance across different academic levels with real data
 - **Real-time Calculations**: Live updating of statistics based on current data
+- **Section Analysis**: Automatic year-level determination from section naming conventions
 
 ### 🎯 **Key Performance Indicators**
 - **Current Month Performance**: Real-time attendance rates for ongoing academic month
@@ -172,6 +190,7 @@
 - **Peak Performance**: Best month identification with detailed statistics and context
 - **Performance Challenges**: Lowest month tracking for improvement opportunities
 - **Activity Patterns**: Most active day identification for scheduling optimization
+- **Monthly Breakdown**: 12-month attendance tracking with year-level comparisons
 
 ### 📊 **Visual Data Presentation**
 - **Interactive Charts**: Professional matplotlib-based visualizations with proper styling
@@ -179,6 +198,7 @@
 - **Responsive Design**: Charts that adapt to different screen sizes and orientations
 - **Export-ready Format**: High-quality visuals suitable for presentations and reports
 - **Real-time Updates**: Dynamic chart regeneration when filters or data change
+- **Database-driven Charts**: All visualizations now use real data from attendance logs
 
 ---
 
@@ -207,5 +227,18 @@ The complete program management system is now **enterprise-ready** with:
 - **Data Relationships**: Proper foreign key relationships between programs, students, and courses
 - **Performance Optimization**: Indexed queries for fast data retrieval and analysis
 - **Data Integrity**: Validation constraints and checks to maintain data consistency
+- **Monthly Attendance Queries**: New `get_program_monthly_attendance()` method for bar chart data
+- **Student Performance Seeding**: Enhanced seed data with 100 students and realistic attendance patterns
+- **Academic Filtering**: Comprehensive filtering by academic year and semester across all analytics
 
-**Latest Update**: June 07, 2025 | **Version**: 1.3.0 - Complete Program Management System & Analytics Dashboard
+### 🚀 **Recent Technical Improvements (Latest Updates)**
+- **Real Database Integration**: Replaced sample data with actual database queries for all charts
+- **Monthly Attendance Analysis**: Added comprehensive monthly tracking by year level
+- **Section-Year Mapping**: Intelligent parsing of section names (e.g., "1-1" → "1st Year")
+- **Performance Distribution**: Enhanced seed data with 55% of students having 90%+ attendance
+- **Chart Data Pipeline**: Complete data flow from database to visual charts
+- **Filter Synchronization**: All charts update dynamically when academic year/semester filters change
+- **Memory Management**: Proper matplotlib cleanup to prevent memory leaks
+- **Error Handling**: Graceful fallbacks when database queries fail
+
+**Latest Update**: June 07, 2025 | **Version**: 1.3.0 - Complete Program Management System & Analytics Dashboard with Real-time Database Integration
