@@ -11,6 +11,7 @@ from .db_manager_auth import DatabaseAuthManager
 from .db_manager_init import DatabaseInitManager
 from .db_manager_user_management import DatabaseUserManager
 from .db_manager_program import DatabaseProgramManager
+from .db_manager_course import DatabaseCourseManager
 
 class DatabaseManager:
     def __init__(self):
@@ -23,6 +24,8 @@ class DatabaseManager:
         self.users = DatabaseUserManager(self)
         # Initialize program management manager with reference to this instance
         self.programs = DatabaseProgramManager(self)
+        # Initialize course management manager with reference to this instance
+        self.courses = DatabaseCourseManager(self)
         # Initialize database tables on first run
         self.init.initialize_database()
     
@@ -176,3 +179,25 @@ class DatabaseManager:
 
     def get_program_monthly_attendance(self, program_id, academic_year=None, semester=None):
         return self.programs.get_program_monthly_attendance(program_id, academic_year, semester)
+
+    # Delegate course management methods to course manager
+    def get_courses(self, program_filter=None, year_filter=None, section_filter=None):
+        return self.courses.get_courses(program_filter, year_filter, section_filter)
+
+    def create_course(self, course_data):
+        return self.courses.create_course(course_data)
+
+    def update_course(self, course_id, course_data):
+        return self.courses.update_course(course_id, course_data)
+
+    def delete_course(self, course_id):
+        return self.courses.delete_course(course_id)
+
+    def check_course_in_use(self, course_id):
+        return self.courses.check_course_in_use(course_id)
+
+    def get_course_statistics(self, course_id, academic_year=None, semester=None):
+        return self.courses.get_course_statistics(course_id, academic_year, semester)
+
+    def get_available_programs_for_courses(self):
+        return self.courses.get_available_programs_for_courses()

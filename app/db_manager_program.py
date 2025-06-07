@@ -185,7 +185,7 @@ class DatabaseProgramManager:
 
     def delete_program(self, program_id):
         """
-        Soft delete a program (set isDeleted = 1)
+        Soft delete a program by setting isDeleted = 1
         
         Args:
             program_id (int): Program ID
@@ -197,27 +197,31 @@ class DatabaseProgramManager:
         try:
             cursor = conn.cursor()
             
-            # Check if program exists
-            cursor.execute("""
-                SELECT id FROM programs 
-                WHERE id = ? AND isDeleted = 0
-            """, (program_id,))
+            # Check if program exists and is not already deleted
+            cursor.execute("SELECT id, name FROM programs WHERE id = ? AND isDeleted = 0", (program_id,))
+            program = cursor.fetchone()
             
-            if not cursor.fetchone():
-                return False, "Program not found."
+            if not program:
+                conn.close()
+                return False, "Program not found or already deleted"
             
-            # Soft delete by setting isDeleted flag
+            # Soft delete by setting isDeleted = 1
+            from datetime import datetime
+            current_time = datetime.now().isoformat()
             cursor.execute("""
                 UPDATE programs 
-                SET isDeleted = 1, updated_at = datetime('now')
+                SET isDeleted = 1, updated_at = ?
                 WHERE id = ?
-            """, (program_id,))
+            """, (current_time, program_id))
             
             conn.commit()
-            return True, "Program deleted successfully."
+            conn.close()
+            return True, f"Program '{program[1]}' has been deleted successfully"
             
         except Exception as e:
-            conn.rollback()
+            if 'conn' in locals():
+                conn.rollback()
+                conn.close()
             print(f"Error deleting program: {e}")
             return False, f"Failed to delete program: {str(e)}"
         finally:

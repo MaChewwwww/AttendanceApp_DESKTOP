@@ -71,6 +71,7 @@ class Course(Base):
     __tablename__ = "courses"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
+    code = Column(String(50), nullable=True, unique=True)  # Added course code field
     description = Column(String(255), nullable=True)
     program_id = Column(Integer, ForeignKey("programs.id"), nullable=False)
     isDeleted = Column(Integer, nullable=False, default=0)  # 0 for False, 1 for True

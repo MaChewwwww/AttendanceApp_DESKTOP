@@ -228,24 +228,7 @@ class ProgramsView(ctk.CTkFrame):
                         print("Error: No program ID found")
                         return
                     
-                    # Check if program is in use
-                    success, usage_info = db.check_program_in_use(program_id)
-                    if success and usage_info.get('in_use', False):
-                        from tkinter import messagebox
-                        student_count = usage_info.get('student_count', 0)
-                        section_count = usage_info.get('section_count', 0)
-                        
-                        message = f"Cannot delete this program because it is currently in use:\n"
-                        if student_count > 0:
-                            message += f"• {student_count} student(s) enrolled\n"
-                        if section_count > 0:
-                            message += f"• {section_count} section(s) assigned\n"
-                        message += "\nPlease reassign or remove these dependencies before deleting."
-                        
-                        messagebox.showerror("Cannot Delete Program", message, parent=self.winfo_toplevel())
-                        return
-                    
-                    # Perform delete
+                    # Perform soft delete (no need to check usage since we're not actually deleting)
                     success, result = db.delete_program(program_id)
                     
                     if success:

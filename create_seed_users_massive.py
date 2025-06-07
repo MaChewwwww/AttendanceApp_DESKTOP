@@ -118,37 +118,37 @@ def seed_programs_and_courses():
         # Enhanced courses data for each program
         courses_data = [
             # BSIT Courses (5 core courses)
-            {'name': 'Programming Fundamentals', 'description': 'Introduction to programming concepts using modern languages', 'program': 'Bachelor of Science in Information Technology'},
-            {'name': 'Data Structures and Algorithms', 'description': 'Advanced programming concepts and algorithmic thinking', 'program': 'Bachelor of Science in Information Technology'},
-            {'name': 'Database Management Systems', 'description': 'Database design, implementation, and management', 'program': 'Bachelor of Science in Information Technology'},
-            {'name': 'Web Development Technologies', 'description': 'Frontend and backend web development frameworks', 'program': 'Bachelor of Science in Information Technology'},
-            {'name': 'Network Administration', 'description': 'Computer networking and system administration', 'program': 'Bachelor of Science in Information Technology'},
+            {'name': 'Programming Fundamentals', 'code': 'IT-101', 'description': 'Introduction to programming concepts using modern languages', 'program': 'Bachelor of Science in Information Technology'},
+            {'name': 'Data Structures and Algorithms', 'code': 'IT-201', 'description': 'Advanced programming concepts and algorithmic thinking', 'program': 'Bachelor of Science in Information Technology'},
+            {'name': 'Database Management Systems', 'code': 'IT-301', 'description': 'Database design, implementation, and management', 'program': 'Bachelor of Science in Information Technology'},
+            {'name': 'Web Development Technologies', 'code': 'IT-302', 'description': 'Frontend and backend web development frameworks', 'program': 'Bachelor of Science in Information Technology'},
+            {'name': 'Network Administration', 'code': 'IT-401', 'description': 'Computer networking and system administration', 'program': 'Bachelor of Science in Information Technology'},
             
             # BSCS Courses (5 core courses)
-            {'name': 'Computer Programming', 'description': 'Core programming principles and paradigms', 'program': 'Bachelor of Science in Computer Science'},
-            {'name': 'Software Engineering', 'description': 'Software development methodologies and practices', 'program': 'Bachelor of Science in Computer Science'},
-            {'name': 'Machine Learning', 'description': 'AI and machine learning fundamentals and applications', 'program': 'Bachelor of Science in Computer Science'},
-            {'name': 'Computer Graphics', 'description': 'Graphics programming and visualization techniques', 'program': 'Bachelor of Science in Computer Science'},
-            {'name': 'Operating Systems', 'description': 'System software and operating system concepts', 'program': 'Bachelor of Science in Computer Science'},
+            {'name': 'Computer Programming', 'code': 'CS-101', 'description': 'Core programming principles and paradigms', 'program': 'Bachelor of Science in Computer Science'},
+            {'name': 'Software Engineering', 'code': 'CS-301', 'description': 'Software development methodologies and practices', 'program': 'Bachelor of Science in Computer Science'},
+            {'name': 'Machine Learning', 'code': 'CS-401', 'description': 'AI and machine learning fundamentals and applications', 'program': 'Bachelor of Science in Computer Science'},
+            {'name': 'Computer Graphics', 'code': 'CS-302', 'description': 'Graphics programming and visualization techniques', 'program': 'Bachelor of Science in Computer Science'},
+            {'name': 'Operating Systems', 'code': 'CS-201', 'description': 'System software and operating system concepts', 'program': 'Bachelor of Science in Computer Science'},
             
             # BSIS Courses (5 core courses)
-            {'name': 'Business Process Analysis', 'description': 'Analyzing and optimizing business workflows', 'program': 'Bachelor of Science in Information Systems'},
-            {'name': 'Systems Analysis and Design', 'description': 'System development lifecycle and design patterns', 'program': 'Bachelor of Science in Information Systems'},
-            {'name': 'Enterprise Resource Planning', 'description': 'ERP systems implementation and management', 'program': 'Bachelor of Science in Information Systems'},
-            {'name': 'IT Project Management', 'description': 'Managing technology projects and teams', 'program': 'Bachelor of Science in Information Systems'},
-            {'name': 'Business Intelligence', 'description': 'Data analytics and business intelligence tools', 'program': 'Bachelor of Science in Information Systems'},
+            {'name': 'Business Process Analysis', 'code': 'IS-101', 'description': 'Analyzing and optimizing business workflows', 'program': 'Bachelor of Science in Information Systems'},
+            {'name': 'Systems Analysis and Design', 'code': 'IS-201', 'description': 'System development lifecycle and design patterns', 'program': 'Bachelor of Science in Information Systems'},
+            {'name': 'Enterprise Resource Planning', 'code': 'IS-301', 'description': 'ERP systems implementation and management', 'program': 'Bachelor of Science in Information Systems'},
+            {'name': 'IT Project Management', 'code': 'IS-302', 'description': 'Managing technology projects and teams', 'program': 'Bachelor of Science in Information Systems'},
+            {'name': 'Business Intelligence', 'code': 'IS-401', 'description': 'Data analytics and business intelligence tools', 'program': 'Bachelor of Science in Information Systems'},
             
             # BSCpE Courses (4 core courses)
-            {'name': 'Digital Logic Design', 'description': 'Digital circuits and logic design principles', 'program': 'Bachelor of Science in Computer Engineering'},
-            {'name': 'Microprocessors and Microcontrollers', 'description': 'Embedded systems and processor architecture', 'program': 'Bachelor of Science in Computer Engineering'},
-            {'name': 'Computer Architecture', 'description': 'Hardware design and computer organization', 'program': 'Bachelor of Science in Computer Engineering'},
-            {'name': 'VLSI Design', 'description': 'Very Large Scale Integration circuit design', 'program': 'Bachelor of Science in Computer Engineering'},
+            {'name': 'Digital Logic Design', 'code': 'CPE-101', 'description': 'Digital circuits and logic design principles', 'program': 'Bachelor of Science in Computer Engineering'},
+            {'name': 'Microprocessors and Microcontrollers', 'code': 'CPE-201', 'description': 'Embedded systems and processor architecture', 'program': 'Bachelor of Science in Computer Engineering'},
+            {'name': 'Computer Architecture', 'code': 'CPE-301', 'description': 'Hardware design and computer organization', 'program': 'Bachelor of Science in Computer Engineering'},
+            {'name': 'VLSI Design', 'code': 'CPE-401', 'description': 'Very Large Scale Integration circuit design', 'program': 'Bachelor of Science in Computer Engineering'},
             
             # BSSE Courses (4 core courses)
-            {'name': 'Software Architecture', 'description': 'Large-scale software system design patterns', 'program': 'Bachelor of Science in Software Engineering'},
-            {'name': 'Software Testing and Quality Assurance', 'description': 'Testing methodologies and quality control', 'program': 'Bachelor of Science in Software Engineering'},
-            {'name': 'DevOps and Deployment', 'description': 'Continuous integration and deployment practices', 'program': 'Bachelor of Science in Software Engineering'},
-            {'name': 'Agile Development Methodologies', 'description': 'Agile and Scrum development practices', 'program': 'Bachelor of Science in Software Engineering'}
+            {'name': 'Software Architecture', 'code': 'SE-301', 'description': 'Large-scale software system design patterns', 'program': 'Bachelor of Science in Software Engineering'},
+            {'name': 'Software Testing and Quality Assurance', 'code': 'SE-302', 'description': 'Testing methodologies and quality control', 'program': 'Bachelor of Science in Software Engineering'},
+            {'name': 'DevOps and Deployment', 'code': 'SE-401', 'description': 'Continuous integration and deployment practices', 'program': 'Bachelor of Science in Software Engineering'},
+            {'name': 'Agile Development Methodologies', 'code': 'SE-201', 'description': 'Agile and Scrum development practices', 'program': 'Bachelor of Science in Software Engineering'}
         ]
         
         # Insert courses with proper error handling
@@ -161,9 +161,9 @@ def seed_programs_and_courses():
                 
             program_id = program_ids[course_data['program']]
             
-            # Check if course already exists for this program
-            cursor.execute("SELECT id FROM courses WHERE name = ? AND program_id = ?", 
-                         (course_data['name'], program_id))
+            # Check if course already exists for this program (by name or code)
+            cursor.execute("SELECT id FROM courses WHERE (name = ? OR code = ?) AND program_id = ?", 
+                         (course_data['name'], course_data['code'], program_id))
             existing = cursor.fetchone()
             
             if existing:
@@ -173,17 +173,17 @@ def seed_programs_and_courses():
             try:
                 current_time = datetime.now().isoformat()
                 cursor.execute("""
-                    INSERT INTO courses (name, description, program_id, isDeleted, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (course_data['name'], course_data['description'], program_id, 0, current_time, current_time))
+                    INSERT INTO courses (name, code, description, program_id, isDeleted, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (course_data['name'], course_data['code'], course_data['description'], program_id, 0, current_time, current_time))
                 
                 course_id = cursor.lastrowid
                 course_ids[course_data['name']] = course_id
                 program_acronym = next((p['acronym'] for p in programs_data if p['name'] == course_data['program']), 'Unknown')
-                logger.info(f"✓ Created course: {course_data['name']} ({program_acronym}) - ID: {course_id}")
+                logger.info(f"✓ Created course: {course_data['name']} ({course_data['code']}) - {program_acronym} - ID: {course_id}")
                 
             except sqlite3.Error as e:
-                logger.error(f"Failed to create course {course_data['name']}: {e}")
+                logger.error(f"Failed to create course {course_data['name']} ({course_data['code']}): {e}")
                 continue
         
         # Enhanced sections data with more realistic distribution
