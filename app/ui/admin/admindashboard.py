@@ -15,6 +15,9 @@ class AdminDashboard(ctk.CTk):
         # Configure window
         self.title("Admin Dashboard")
         self.geometry("1280x720")
+
+        # Disable window resizing
+        self.resizable(False, False)
         
         # Center the window on the screen
         self.update_idletasks()
