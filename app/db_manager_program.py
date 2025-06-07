@@ -1,5 +1,6 @@
-from .config import DB_PATH
 import sqlite3
+from datetime import datetime
+from .config import DB_PATH
 
 class DatabaseProgramManager:
     def __init__(self, db_manager):
@@ -184,48 +185,37 @@ class DatabaseProgramManager:
             conn.close()
 
     def delete_program(self, program_id):
-        """
-        Soft delete a program by setting isDeleted = 1
-        
-        Args:
-            program_id (int): Program ID
-        
-        Returns:
-            tuple: (success: bool, result: str)
-        """
-        conn = self.get_connection()
+        """Soft delete a program by setting isDeleted flag"""
         try:
+            conn = self.db_manager.get_connection()
             cursor = conn.cursor()
             
-            # Check if program exists and is not already deleted
+            # Check if program exists
             cursor.execute("SELECT id, name FROM programs WHERE id = ? AND isDeleted = 0", (program_id,))
             program = cursor.fetchone()
             
             if not program:
                 conn.close()
-                return False, "Program not found or already deleted"
+                return False, "Program not found"
             
-            # Soft delete by setting isDeleted = 1
-            from datetime import datetime
+            # Since we're using soft delete, we don't need to check usage
+            # Just soft delete the program directly
             current_time = datetime.now().isoformat()
             cursor.execute("""
                 UPDATE programs 
-                SET isDeleted = 1, updated_at = ?
+                SET isDeleted = 1, updated_at = ? 
                 WHERE id = ?
             """, (current_time, program_id))
             
             conn.commit()
             conn.close()
-            return True, f"Program '{program[1]}' has been deleted successfully"
+            
+            print(f"Successfully soft deleted program {program_id}: {program['name']}")
+            return True, "Program deleted successfully"
             
         except Exception as e:
-            if 'conn' in locals():
-                conn.rollback()
-                conn.close()
             print(f"Error deleting program: {e}")
-            return False, f"Failed to delete program: {str(e)}"
-        finally:
-            conn.close()
+            return False, str(e)
 
     def check_program_in_use(self, program_id):
         """

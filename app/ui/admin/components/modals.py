@@ -92,49 +92,43 @@ class CautionModal(ctk.CTkToplevel):
 class DeleteModal(ctk.CTkToplevel):
     def __init__(self, parent, on_delete=None):
         super().__init__(parent)
-        self.title("Delete")
+        self.on_delete_callback = on_delete
+        self.title("Delete Confirmation")
         self.geometry("340x210")
         self.resizable(False, False)
         self.configure(fg_color="#FAFAFA")
         self.transient(parent)
         self.grab_set()
-        self.on_delete = on_delete
-        self._is_destroyed = False
-        
-        # Bind close event
-        self.protocol("WM_DELETE_WINDOW", self._on_close)
-        
-        # Use the same centering approach as CautionModal
         self._center_window(340, 210)
         self.setup_ui()
 
     def _center_window(self, width, height):
+        self.update_idletasks()
         x = (self.winfo_screenwidth() // 2) - (width // 2)
         y = (self.winfo_screenheight() // 2) - (height // 2)
         self.geometry(f"{width}x{height}+{x}+{y}")
 
     def setup_ui(self):
-        # Card frame for rounded corners, responsive
+        # Card frame for rounded corners
         card = ctk.CTkFrame(self, fg_color="#fff", corner_radius=16)
         card.pack(expand=True, fill="both", padx=16, pady=16)
-        card.pack_propagate(True)
         
-        # Circle + Trash icon (centered) - use same approach as CautionModal
+        # Draw red circle with X mark
         canvas = tk.Canvas(card, width=56, height=56, bg="#fff", highlightthickness=0)
-        canvas.create_oval(4, 4, 52, 52, outline="#F87171", width=3, fill="#FEF2F2")
-        # Use a simple "X" character instead of emoji for better centering
-        canvas.create_text(28, 28, text="🗑", font=("Segoe UI", 18), fill="#F87171", anchor="center")
+        canvas.create_oval(4, 4, 52, 52, outline="#EF4444", width=3)
+        canvas.create_line(18, 18, 38, 38, fill="#EF4444", width=4)
+        canvas.create_line(38, 18, 18, 38, fill="#EF4444", width=4)
         canvas.pack(pady=(8, 0))
         
         # Title
-        ctk.CTkLabel(card, text="Delete", font=ctk.CTkFont(size=16, weight="bold"), text_color="#222", fg_color="#fff").pack(pady=(4, 0))
+        ctk.CTkLabel(card, text="Delete Item", font=ctk.CTkFont(size=16, weight="bold"), text_color="#222").pack(pady=(4, 0))
         
         # Subtitle
-        ctk.CTkLabel(card, text="Are you sure you want to delete?", font=ctk.CTkFont(size=13), text_color="#888", fg_color="#fff").pack(pady=(0, 8))
+        ctk.CTkLabel(card, text="Are you sure you want to delete this item?", font=ctk.CTkFont(size=13), text_color="#888").pack(pady=(0, 8))
         
         # Buttons
         btns_frame = ctk.CTkFrame(card, fg_color="#fff")
-        btns_frame.pack(side="bottom", fill="x", pady=(0, 16), padx=0)
+        btns_frame.pack(side="bottom", fill="x", pady=(0, 16))
         
         ctk.CTkButton(
             btns_frame,
@@ -144,41 +138,48 @@ class DeleteModal(ctk.CTkToplevel):
             hover_color="#BDBDBD",
             height=38,
             corner_radius=8,
-            command=self._on_close
+            command=self.safe_destroy
         ).pack(side="left", expand=True, fill="x", padx=(0, 8))
         
         ctk.CTkButton(
             btns_frame,
             text="Delete",
-            fg_color="#F87171",
+            fg_color="#EF4444",
             text_color="#fff",
-            hover_color="#ef4444",
+            hover_color="#DC2626",
             height=38,
             corner_radius=8,
-            command=self._handle_delete
+            command=self.confirm_delete
         ).pack(side="left", expand=True, fill="x", padx=(8, 0))
 
-    def _on_close(self):
-        if not self._is_destroyed:
-            self._is_destroyed = True
-            try:
-                self.grab_release()
-            except:
-                pass
+    def safe_destroy(self):
+        """Safely destroy the modal"""
+        try:
+            self.grab_release()
+            self.destroy()
+        except Exception as e:
+            print(f"Error destroying delete modal: {e}")
+
+    def confirm_delete(self):
+        """Confirm deletion and execute callback"""
+        try:
+            # Release grab and destroy modal first
+            self.grab_release()
+            
+            # Execute the delete callback if provided
+            if self.on_delete_callback:
+                self.on_delete_callback()
+            
+            # Destroy the modal
+            self.destroy()
+            
+        except Exception as e:
+            print(f"Error in confirm_delete: {e}")
+            # Ensure modal is destroyed even if callback fails
             try:
                 self.destroy()
             except:
                 pass
-
-    def _handle_delete(self):
-        if not self._is_destroyed:
-            try:
-                if self.on_delete:
-                    self.on_delete()
-            except Exception as e:
-                print(f"Error in delete handler: {e}")
-            finally:
-                self._on_close()
 
 class SuccessModal(ctk.CTkToplevel):
     def __init__(self, parent, on_continue=None):

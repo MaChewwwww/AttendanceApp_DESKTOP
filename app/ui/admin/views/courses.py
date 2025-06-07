@@ -537,16 +537,30 @@ class CoursesView(ctk.CTkFrame):
                 if self.db_manager:
                     success, result = self.db_manager.delete_course(course_data['id'])
                     if success:
-                        self.refresh_courses()
-                        SuccessModal(self)
+                        # Schedule the refresh and success modal to run after the current modal is destroyed
+                        self.after(100, lambda: self.refresh_courses())
+                        self.after(200, lambda: self._show_delete_success())
                     else:
                         print(f"Error deleting course: {result}")
+                        from tkinter import messagebox
+                        messagebox.showerror("Delete Error", f"Failed to delete course: {result}")
                 else:
                     print("Database manager not available")
+                    from tkinter import messagebox
+                    messagebox.showerror("Error", "Database manager not available")
             except Exception as e:
                 print(f"Error deleting course: {e}")
+                from tkinter import messagebox
+                messagebox.showerror("Error", f"An unexpected error occurred: {str(e)}")
         
         DeleteModal(self, on_delete=on_delete)
+    
+    def _show_delete_success(self):
+        """Show success modal for deletion"""
+        try:
+            SuccessModal(self)
+        except Exception as e:
+            print(f"Error showing success modal: {e}")
 
     def show_filter_popup(self):
         """Show filter popup"""
