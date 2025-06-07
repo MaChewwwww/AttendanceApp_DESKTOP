@@ -162,39 +162,27 @@ class ViewProgramPopup(ctk.CTkToplevel):
         self.charts_frame = ctk.CTkFrame(self, fg_color="#fff", corner_radius=12)
         self.charts_frame.pack(fill="x", padx=30, pady=25)
         
-        ctk.CTkLabel(
-            self.charts_frame,
-            text="Data Analytics",
-            font=ctk.CTkFont(size=18, weight="bold"),
-            text_color="#222"
-        ).pack(anchor="center", pady=(10, 8))
+        # Remove "Data Analytics" title
         
-        # Charts container
-        charts_container = ctk.CTkFrame(self.charts_frame, fg_color="transparent", height=240)
-        charts_container.pack(fill="x", padx=25, pady=(8, 20))
+        # Charts container - adjust padding since we removed title
+        charts_container = ctk.CTkFrame(self.charts_frame, fg_color="transparent", height=320)
+        charts_container.pack(fill="x", padx=25, pady=(20, 20))
         charts_container.pack_propagate(False)
         
-        # Left side - Pie Chart (Demographics)
-        demo_frame = ctk.CTkFrame(charts_container, fg_color="#F8F9FA", corner_radius=8, width=280)
-        demo_frame.pack(side="left", fill="y", padx=(0, 12))
+        # Left side - Pie Chart (Demographics) - balanced width
+        demo_frame = ctk.CTkFrame(charts_container, fg_color="#F8F9FA", corner_radius=8, width=270)
+        demo_frame.pack(side="left", fill="y", padx=(0, 15))
         demo_frame.pack_propagate(False)
         
         # Create pie chart
         self.create_pie_chart(demo_frame)
         
-        # Right side - Data Cards
-        metrics_frame = ctk.CTkFrame(charts_container, fg_color="#F8F9FA", corner_radius=8, width=480)
-        metrics_frame.pack(side="right", fill="y", padx=(12, 0))
+        # Right side - Key Metrics Cards - optimal width for 5 cards
+        metrics_frame = ctk.CTkFrame(charts_container, fg_color="#F8F9FA", corner_radius=8, width=550)
+        metrics_frame.pack(side="right", fill="y", padx=(15, 0))
         metrics_frame.pack_propagate(False)
         
-        ctk.CTkLabel(
-            metrics_frame,
-            text="Key Metrics",
-            font=ctk.CTkFont(size=14, weight="bold"),
-            text_color="#222"
-        ).pack(pady=(15, 8))
-        
-        # Create data cards
+        # Create data cards with improved design
         self.create_data_cards(metrics_frame)
 
     def create_bar_chart_section(self):
@@ -207,16 +195,11 @@ class ViewProgramPopup(ctk.CTkToplevel):
         self.bar_chart_frame = ctk.CTkFrame(self, fg_color="#fff", corner_radius=12)
         self.bar_chart_frame.pack(fill="both", expand=True, padx=30, pady=(0, 25))
         
-        ctk.CTkLabel(
-            self.bar_chart_frame,
-            text="Detailed Monthly Analysis",
-            font=ctk.CTkFont(size=18, weight="bold"),
-            text_color="#222"
-        ).pack(anchor="center", padx=25, pady=(10, 10))
+        # Remove "Detailed Monthly Analysis" title
         
-        # Bar chart container
+        # Bar chart container - adjust padding since we removed title
         bar_container = ctk.CTkFrame(self.bar_chart_frame, fg_color="#F8F9FA", corner_radius=8, height=320)
-        bar_container.pack(fill="both", expand=True, padx=25, pady=(0, 25))
+        bar_container.pack(fill="both", expand=True, padx=25, pady=(20, 25))
         bar_container.pack_propagate(False)
         
         # Create bar chart
@@ -282,39 +265,107 @@ class ViewProgramPopup(ctk.CTkToplevel):
         plt.close(fig)
 
     def create_data_cards(self, parent):
-        # TODO: Replace with actual data from backend
-        card_data = [
-            ("Current Month", "92%", "#10B981"),
-            ("Previous Month", "88%", "#3B82F6"),
-            ("Best Month", "96%", "#059669"),
-            ("Lowest Month", "78%", "#EF4444"),
-            ("Most Active Day", "Monday", "#8B5CF6")
-        ]
+        # Get real metrics data from database
+        if self.db_manager:
+            # Get filter values
+            academic_year = None if self.year_var.get() == "All Years" else self.year_var.get()
+            semester = None if self.semester_var.get() == "All Semesters" else self.semester_var.get()
+            
+            success, metrics = self.db_manager.get_program_key_metrics(
+                self.program_data.get('id'),
+                academic_year=academic_year,
+                semester=semester
+            )
+            
+            if success:
+                card_data = [
+                    ("Current Month", metrics.get('current_month', '0%'), "#10B981", "📅"),
+                    ("Previous Month", metrics.get('previous_month', '0%'), "#3B82F6", "📊"),
+                    ("Best Month", metrics.get('best_month', '0%'), "#059669", "🏆"),
+                    ("Lowest Month", metrics.get('lowest_month', '0%'), "#EF4444", "📉"),
+                    ("Most Active Day", metrics.get('most_active_day', 'N/A'), "#8B5CF6", "📆")
+                ]
+            else:
+                # Fallback data if database query fails
+                card_data = [
+                    ("Current Month", "0%", "#10B981", "📅"),
+                    ("Previous Month", "0%", "#3B82F6", "📊"),
+                    ("Best Month", "0%", "#059669", "🏆"),
+                    ("Lowest Month", "0%", "#EF4444", "📉"),
+                    ("Most Active Day", "N/A", "#8B5CF6", "📆")
+                ]
+        else:
+            # Default fallback data for testing
+            card_data = [
+                ("Current Month", "92% (Dec 2024)", "#10B981", "📅"),
+                ("Previous Month", "88% (Nov 2024)", "#3B82F6", "📊"),
+                ("Best Month", "96% (Sep 2024)", "#059669", "🏆"),
+                ("Lowest Month", "78% (Aug 2024)", "#EF4444", "📉"),
+                ("Most Active Day", "Monday", "#8B5CF6", "📆")
+            ]
         
-        for i, (label, value, color) in enumerate(card_data):
-            card_frame = ctk.CTkFrame(parent, fg_color="#FFFFFF", corner_radius=8, height=32)
-            card_frame.pack(fill="x", padx=15, pady=3)
+        # Balanced top spacing
+        top_spacer = ctk.CTkFrame(parent, fg_color="transparent", height=25)
+        top_spacer.pack(fill="x")
+        
+        for i, (label, value, color, icon) in enumerate(card_data):
+            # Optimized card design with better proportions
+            card_frame = ctk.CTkFrame(
+                parent, 
+                fg_color="#FFFFFF", 
+                corner_radius=12, 
+                height=48,
+                border_width=1,
+                border_color="#E5E7EB"
+            )
+            card_frame.pack(fill="x", padx=22, pady=6)
             card_frame.pack_propagate(False)
             
-            # Color indicator
-            indicator = ctk.CTkFrame(card_frame, fg_color=color, width=4, corner_radius=2)
-            indicator.pack(side="left", fill="y", padx=(10, 0))
+            # Left section with improved spacing
+            left_section = ctk.CTkFrame(card_frame, fg_color="transparent")
+            left_section.pack(side="left", fill="y", padx=(18, 0))
             
-            # Label
+            # Icon with refined size and design
+            icon_frame = ctk.CTkFrame(
+                left_section, 
+                fg_color=color, 
+                width=34, 
+                height=34, 
+                corner_radius=17
+            )
+            icon_frame.pack(side="left", pady=7)
+            icon_frame.pack_propagate(False)
+            
+            # Icon with perfect centering
             ctk.CTkLabel(
-                card_frame,
+                icon_frame,
+                text=icon,
+                font=ctk.CTkFont(size=15),
+                text_color="white"
+            ).place(relx=0.5, rely=0.5, anchor="center")
+            
+            # Label with refined typography
+            ctk.CTkLabel(
+                left_section,
                 text=label,
-                font=ctk.CTkFont(size=10),
-                text_color="#666"
-            ).pack(side="left", padx=(10, 0), anchor="w")
+                font=ctk.CTkFont(size=13, weight="bold"),
+                text_color="#374151"
+            ).pack(side="left", padx=(16, 0), anchor="w")
             
-            # Value
-            ctk.CTkLabel(
+            # Value with optimized text handling
+            value_label = ctk.CTkLabel(
                 card_frame,
                 text=value,
-                font=ctk.CTkFont(size=11, weight="bold"),
-                text_color="#222"
-            ).pack(side="right", padx=(0, 15), anchor="e")
+                font=ctk.CTkFont(size=12, weight="bold"),
+                text_color="#111827",
+                wraplength=220,  # Generous wrap length for long text
+                justify="right"
+            )
+            value_label.pack(side="right", padx=(8, 22), anchor="e")
+        
+        # Balanced bottom spacing
+        bottom_spacer = ctk.CTkFrame(parent, fg_color="transparent", height=20)
+        bottom_spacer.pack(fill="x")
 
     def create_bar_chart(self, parent):
         # TODO: Replace with actual data from backend

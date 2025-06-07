@@ -170,3 +170,6 @@ class DatabaseManager:
 
     def get_available_semesters(self):
         return self.programs.get_available_semesters()
+
+    def get_program_key_metrics(self, program_id, academic_year=None, semester=None):
+        return self.programs.get_program_key_metrics(program_id, academic_year, semester)
