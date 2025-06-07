@@ -614,3 +614,104 @@ class DatabaseCourseManager:
             return False, str(e)
         finally:
             conn.close()
+
+    def get_course_monthly_attendance(self, course_id, academic_year=None, semester=None):
+        """Get monthly attendance data for a specific course grouped by sections"""
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            
+            # Get monthly attendance data by section
+            monthly_query = """
+            SELECT 
+                s.name as section_name,
+                CASE 
+                    WHEN SUBSTR(al.date, 6, 2) = '01' THEN 'Jan'
+                    WHEN SUBSTR(al.date, 6, 2) = '02' THEN 'Feb'
+                    WHEN SUBSTR(al.date, 6, 2) = '03' THEN 'Mar'
+                    WHEN SUBSTR(al.date, 6, 2) = '04' THEN 'Apr'
+                    WHEN SUBSTR(al.date, 6, 2) = '05' THEN 'May'
+                    WHEN SUBSTR(al.date, 6, 2) = '06' THEN 'Jun'
+                    WHEN SUBSTR(al.date, 6, 2) = '07' THEN 'Jul'
+                    WHEN SUBSTR(al.date, 6, 2) = '08' THEN 'Aug'
+                    WHEN SUBSTR(al.date, 6, 2) = '09' THEN 'Sep'
+                    WHEN SUBSTR(al.date, 6, 2) = '10' THEN 'Oct'
+                    WHEN SUBSTR(al.date, 6, 2) = '11' THEN 'Nov'
+                    WHEN SUBSTR(al.date, 6, 2) = '12' THEN 'Dec'
+                    ELSE 'Unknown'
+                END as month,
+                SUBSTR(al.date, 6, 2) as month_num,
+                COUNT(al.id) as total_records,
+                SUM(CASE WHEN al.status = 'present' THEN 1 ELSE 0 END) as present_count
+            FROM sections s
+            JOIN assigned_courses ac ON s.id = ac.section_id
+            LEFT JOIN attendance_logs al ON al.assigned_course_id = ac.id
+            WHERE ac.course_id = ? AND ac.isDeleted = 0
+            AND al.date IS NOT NULL
+            """
+            
+            params = [course_id]
+            
+            # Add filters if provided
+            if academic_year:
+                monthly_query += " AND ac.academic_year = ?"
+                params.append(academic_year)
+            
+            if semester:
+                monthly_query += " AND ac.semester = ?"
+                params.append(semester)
+            
+            monthly_query += """
+            GROUP BY s.id, s.name, month_num, month
+            ORDER BY s.name, month_num
+            """
+            
+            cursor.execute(monthly_query, params)
+            monthly_results = cursor.fetchall()
+            
+            # Process the data into a structured format
+            months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            
+            sections_data = {}
+            
+            for row in monthly_results:
+                section_name = row['section_name']
+                month = row['month']
+                total_records = row['total_records'] or 0
+                present_count = row['present_count'] or 0
+                
+                if section_name not in sections_data:
+                    sections_data[section_name] = {}
+                
+                # Calculate attendance rate for this month
+                if total_records > 0:
+                    attendance_rate = (present_count / total_records) * 100
+                else:
+                    attendance_rate = 0
+                
+                sections_data[section_name][month] = round(attendance_rate, 1)
+            
+            # Fill missing months with 0 or interpolated values
+            for section_name in sections_data:
+                for month in months:
+                    if month not in sections_data[section_name]:
+                        sections_data[section_name][month] = 0
+            
+            # Convert to the format expected by the chart
+            chart_data = {}
+            for section_name, monthly_data in sections_data.items():
+                chart_data[section_name] = [monthly_data[month] for month in months]
+            
+            result = {
+                'months': months,
+                'sections_data': chart_data
+            }
+            
+            return True, result
+            
+        except Exception as e:
+            print(f"Error getting course monthly attendance: {e}")
+            return False, str(e)
+        finally:
+            conn.close()

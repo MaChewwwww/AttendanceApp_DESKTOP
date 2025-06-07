@@ -219,3 +219,6 @@ class DatabaseManager:
 
     def get_available_semesters(self):
         return self.courses.get_available_semesters()
+
+    def get_course_monthly_attendance(self, course_id, academic_year=None, semester=None):
+        return self.courses.get_course_monthly_attendance(course_id, academic_year, semester)

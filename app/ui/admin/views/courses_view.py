@@ -264,6 +264,20 @@ class ViewCoursePopup(ctk.CTkToplevel):
                 else:
                     print(f"Error loading schedule statistics: {schedule_stats}")
                     self.schedule_stats = self._get_fallback_schedule_stats()
+                
+                # Load monthly attendance data for line chart
+                success_monthly, monthly_stats = self.db_manager.get_course_monthly_attendance(
+                    self.course_data['id'], 
+                    academic_year=year_filter,
+                    semester=semester_filter
+                )
+                
+                if success_monthly:
+                    self.monthly_stats = monthly_stats
+                    print(f"Loaded monthly attendance statistics: {monthly_stats}")
+                else:
+                    print(f"Error loading monthly attendance statistics: {monthly_stats}")
+                    self.monthly_stats = self._get_fallback_monthly_stats()
                     
             except Exception as e:
                 print(f"Exception loading course statistics: {e}")
@@ -271,12 +285,14 @@ class ViewCoursePopup(ctk.CTkToplevel):
                 self.stats = self._get_fallback_stats()
                 self.section_stats = self._get_fallback_section_stats()
                 self.schedule_stats = self._get_fallback_schedule_stats()
+                self.monthly_stats = self._get_fallback_monthly_stats()
         else:
             # Use sample data when no database connection or course ID
             print("Using sample data - no database connection or course ID")
             self.stats = self._get_sample_stats()
             self.section_stats = self._get_sample_section_stats()
             self.schedule_stats = self._get_sample_schedule_stats()
+            self.monthly_stats = self._get_sample_monthly_stats()
 
     def _get_fallback_stats(self):
         """Get fallback statistics when database query fails"""
@@ -331,6 +347,25 @@ class ViewCoursePopup(ctk.CTkToplevel):
         """Get sample schedule statistics for demonstration"""
         return {
             'best_schedule': {'time': 'Monday : 9:00 - 10:00', 'rate': 94.5}
+        }
+
+    def _get_fallback_monthly_stats(self):
+        """Get fallback monthly statistics when database query fails"""
+        return {
+            'months': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            'sections_data': {}
+        }
+
+    def _get_sample_monthly_stats(self):
+        """Get sample monthly statistics for demonstration"""
+        return {
+            'months': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            'sections_data': {
+                'Section A': [88, 92, 89, 94, 91, 85, 82, 87, 93, 90, 89, 92],
+                'Section B': [82, 85, 83, 88, 86, 80, 78, 82, 87, 84, 83, 86],
+                'Section C': [75, 78, 76, 81, 79, 72, 70, 75, 80, 77, 76, 78],
+                'Section D': [85, 88, 86, 91, 89, 83, 81, 85, 90, 87, 86, 89]
+            }
         }
 
     def on_filter_change(self, value=None):
@@ -528,39 +563,66 @@ class ViewCoursePopup(ctk.CTkToplevel):
         self.create_monthly_attendance_line_chart(line_container)
 
     def create_monthly_attendance_line_chart(self, parent):
-        """Create symmetric monthly attendance chart with better proportions"""
-        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        """Create monthly attendance chart with real data from database"""
+        # Get real monthly data from loaded statistics
+        monthly_data = self.monthly_stats
+        months = monthly_data.get('months', ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+        sections_data = monthly_data.get('sections_data', {})
         
-        # Monthly section data with realistic patterns
-        section_a_attendance = [88, 92, 89, 94, 91, 85, 82, 87, 93, 90, 89, 92]
-        section_b_attendance = [82, 85, 83, 88, 86, 80, 78, 82, 87, 84, 83, 86]
-        section_c_attendance = [75, 78, 76, 81, 79, 72, 70, 75, 80, 77, 76, 78]
-        section_d_attendance = [85, 88, 86, 91, 89, 83, 81, 85, 90, 87, 86, 89]
+        # Use sample data if no real data available
+        if not sections_data:
+            sections_data = {
+                'No Data': [0] * 12
+            }
         
-        fig, ax = plt.subplots(figsize=(11.2, 4.4))  # Slightly larger for better proportions
+        fig, ax = plt.subplots(figsize=(11.2, 4.4))
         fig.patch.set_facecolor('#F8F9FA')
         
         x = np.arange(len(months))
         
-        # Symmetric line styling with better colors
-        ax.plot(x, section_a_attendance, label='Section A', 
-               color='#3B82F6', linewidth=3.5, marker='o', markersize=5)
-        ax.plot(x, section_b_attendance, label='Section B', 
-               color='#F59E0B', linewidth=3, marker='s', markersize=4)
-        ax.plot(x, section_c_attendance, label='Section C', 
-               color='#10B981', linewidth=3, marker='^', markersize=4)
-        ax.plot(x, section_d_attendance, label='Section D', 
-               color='#EF4444', linewidth=3, marker='D', markersize=4)
+        # Color palette for different sections
+        color_palette = ['#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6', '#06B6D4', '#F97316', '#84CC16']
+        marker_styles = ['o', 's', '^', 'D', 'v', 'h', 'p', '*']
         
-        # Symmetric chart styling
+        # Plot lines for each section with real data
+        legend_entries = []
+        max_value = 0
+        min_value = 100
+        
+        for i, (section_name, attendance_data) in enumerate(sections_data.items()):
+            color = color_palette[i % len(color_palette)]
+            marker = marker_styles[i % len(marker_styles)]
+            
+            # Plot the line
+            line = ax.plot(x, attendance_data, 
+                          label=section_name, 
+                          color=color, 
+                          linewidth=3.5 if i == 0 else 3, 
+                          marker=marker, 
+                          markersize=5 if i == 0 else 4)
+            
+            legend_entries.append(section_name)
+            
+            # Track min/max for annotations
+            if attendance_data:
+                section_max = max(attendance_data)
+                section_min = min([val for val in attendance_data if val > 0])  # Exclude 0 values
+                if section_max > max_value:
+                    max_value = section_max
+                if section_min < min_value and section_min > 0:
+                    min_value = section_min
+        
+        # Chart styling
         ax.set_xlabel('Months', fontsize=12, color='#374151', weight='bold')
         ax.set_ylabel('Attendance Rate (%)', fontsize=12, color='#374151', weight='bold')
         ax.set_xticks(x)
         ax.set_xticklabels(months, fontsize=10, color='#6B7280')
         
-        # Balanced y-axis range for monthly data
-        ax.set_ylim(65, 100)
+        # Dynamic y-axis range based on real data
+        if max_value > 0:
+            ax.set_ylim(max(0, min_value - 10), min(100, max_value + 10))
+        else:
+            ax.set_ylim(0, 100)
         
         # Clean axes
         ax.spines['top'].set_visible(False)
@@ -568,41 +630,64 @@ class ViewCoursePopup(ctk.CTkToplevel):
         ax.spines['left'].set_color('#E5E7EB')
         ax.spines['bottom'].set_color('#E5E7EB')
         
-        # Symmetric grid
+        # Grid
         ax.grid(axis='y', alpha=0.3, linestyle='-', linewidth=0.5)
         ax.set_axisbelow(True)
         
-        # Symmetric tick styling
+        # Tick styling
         ax.tick_params(axis='y', colors='#6B7280', labelsize=10)
         ax.tick_params(axis='x', colors='#6B7280', labelsize=10)
         
-        # Balanced legend positioning
-        ax.legend(fontsize=11, loc='upper left', frameon=False, bbox_to_anchor=(0.02, 0.98))
+        # Legend positioning
+        if legend_entries:
+            ax.legend(fontsize=11, loc='upper left', frameon=False, bbox_to_anchor=(0.02, 0.98))
         
-        # Symmetric annotations for monthly data
-        best_section_data = section_a_attendance
-        best_month_idx = best_section_data.index(max(best_section_data))
+        # Add annotations for real data peaks and lows
+        if sections_data and any(any(data) for data in sections_data.values()):
+            # Find section with highest peak
+            best_section = None
+            best_value = 0
+            best_month_idx = 0
+            
+            worst_section = None
+            worst_value = 100
+            worst_month_idx = 0
+            
+            for section_name, attendance_data in sections_data.items():
+                if attendance_data:
+                    section_max = max(attendance_data)
+                    section_min = min([val for val in attendance_data if val > 0])
+                    
+                    if section_max > best_value:
+                        best_value = section_max
+                        best_section = section_name
+                        best_month_idx = attendance_data.index(section_max)
+                    
+                    if section_min < worst_value and section_min > 0:
+                        worst_value = section_min
+                        worst_section = section_name
+                        worst_month_idx = attendance_data.index(section_min)
+            
+            # Add annotations if we have valid data
+            if best_section and best_value > 0:
+                ax.annotate(f'{best_section} Peak: {best_value:.0f}%', 
+                           xy=(best_month_idx, best_value), 
+                           xytext=(best_month_idx + 0.5, best_value + 3),
+                           fontsize=9, color='#1D4ED8', weight='bold',
+                           arrowprops=dict(arrowstyle='->', color='#1D4ED8', alpha=0.7))
+            
+            if worst_section and worst_value < 100:
+                ax.annotate(f'{worst_section} Low: {worst_value:.0f}%', 
+                           xy=(worst_month_idx, worst_value), 
+                           xytext=(worst_month_idx + 0.5, worst_value - 3),
+                           fontsize=9, color='#DC2626', weight='bold',
+                           arrowprops=dict(arrowstyle='->', color='#DC2626', alpha=0.7))
         
-        worst_section_data = section_c_attendance
-        worst_month_idx = worst_section_data.index(min(worst_section_data))
-        
-        ax.annotate(f'Section A Peak: {max(best_section_data)}%', 
-                   xy=(best_month_idx, max(best_section_data)), 
-                   xytext=(best_month_idx + 0.5, max(best_section_data) + 3),
-                   fontsize=9, color='#1D4ED8', weight='bold',
-                   arrowprops=dict(arrowstyle='->', color='#1D4ED8', alpha=0.7))
-        
-        ax.annotate(f'Section C Low: {min(worst_section_data)}%', 
-                   xy=(worst_month_idx, min(worst_section_data)), 
-                   xytext=(worst_month_idx + 0.5, min(worst_section_data) - 3),
-                   fontsize=9, color='#DC2626', weight='bold',
-                   arrowprops=dict(arrowstyle='->', color='#DC2626', alpha=0.7))
-        
-        plt.tight_layout(pad=2.2)  # More padding for better spacing
+        plt.tight_layout(pad=2.2)
         
         canvas = FigureCanvasTkAgg(fig, parent)
         canvas.draw()
-        canvas.get_tk_widget().pack(pady=30, padx=30, fill="both", expand=True)  # Symmetric padding
+        canvas.get_tk_widget().pack(pady=30, padx=30, fill="both", expand=True)
         
         plt.close(fig)
 
