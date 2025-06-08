@@ -6,29 +6,51 @@ from app.ui.admin.components.modals import SuccessModal
 class SectionEditPopup(ctk.CTkToplevel):
     def __init__(self, parent, db_manager, section_data, on_success=None):
         super().__init__(parent)
+        self.parent_view = parent
         self.db_manager = db_manager
         self.section_data = section_data
         self.on_success = on_success
+        self.programs_data = []
+        self.load_programs_data()
         self.title("Update Section")
-        self.geometry("450x550")
+        self.geometry("450x420")
         self.resizable(False, False)
-        
-        # Set background color to white
         self.configure(fg_color="#fff")
-        
-        # Make it modal
         self.transient(parent)
         self.grab_set()
-        
-        # Center the window
+        self.center_window()
+        self.setup_ui()
+
+    def center_window(self):
         self.update_idletasks()
         width = self.winfo_width()
         height = self.winfo_height()
         x = (self.winfo_screenwidth() // 2) - (width // 2)
         y = (self.winfo_screenheight() // 2) - (height // 2)
         self.geometry(f'{width}x{height}+{x}+{y}')
-        
-        self.setup_ui()
+
+    def load_programs_data(self):
+        """Load programs data from database"""
+        try:
+            if self.db_manager:
+                success, programs = self.db_manager.get_programs()
+                if success:
+                    self.programs_data = programs
+                else:
+                    print(f"Error loading programs: {programs}")
+                    self.programs_data = []
+            else:
+                # Try to get db_manager from parent if not available
+                from app.db_manager import DatabaseManager
+                self.db_manager = DatabaseManager()
+                success, programs = self.db_manager.get_programs()
+                if success:
+                    self.programs_data = programs
+                else:
+                    self.programs_data = []
+        except Exception as e:
+            print(f"Error loading programs data: {e}")
+            self.programs_data = []
 
     def setup_ui(self):
         # Header
@@ -59,8 +81,7 @@ class SectionEditPopup(ctk.CTkToplevel):
         ).pack(anchor="w", pady=(0, 8))
         
         # Get programs from database
-        programs = self.load_programs()
-        program_names = [p['name'] for p in programs] if programs else ["No programs available"]
+        program_names = [p['name'] for p in self.programs_data] if self.programs_data else ["No programs available"]
         
         # Set current program as default
         current_program = self.section_data.get('program_name', program_names[0] if program_names else "")
@@ -153,33 +174,6 @@ class SectionEditPopup(ctk.CTkToplevel):
             command=self.update_section
         )
         update_btn.pack(side="right")
-
-    def load_programs(self):
-        """Load available programs from database"""
-        try:
-            if self.db_manager:
-                result = self.db_manager.get_programs()
-                
-                # Handle tuple return (success, data) format
-                if isinstance(result, tuple) and len(result) == 2:
-                    success, programs = result
-                    if success and isinstance(programs, list):
-                        # Filter out deleted programs
-                        return [p for p in programs if not p.get('isDeleted', False)]
-                    else:
-                        print(f"get_programs failed: {programs}")
-                        return []
-                # Handle direct list return (legacy format)
-                elif isinstance(result, list):
-                    # Filter out deleted programs
-                    return [p for p in result if not p.get('isDeleted', False)]
-                else:
-                    print(f"Unexpected return type from get_programs: {type(result)}")
-                    return []
-            return []
-        except Exception as e:
-            print(f"Error loading programs: {e}")
-            return []
 
     def validate_input(self):
         """Validate form input"""

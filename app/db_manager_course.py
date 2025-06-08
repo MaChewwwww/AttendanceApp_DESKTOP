@@ -652,7 +652,7 @@ class DatabaseCourseManager:
             
             params = [course_id]
             
-            # Apply academic year filter only if provided
+            # Apply academic_year filter only if provided
             if academic_year:
                 monthly_query += " AND ac.academic_year = ?"
                 params.append(academic_year)
@@ -776,44 +776,37 @@ class DatabaseCourseManager:
             conn.close()
 
     def get_courses_by_program_id(self, program_id):
-        """Get courses for a specific program ID"""
-        conn = self.get_connection()
+        """Get courses by program ID"""
+        conn = self.db_manager.get_connection()
         try:
-            cursor = conn.cursor()
+            cursor = conn.execute("""
+                SELECT c.id, c.name, c.code, c.description, c.program_id,
+                       p.name as program_name, p.acronym as program_acronym
+                FROM courses c
+                JOIN programs p ON c.program_id = p.id
+                WHERE c.program_id = ? AND c.isDeleted = 0 AND p.isDeleted = 0
+                ORDER BY c.name
+            """, (program_id,))
             
-            query = """
-            SELECT 
-                c.id,
-                c.name as course_name,
-                c.code as course_code,
-                c.description,
-                p.name as program_name,
-                p.acronym as program_acronym
-            FROM courses c
-            LEFT JOIN programs p ON c.program_id = p.id
-            WHERE c.isDeleted = 0 AND c.program_id = ?
-            ORDER BY c.name
-            """
+            courses = cursor.fetchall()
             
-            cursor.execute(query, (program_id,))
-            results = cursor.fetchall()
-            
-            courses = []
-            for row in results:
-                course_dict = {
+            # Convert to list of dictionaries
+            result = []
+            for row in courses:
+                result.append({
                     'id': row['id'],
-                    'name': row['course_name'],
-                    'code': row['course_code'] or '',
-                    'description': row['description'] or '',
-                    'program_name': row['program_name'] or 'No Program',
-                    'program_acronym': row['program_acronym'] or 'N/A'
-                }
-                courses.append(course_dict)
+                    'name': row['name'],
+                    'code': row['code'],
+                    'description': row['description'],
+                    'program_id': row['program_id'],
+                    'program_name': row['program_name'],
+                    'program_acronym': row['program_acronym']
+                })
             
-            return True, courses
+            return True, result
             
         except Exception as e:
-            print(f"Error getting courses by program: {e}")
+            print(f"Error getting courses by program ID: {e}")
             return False, str(e)
         finally:
             conn.close()

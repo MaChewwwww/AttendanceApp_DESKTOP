@@ -1005,51 +1005,36 @@ class DatabaseUserManager:
             return program_name[:4].upper()
     
     def get_all_faculty(self):
-        """Get all faculty members without any filters"""
+        """Get all faculty members using correct database schema, excluding Admins in Python"""
         conn = self.db_manager.get_connection()
         try:
-            cursor = conn.cursor()
+            cursor = conn.execute("""
+                SELECT u.id, u.first_name, u.last_name, u.email, u.role,
+                       f.employee_number
+                FROM users u
+                JOIN faculties f ON u.id = f.user_id
+                WHERE u.role IN ('Faculty', 'Admin') AND u.isDeleted = 0
+                ORDER BY u.last_name, u.first_name
+            """)
+            faculty = cursor.fetchall()
             
-            # Query to get all faculty with their user details - exclude Admin role
-            query = """
-            SELECT DISTINCT
-                u.id,
-                u.first_name,
-                u.last_name,
-                u.email,
-                u.contact_number,
-                u.role,
-                f.employee_number,
-                s.name as status_name
-            FROM users u
-            JOIN faculties f ON u.id = f.user_id
-            LEFT JOIN statuses s ON u.status_id = s.id
-            WHERE u.isDeleted = 0
-            AND u.role = 'Faculty'
-            ORDER BY u.first_name, u.last_name
-            """
+            # Convert to list of dictionaries and exclude Admins in Python
+            result = []
+            for row in faculty:
+                if row['role'].lower() != 'admin':
+                    result.append({
+                        'id': row['id'],
+                        'first_name': row['first_name'],
+                        'last_name': row['last_name'],
+                        'email': row['email'],
+                        'role': row['role'],
+                        'employee_number': row['employee_number']
+                    })
             
-            cursor.execute(query)
-            results = cursor.fetchall()
-            
-            faculty_list = []
-            for row in results:
-                faculty_dict = {
-                    'id': row['id'],
-                    'first_name': row['first_name'],
-                    'last_name': row['last_name'],
-                    'email': row['email'],
-                    'contact_number': row['contact_number'],
-                    'role': row['role'],
-                    'employee_number': row['employee_number'],
-                    'status_name': row['status_name'] or 'No Status'
-                }
-                faculty_list.append(faculty_dict)
-            
-            return True, faculty_list
+            return True, result
             
         except Exception as e:
-            print(f"Error getting all faculty: {e}")
+            print(f"Error getting faculty: {e}")
             return False, str(e)
         finally:
             conn.close()

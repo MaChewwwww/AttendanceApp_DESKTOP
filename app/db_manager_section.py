@@ -324,18 +324,20 @@ class DatabaseSectionManager:
             conn.close()
 
     def get_section_courses(self, section_id, academic_year=None, semester=None):
-        """Get courses assigned to a specific section"""
+        """Get courses assigned to a specific section with complete assignment data"""
         conn = self.db_manager.get_connection()
         try:
             query = """
                 SELECT c.id as course_id, c.name as course_name, c.code as course_code,
                        c.description, p.name as program_name, p.acronym as program_acronym,
-                       ac.id as assignment_id, ac.academic_year, ac.semester,
-                       u.first_name as faculty_first_name, u.last_name as faculty_last_name
+                       ac.id as assignment_id, ac.academic_year, ac.semester, ac.room,
+                       u.first_name as faculty_first_name, u.last_name as faculty_last_name,
+                       u.id as faculty_id, f.employee_number
                 FROM assigned_courses ac
                 JOIN courses c ON ac.course_id = c.id
                 JOIN programs p ON c.program_id = p.id
-                LEFT JOIN users u ON ac.faculty_id = u.id
+                LEFT JOIN users u ON ac.faculty_id = u.id AND u.isDeleted = 0
+                LEFT JOIN faculties f ON u.id = f.user_id
                 WHERE ac.section_id = ? AND ac.isDeleted = 0 AND c.isDeleted = 0
             """
             params = [section_id]
@@ -356,21 +358,27 @@ class DatabaseSectionManager:
             if not courses:
                 return True, []  # Return success with empty list
             
-            # Convert to list of dictionaries
+            # Convert to list of dictionaries with complete data
             result = []
             for row in courses:
-                result.append({
+                assignment_data = {
                     'course_id': row['course_id'],
-                    'course_name': row['course_name'],
-                    'course_code': row['course_code'],
-                    'description': row['description'],
-                    'program_name': row['program_name'],
-                    'program_acronym': row['program_acronym'],
+                    'course_name': row['course_name'] or '',
+                    'course_code': row['course_code'] or '',
+                    'description': row['description'] or '',
+                    'program_name': row['program_name'] or '',
+                    'program_acronym': row['program_acronym'] or '',
                     'assignment_id': row['assignment_id'],
-                    'academic_year': row['academic_year'],
-                    'semester': row['semester'],
-                    'faculty_name': f"{row['faculty_first_name']} {row['faculty_last_name']}" if row['faculty_first_name'] else "No Faculty Assigned"
-                })
+                    'academic_year': row['academic_year'] or '',
+                    'semester': row['semester'] or '',
+                    'room': row['room'] or '',
+                    'faculty_id': row['faculty_id'],
+                    'faculty_first_name': row['faculty_first_name'] or '',
+                    'faculty_last_name': row['faculty_last_name'] or '',
+                    'employee_number': row['employee_number'] or '',
+                    'faculty_name': f"{row['faculty_first_name']} {row['faculty_last_name']}" if row['faculty_first_name'] and row['faculty_last_name'] else "No Faculty Assigned"
+                }
+                result.append(assignment_data)
             
             return True, result
             

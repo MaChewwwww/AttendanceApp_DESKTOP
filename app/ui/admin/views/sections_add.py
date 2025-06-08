@@ -2,7 +2,7 @@ import customtkinter as ctk
 import tkinter as tk
 from tkinter import messagebox
 from app.ui.admin.components.modals import SuccessModal
-from .sections_course_assignment import SectionCourseAssignmentPopup
+from .sections_assigned_courses import SectionAssignedCoursesPopup
 
 class CreateSectionPopup(ctk.CTkToplevel):
     def __init__(self, parent):
@@ -251,7 +251,7 @@ class CreateSectionPopup(ctk.CTkToplevel):
             return False
 
     def create_section(self):
-        """Prepare section data and open course assignment window"""
+        """Create section and open course assignment window"""
         try:
             # Get values from widgets
             section_name = self.section_entry.get().strip()
@@ -276,18 +276,44 @@ class CreateSectionPopup(ctk.CTkToplevel):
                 messagebox.showerror("Error", "Invalid program selected")
                 return
             
-            # Prepare section data with correct structure for database manager
+            # Create the section in database first
             section_data = {
                 'name': section_name,
-                'program_id': program_id,  # This is what the DB manager expects
-                'program_data': program_data  # Keep this for the UI display
+                'program_id': program_id
             }
             
-            # Open course assignment window
-            SectionCourseAssignmentPopup(self, section_data, self.db_manager)
+            success, result = self.db_manager.create_section(section_data)
+            if not success:
+                messagebox.showerror("Error", f"Failed to create section: {result}")
+                return
+            
+            # Get the created section ID
+            section_id = result.get('id') if isinstance(result, dict) else None
+            if not section_id:
+                messagebox.showerror("Error", "Section created but ID not returned")
+                return
+            
+            # Prepare section data with the new ID for course assignment
+            complete_section_data = {
+                'id': section_id,
+                'name': section_name,
+                'program_id': program_id,
+                'program_name': program_data.get('name'),
+                'program_data': program_data
+            }
+            
+            # Close this popup first
+            self.destroy()
+            
+            # Open course assignment window with the created section
+            self.parent_view.after(100, lambda: SectionAssignedCoursesPopup(
+                self.parent_view, 
+                self.db_manager, 
+                complete_section_data
+            ))
                 
         except Exception as e:
-            print(f"Error preparing section: {e}")
+            print(f"Error creating section: {e}")
             messagebox.showerror("Error", f"An error occurred: {str(e)}")
 
     def destroy(self):

@@ -492,7 +492,7 @@ class SectionsView(ctk.CTkFrame):
                 
                 # Actions dropdown - compact size
                 action_var = tk.StringVar(value="Actions")
-                actions = ["View", "Edit", "Delete"]
+                actions = ["View", "Edit", "Assigned Courses", "Delete"]
                 action_menu = ctk.CTkOptionMenu(
                     table_frame,
                     values=actions,
@@ -565,6 +565,9 @@ class SectionsView(ctk.CTkFrame):
             SectionViewPopup(self, self.db_manager, data)
         elif action == "Edit":
             SectionEditPopup(self, self.db_manager, data, on_success=self.refresh_sections)
+        elif action == "Assigned Courses":
+            from .sections_assigned_courses_edit import SectionAssignedCoursesEditPopup
+            SectionAssignedCoursesEditPopup(self, self.db_manager, data)
         elif action == "Delete":
             self.delete_section(data)
 
