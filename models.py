@@ -104,9 +104,9 @@ class Schedule(Base):
     __tablename__ = "schedules"
     id = Column(Integer, primary_key=True, index=True)
     assigned_course_id = Column(Integer, ForeignKey("assigned_courses.id"), nullable=False)
-    day_of_week = Column(String(10), nullable=False)  # Monday, Tuesday, etc.
-    start_time = Column(DateTime, nullable=False)     # ISO datetime format
-    end_time = Column(DateTime, nullable=False)       # ISO datetime format
+    day_of_week = Column(String(50), nullable=False)  # e.g., "Monday", "Tuesday"
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
