@@ -2,7 +2,7 @@ import customtkinter as ctk
 from app.ui.admin.components.sidebar import DateTimePill
 import tkinter as tk
 from app.ui.admin.components.modals import DeleteModal, SuccessModal
-from app.ui.admin.views.sections_add import SectionCreatePopup
+from app.ui.admin.views.sections_add import CreateSectionPopup
 from app.ui.admin.views.sections_edit import SectionEditPopup  
 from app.ui.admin.views.sections_view import SectionViewPopup
 
@@ -775,7 +775,7 @@ class SectionsView(ctk.CTkFrame):
             messagebox.showerror("Export Error", f"Failed to export sections data:\n{str(e)}")
 
     def create_section(self):
-        SectionCreatePopup(self, self.db_manager, on_success=self.refresh_sections)
+        CreateSectionPopup(self)
 
     def refresh_sections(self):
         """Refresh the sections data and update the UI"""

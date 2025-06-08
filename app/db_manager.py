@@ -211,6 +211,9 @@ class DatabaseManager:
     def get_courses_by_section(self, section_name):
         return self.courses.get_courses_by_section(section_name)
 
+    def get_courses_by_program_id(self, program_id):
+        return self.courses.get_courses_by_program_id(program_id)
+
     def get_course_section_statistics(self, course_id, academic_year=None, semester=None):
         return self.courses.get_course_section_statistics(course_id, academic_year, semester)
 
@@ -247,3 +250,6 @@ class DatabaseManager:
 
     def get_section_statistics(self, section_id, academic_year=None, semester=None):
         return self.sections.get_section_statistics(section_id, academic_year, semester)
+
+    def get_all_faculty(self):
+        return self.users.get_all_faculty()

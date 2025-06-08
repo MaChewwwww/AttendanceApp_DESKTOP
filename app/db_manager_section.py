@@ -1,13 +1,20 @@
 import sqlite3
 from datetime import datetime
+from .config import DB_PATH
 
 class DatabaseSectionManager:
-    def __init__(self, main_db_manager):
-        self.main_db_manager = main_db_manager
+    def __init__(self, db_manager):
+        self.db_manager = db_manager
+    
+    def get_connection(self):
+        """Create and return a new database connection."""
+        conn = sqlite3.connect(DB_PATH, timeout=10)
+        conn.row_factory = sqlite3.Row
+        return conn
 
     def get_sections(self, program_filter=None, year_filter=None):
         """Get all sections with optional filters"""
-        conn = self.main_db_manager.get_connection()
+        conn = self.db_manager.get_connection()
         try:
             query = """
                 SELECT s.id, s.name, p.name as program_name, p.acronym as program_acronym,
@@ -61,45 +68,54 @@ class DatabaseSectionManager:
 
     def create_section(self, section_data):
         """Create a new section"""
-        conn = self.main_db_manager.get_connection()
+        conn = self.get_connection()
         try:
-            # Get program_id from program name
-            program_cursor = conn.execute(
-                "SELECT id FROM programs WHERE name = ? AND isDeleted = 0",
-                (section_data['program'],)
-            )
-            program_row = program_cursor.fetchone()
-            if not program_row:
-                return False, "Program not found"
+            cursor = conn.cursor()
             
-            program_id = program_row['id']
+            # Validate required fields - handle both 'program_id' and 'program' keys
+            if not section_data.get('name'):
+                return False, "Section name is required"
+            
+            # Handle both program_id and program keys for backward compatibility
+            program_id = section_data.get('program_id') or section_data.get('program')
+            if not program_id:
+                return False, "Program is required"
             
             # Check if section already exists for this program
-            existing_cursor = conn.execute(
-                "SELECT id FROM sections WHERE name = ? AND program_id = ? AND isDeleted = 0",
-                (section_data['name'], program_id)
-            )
-            if existing_cursor.fetchone():
+            cursor.execute("""
+                SELECT id FROM sections 
+                WHERE name = ? AND program_id = ? AND isDeleted = 0
+            """, (section_data['name'], program_id))
+            
+            if cursor.fetchone():
                 return False, "Section already exists for this program"
             
-            # Create the section with proper datetime format
-            current_time = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
-            conn.execute(
-                """INSERT INTO sections (name, program_id, isDeleted, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?)""",
-                (section_data['name'], program_id, 0, current_time, current_time)
-            )
+            # Insert the new section
+            cursor.execute("""
+                INSERT INTO sections (name, program_id, isDeleted, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                section_data['name'],
+                program_id,
+                0,  # isDeleted = 0 (not deleted)
+                datetime.now().isoformat(),
+                datetime.now().isoformat()
+            ))
+            
             conn.commit()
-            return True, "Section created successfully"
+            section_id = cursor.lastrowid
+            return True, {"id": section_id, "message": "Section created successfully"}
+            
         except Exception as e:
             conn.rollback()
-            return False, f"Error creating section: {str(e)}"
+            print(f"Error creating section: {e}")
+            return False, str(e)
         finally:
             conn.close()
 
     def update_section(self, section_id, section_data):
         """Update an existing section"""
-        conn = self.main_db_manager.get_connection()
+        conn = self.db_manager.get_connection()
         try:
             # Get program_id from program name
             program_cursor = conn.execute(
@@ -138,7 +154,7 @@ class DatabaseSectionManager:
     def delete_section(self, section_id):
         """Soft delete a section by setting isDeleted = 1"""
         try:
-            conn = self.main_db_manager.get_connection()
+            conn = self.db_manager.get_connection()
             cursor = conn.cursor()
             
             # Check if section exists and is not already deleted
@@ -176,7 +192,7 @@ class DatabaseSectionManager:
 
     def check_section_in_use(self, section_id):
         """Check if section is being used by students or assigned courses"""
-        conn = self.main_db_manager.get_connection()
+        conn = self.db_manager.get_connection()
         try:
             # Check if any students are assigned to this section
             student_cursor = conn.execute(
@@ -200,7 +216,7 @@ class DatabaseSectionManager:
 
     def get_section_details(self, section_id):
         """Get detailed information about a section"""
-        conn = self.main_db_manager.get_connection()
+        conn = self.db_manager.get_connection()
         try:
             cursor = conn.execute(
                 """SELECT s.id, s.name, p.name as program_name, p.acronym as program_acronym,
@@ -227,7 +243,7 @@ class DatabaseSectionManager:
 
     def get_section_students(self, section_id, search_term="", status_filter=""):
         """Get students in a specific section"""
-        conn = self.main_db_manager.get_connection()
+        conn = self.db_manager.get_connection()
         try:
             query = """
                 SELECT u.id, u.first_name, u.last_name, u.email, st.student_number,
@@ -266,7 +282,7 @@ class DatabaseSectionManager:
 
     def get_section_statistics(self, section_id, academic_year=None, semester=None):
         """Get statistics for a specific section"""
-        conn = self.main_db_manager.get_connection()
+        conn = self.db_manager.get_connection()
         try:
             # Get total students
             student_cursor = conn.execute(
@@ -309,7 +325,7 @@ class DatabaseSectionManager:
 
     def get_section_courses(self, section_id, academic_year=None, semester=None):
         """Get courses assigned to a specific section"""
-        conn = self.main_db_manager.get_connection()
+        conn = self.db_manager.get_connection()
         try:
             query = """
                 SELECT c.id as course_id, c.name as course_name, c.code as course_code,

@@ -774,3 +774,46 @@ class DatabaseCourseManager:
             return False, str(e)
         finally:
             conn.close()
+
+    def get_courses_by_program_id(self, program_id):
+        """Get courses for a specific program ID"""
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            
+            query = """
+            SELECT 
+                c.id,
+                c.name as course_name,
+                c.code as course_code,
+                c.description,
+                p.name as program_name,
+                p.acronym as program_acronym
+            FROM courses c
+            LEFT JOIN programs p ON c.program_id = p.id
+            WHERE c.isDeleted = 0 AND c.program_id = ?
+            ORDER BY c.name
+            """
+            
+            cursor.execute(query, (program_id,))
+            results = cursor.fetchall()
+            
+            courses = []
+            for row in results:
+                course_dict = {
+                    'id': row['id'],
+                    'name': row['course_name'],
+                    'code': row['course_code'] or '',
+                    'description': row['description'] or '',
+                    'program_name': row['program_name'] or 'No Program',
+                    'program_acronym': row['program_acronym'] or 'N/A'
+                }
+                courses.append(course_dict)
+            
+            return True, courses
+            
+        except Exception as e:
+            print(f"Error getting courses by program: {e}")
+            return False, str(e)
+        finally:
+            conn.close()

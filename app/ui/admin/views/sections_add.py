@@ -2,32 +2,54 @@ import customtkinter as ctk
 import tkinter as tk
 from tkinter import messagebox
 from app.ui.admin.components.modals import SuccessModal
+from .sections_course_assignment import SectionCourseAssignmentPopup
 
-class SectionCreatePopup(ctk.CTkToplevel):
-    def __init__(self, parent, db_manager, on_success=None):
+class CreateSectionPopup(ctk.CTkToplevel):
+    def __init__(self, parent):
         super().__init__(parent)
-        self.db_manager = db_manager
-        self.on_success = on_success
+        self.parent_view = parent
+        self.db_manager = getattr(parent, 'db_manager', None)
+        self.programs_data = []
+        self.load_programs_data()
         self.title("Create Section")
-        self.geometry("450x550")  # Increased from 400x350 to 450x550
+        self.geometry("360x420")
         self.resizable(False, False)
-        
-        # Set background color to white
-        self.configure(fg_color="#fff")
-        
-        # Make it modal
+        self.configure(fg_color="#FAFAFA")
         self.transient(parent)
         self.grab_set()
-        
-        # Center the window
+        self.center_window()
+        self.setup_ui()
+
+    def center_window(self):
         self.update_idletasks()
         width = self.winfo_width()
         height = self.winfo_height()
         x = (self.winfo_screenwidth() // 2) - (width // 2)
         y = (self.winfo_screenheight() // 2) - (height // 2)
         self.geometry(f'{width}x{height}+{x}+{y}')
-        
-        self.setup_ui()
+
+    def load_programs_data(self):
+        """Load programs data from database"""
+        try:
+            if self.db_manager:
+                success, programs = self.db_manager.get_programs()
+                if success:
+                    self.programs_data = programs
+                else:
+                    print(f"Error loading programs: {programs}")
+                    self.programs_data = []
+            else:
+                # Try to get db_manager from parent if not available
+                from app.db_manager import DatabaseManager
+                self.db_manager = DatabaseManager()
+                success, programs = self.db_manager.get_programs()
+                if success:
+                    self.programs_data = programs
+                else:
+                    self.programs_data = []
+        except Exception as e:
+            print(f"Error loading programs data: {e}")
+            self.programs_data = []
 
     def setup_ui(self):
         # Header
@@ -229,48 +251,44 @@ class SectionCreatePopup(ctk.CTkToplevel):
             return False
 
     def create_section(self):
-        """Create new section"""
-        # Validate input
-        is_valid, error_message = self.validate_input()
-        if not is_valid:
-            messagebox.showerror("Validation Error", error_message)
-            return
-        
-        if not self.db_manager:
-            messagebox.showerror("Error", "Database connection not available")
-            return
-        
-        # Prepare section data
-        section_data = {
-            'name': self.section_entry.get().strip(),
-            'program': self.program_var.get().strip()
-        }
-        
+        """Prepare section data and open course assignment window"""
         try:
-            # Create section in database
-            success, message = self.db_manager.create_section(section_data)
+            # Get values from widgets
+            section_name = self.section_entry.get().strip()
+            selected_program = self.program_var.get()
             
-            if success:
-                # Close the popup
-                self.destroy()
-                
-                # Show success modal
-                try:
-                    SuccessModal(self.master)
-                except Exception as e:
-                    print(f"Error showing success modal: {e}")
-                    # Fallback to messagebox
-                    messagebox.showinfo("Success", "Section created successfully!")
-                
-                # Call success callback to refresh the parent view
-                if self.on_success:
-                    self.on_success()
-            else:
-                messagebox.showerror("Error", message)
+            # Validate input using the existing validation method
+            is_valid, error_message = self.validate_input()
+            if not is_valid:
+                messagebox.showerror("Validation Error", error_message)
+                return
+            
+            # Find program ID and data
+            program_id = None
+            program_data = None
+            for program in self.programs_data:
+                if program["name"] == selected_program:
+                    program_id = program["id"]
+                    program_data = program
+                    break
+            
+            if not program_id:
+                messagebox.showerror("Error", "Invalid program selected")
+                return
+            
+            # Prepare section data with correct structure for database manager
+            section_data = {
+                'name': section_name,
+                'program_id': program_id,  # This is what the DB manager expects
+                'program_data': program_data  # Keep this for the UI display
+            }
+            
+            # Open course assignment window
+            SectionCourseAssignmentPopup(self, section_data, self.db_manager)
                 
         except Exception as e:
-            print(f"Error creating section: {e}")
-            messagebox.showerror("Error", "An unexpected error occurred. Please try again.")
+            print(f"Error preparing section: {e}")
+            messagebox.showerror("Error", f"An error occurred: {str(e)}")
 
     def destroy(self):
         """Override destroy to ensure proper cleanup"""
