@@ -229,14 +229,12 @@ class DatabaseCourseManager:
             
             params = [course_id]
             
-            # Add filters if provided - academic_year is used here
+            # Add academic year filter if provided
             if academic_year:
                 base_query += " AND ac.academic_year = ?"
                 params.append(academic_year)
             
-            if semester:
-                base_query += " AND ac.semester = ?"
-                params.append(semester)
+            # Removed semester filter completely
             
             cursor.execute(base_query, params)
             result = cursor.fetchone()
@@ -411,14 +409,12 @@ class DatabaseCourseManager:
             
             params = [course_id]
             
-            # academic_year filtering is used here too
+            # Add academic year filter if provided
             if academic_year:
                 section_query += " AND ac.academic_year = ?"
                 params.append(academic_year)
             
-            if semester:
-                section_query += " AND ac.semester = ?"
-                params.append(semester)
+            # Removed semester filter completely
             
             section_query += " GROUP BY s.id, s.name"
             
@@ -485,7 +481,6 @@ class DatabaseCourseManager:
                 s.start_time,
                 s.end_time,
                 ac.academic_year, 
-                ac.semester, 
                 al.status
             FROM schedules s
             JOIN assigned_courses ac ON s.assigned_course_id = ac.id
@@ -496,18 +491,14 @@ class DatabaseCourseManager:
             cursor.execute(schedule_query, [course_id])
             schedule_data = cursor.fetchall()
             
-            # Filter by academic year and semester in Python
+            # Filter by academic year only (removed semester filtering)
             filtered_schedules = []
             for schedule in schedule_data:
                 include_schedule = True
                 
-                # academic_year filtering happens here
+                # academic_year filtering only
                 if academic_year and academic_year != "All Years":
                     if schedule['academic_year'] != academic_year:
-                        include_schedule = False
-                
-                if semester and semester != "All Semesters":
-                    if schedule['semester'] != semester:
                         include_schedule = False
                 
                 if include_schedule:
@@ -661,14 +652,12 @@ class DatabaseCourseManager:
             
             params = [course_id]
             
-            # Apply filters if provided
+            # Apply academic year filter only if provided
             if academic_year:
                 monthly_query += " AND ac.academic_year = ?"
                 params.append(academic_year)
             
-            if semester:
-                monthly_query += " AND ac.semester = ?"
-                params.append(semester)
+            # Removed semester filter completely
             
             monthly_query += """
             GROUP BY s.id, s.name, year, month

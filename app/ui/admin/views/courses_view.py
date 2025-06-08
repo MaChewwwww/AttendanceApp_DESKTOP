@@ -17,9 +17,8 @@ class ViewCoursePopup(ctk.CTkToplevel):
         self.transient(parent)
         self.grab_set()
         
-        # Initialize filter variables first
+        # Initialize filter variables first - removed semester filter
         self.year_var = ctk.StringVar(value="All Years")
-        self.semester_var = ctk.StringVar(value="All Semesters")
         
         # Load initial statistics before setting up UI
         self.load_statistics()
@@ -75,15 +74,14 @@ class ViewCoursePopup(ctk.CTkToplevel):
                 wraplength=450
             ).pack(anchor="w", pady=(8, 0), fill="x")
         
-        # Filters (right) - better symmetry
+        # Filters (right) - only year filter now
         controls_frame = ctk.CTkFrame(header_frame, fg_color="#F5F5F5")
         controls_frame.pack(side="right", anchor="n")
         
-        # Get available years and semesters dynamically from database
+        # Get available years dynamically from database
         available_years = self.get_available_years()
-        available_semesters = self.get_available_semesters()
         
-        # Year selection
+        # Year selection only
         year_values = ["All Years"] + available_years
         year_dropdown = ctk.CTkOptionMenu(
             controls_frame,
@@ -93,19 +91,7 @@ class ViewCoursePopup(ctk.CTkToplevel):
             height=32,
             command=self.on_filter_change
         )
-        year_dropdown.grid(row=0, column=0, padx=(0, 10), pady=(0, 6))
-        
-        # Semester selection
-        semester_values = ["All Semesters"] + available_semesters
-        semester_dropdown = ctk.CTkOptionMenu(
-            controls_frame,
-            values=semester_values,
-            variable=self.semester_var,
-            width=120,
-            height=32,
-            command=self.on_filter_change
-        )
-        semester_dropdown.grid(row=0, column=1, pady=(0, 6))
+        year_dropdown.pack(pady=(0, 6))
         
         # Create containers for refreshable content
         self.create_refreshable_content()
@@ -218,15 +204,14 @@ class ViewCoursePopup(ctk.CTkToplevel):
         """Load statistics based on current filter selections"""
         if self.db_manager and self.course_data.get('id'):
             try:
-                # Get current filter values
+                # Get current filter values - removed semester filter
                 year_filter = self.year_var.get() if self.year_var.get() != "All Years" else None
-                semester_filter = self.semester_var.get() if self.semester_var.get() != "All Semesters" else None
                 
                 # Get course statistics from database using the courses manager
                 success, stats = self.db_manager.courses.get_course_statistics(
                     self.course_data['id'], 
                     academic_year=year_filter,
-                    semester=semester_filter
+                    semester=None  # Always None since we removed semester filter
                 )
                 
                 if success:
@@ -241,7 +226,7 @@ class ViewCoursePopup(ctk.CTkToplevel):
                 success_sections, section_stats = self.db_manager.courses.get_course_section_statistics(
                     self.course_data['id'], 
                     academic_year=year_filter,
-                    semester=semester_filter
+                    semester=None  # Always None since we removed semester filter
                 )
                 
                 if success_sections:
@@ -255,7 +240,7 @@ class ViewCoursePopup(ctk.CTkToplevel):
                 success_schedule, schedule_stats = self.db_manager.courses.get_course_schedule_statistics(
                     self.course_data['id'], 
                     academic_year=year_filter,
-                    semester=semester_filter
+                    semester=None  # Always None since we removed semester filter
                 )
                 
                 if success_schedule:
@@ -269,7 +254,7 @@ class ViewCoursePopup(ctk.CTkToplevel):
                 success_monthly, monthly_stats = self.db_manager.courses.get_course_monthly_attendance(
                     self.course_data['id'], 
                     academic_year=year_filter,
-                    semester=semester_filter
+                    semester=None  # Always None since we removed semester filter
                 )
                 
                 if success_monthly:
@@ -369,7 +354,7 @@ class ViewCoursePopup(ctk.CTkToplevel):
         }
 
     def on_filter_change(self, value=None):
-        """Called when year or semester selection changes"""
+        """Called when year selection changes"""
         self.load_statistics()
         self.refresh_charts()
 
@@ -386,7 +371,7 @@ class ViewCoursePopup(ctk.CTkToplevel):
         # Force a visual update
         self.update()
         
-        print(f"Charts refreshed - Academic Year: {self.year_var.get()}, Semester: {self.semester_var.get()}")
+        print(f"Charts refreshed - Academic Year: {self.year_var.get()}")
         print(f"Course stats: Students: {self.stats['total_students']}, Attendance: {self.stats['attendance_rate']}")
 
     def create_data_cards(self, parent):
@@ -562,8 +547,182 @@ class ViewCoursePopup(ctk.CTkToplevel):
         
         self.create_monthly_attendance_line_chart(line_container)
 
+    def load_statistics(self):
+        """Load statistics based on current filter selections"""
+        if self.db_manager and self.course_data.get('id'):
+            try:
+                # Get current filter values - removed semester filter
+                year_filter = self.year_var.get() if self.year_var.get() != "All Years" else None
+                
+                # Get course statistics from database using the courses manager
+                success, stats = self.db_manager.courses.get_course_statistics(
+                    self.course_data['id'], 
+                    academic_year=year_filter,
+                    semester=None  # Always None since we removed semester filter
+                )
+                
+                if success:
+                    self.stats = stats
+                    print(f"Loaded course statistics for course {self.course_data['id']}: {stats}")
+                else:
+                    print(f"Error loading course statistics: {stats}")
+                    # Fallback to sample data
+                    self.stats = self._get_fallback_stats()
+                
+                # Load section statistics for bar chart and key metrics
+                success_sections, section_stats = self.db_manager.courses.get_course_section_statistics(
+                    self.course_data['id'], 
+                    academic_year=year_filter,
+                    semester=None  # Always None since we removed semester filter
+                )
+                
+                if success_sections:
+                    self.section_stats = section_stats
+                    print(f"Loaded section statistics: {section_stats}")
+                else:
+                    print(f"Error loading section statistics: {section_stats}")
+                    self.section_stats = self._get_fallback_section_stats()
+                
+                # Load schedule statistics for key metrics
+                success_schedule, schedule_stats = self.db_manager.courses.get_course_schedule_statistics(
+                    self.course_data['id'], 
+                    academic_year=year_filter,
+                    semester=None  # Always None since we removed semester filter
+                )
+                
+                if success_schedule:
+                    self.schedule_stats = schedule_stats
+                    print(f"Loaded schedule statistics: {schedule_stats}")
+                else:
+                    print(f"Error loading schedule statistics: {schedule_stats}")
+                    self.schedule_stats = self._get_fallback_schedule_stats()
+                
+                # Load monthly attendance data for line chart
+                success_monthly, monthly_stats = self.db_manager.courses.get_course_monthly_attendance(
+                    self.course_data['id'], 
+                    academic_year=year_filter,
+                    semester=None  # Always None since we removed semester filter
+                )
+                
+                if success_monthly:
+                    self.monthly_stats = monthly_stats
+                    print(f"Loaded monthly attendance statistics: {monthly_stats}")
+                else:
+                    print(f"Error loading monthly attendance statistics: {monthly_stats}")
+                    self.monthly_stats = self._get_fallback_monthly_stats()
+                    
+            except Exception as e:
+                print(f"Exception loading course statistics: {e}")
+                # Fallback to sample data
+                self.stats = self._get_fallback_stats()
+                self.section_stats = self._get_fallback_section_stats()
+                self.schedule_stats = self._get_fallback_schedule_stats()
+                self.monthly_stats = self._get_fallback_monthly_stats()
+        else:
+            # Use sample data when no database connection or course ID
+            print("Using sample data - no database connection or course ID")
+            self.stats = self._get_sample_stats()
+            self.section_stats = self._get_sample_section_stats()
+            self.schedule_stats = self._get_sample_schedule_stats()
+            self.monthly_stats = self._get_sample_monthly_stats()
+
+    def _get_fallback_stats(self):
+        """Get fallback statistics when database query fails"""
+        return {
+            'total_students': 0,
+            'attendance_rate': '0%',
+            'total_classes': 0,
+            'total_absents': 0,
+            'total_present': 0,
+            'total_late': 0
+        }
+
+    def _get_sample_stats(self):
+        """Get sample statistics for demonstration"""
+        return {
+            'total_students': 45,
+            'attendance_rate': '87%',
+            'total_classes': 24,
+            'total_absents': 32,
+            'total_present': 180,
+            'total_late': 25
+        }
+
+    def _get_fallback_section_stats(self):
+        """Get fallback section statistics when database query fails"""
+        return {
+            'section_stats': {},
+            'best_section': None,
+            'worst_section': None
+        }
+
+    def _get_sample_section_stats(self):
+        """Get sample section statistics for demonstration"""
+        return {
+            'section_stats': {
+                'Section A': {'attendance_rate': 92.0, 'total_students': 12, 'total_records': 48, 'present_count': 44},
+                'Section B': {'attendance_rate': 86.0, 'total_students': 11, 'total_records': 44, 'present_count': 38},
+                'Section C': {'attendance_rate': 78.0, 'total_students': 10, 'total_records': 40, 'present_count': 31},
+                'Section D': {'attendance_rate': 89.0, 'total_students': 12, 'total_records': 48, 'present_count': 43}
+            },
+            'best_section': {'name': 'Section A', 'rate': 92.0},
+            'worst_section': {'name': 'Section C', 'rate': 78.0}
+        }
+
+    def _get_fallback_schedule_stats(self):
+        """Get fallback schedule statistics when database query fails"""
+        return {
+            'best_schedule': None
+        }
+
+    def _get_sample_schedule_stats(self):
+        """Get sample schedule statistics for demonstration"""
+        return {
+            'best_schedule': {'time': 'Monday : 9:00 - 10:00', 'rate': 94.5}
+        }
+
+    def _get_fallback_monthly_stats(self):
+        """Get fallback monthly statistics when database query fails"""
+        return {
+            'months': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            'sections_data': {}
+        }
+
+    def _get_sample_monthly_stats(self):
+        """Get sample monthly statistics for demonstration"""
+        return {
+            'months': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            'sections_data': {
+                'Section A': [88, 92, 89, 94, 91, 85, 82, 87, 93, 90, 89, 92],
+                'Section B': [82, 85, 83, 88, 86, 80, 78, 82, 87, 84, 83, 86],
+                'Section C': [75, 78, 76, 81, 79, 72, 70, 75, 80, 77, 76, 78],
+                'Section D': [85, 88, 86, 91, 89, 83, 81, 85, 90, 87, 86, 89]
+            }
+        }
+
+    def on_filter_change(self, value=None):
+        """Called when year selection changes"""
+        self.load_statistics()
+        self.refresh_charts()
+
+    def refresh_charts(self):
+        """Refresh all charts with new data"""
+        # Update the window to ensure proper layout
+        self.update_idletasks()
+        
+        # Recreate all refreshable content with new data
+        self.create_stat_cards()
+        self.create_charts_section() 
+        self.create_bar_chart_section()
+        
+        # Force a visual update
+        self.update()
+        
+        print(f"Charts refreshed - Academic Year: {self.year_var.get()}")
+        print(f"Course stats: Students: {self.stats['total_students']}, Attendance: {self.stats['attendance_rate']}")
+
     def create_monthly_attendance_line_chart(self, parent):
-        """Create monthly attendance chart with real data from database - completely dynamic date ranges"""
+        """Create monthly attendance chart with real data from database - shows full academic year"""
         # Get real monthly data from loaded statistics
         monthly_data = self.monthly_stats
         all_months = monthly_data.get('months', [])
@@ -577,16 +736,15 @@ class ViewCoursePopup(ctk.CTkToplevel):
                 'No Data': [0]
             }
         else:
-            # The monthly data is already filtered by the database query based on semester selection
-            # So we just use the data as returned from the database
+            # Show all months from the academic year since we removed semester filtering
             months = all_months
             sections_data = all_sections_data
             
-            # If the database returned empty data for the selected filters, show appropriate message
+            # If the database returned empty data for the selected year, show appropriate message
             if not months or not sections_data:
-                current_semester = self.semester_var.get()
-                if current_semester != "All Semesters":
-                    months = [f'No data for {current_semester}']
+                current_year = self.year_var.get()
+                if current_year != "All Years":
+                    months = [f'No data for {current_year}']
                 else:
                     months = ['No data available']
                 sections_data = {'No Data': [0]}
