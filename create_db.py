@@ -167,6 +167,42 @@ def create_superadmin(db_path):
         print(f"Error creating superadmin: {e}")
         return False
 
+def run_comprehensive_seeding():
+    """Run the comprehensive seeding process"""
+    try:
+        print("\n" + "="*60)
+        print("RUNNING COMPREHENSIVE DATABASE SEEDING")
+        print("="*60)
+        
+        # Import and run the main seeder
+        from seeders.main_seeder import run_all_seeders
+        
+        success = run_all_seeders()
+        
+        if success:
+            print("\n✅ COMPREHENSIVE SEEDING COMPLETED SUCCESSFULLY!")
+            print("Database now contains:")
+            print("  - Programs, courses, and sections")
+            print("  - Faculty and student users")
+            print("  - Course assignments and schedules")
+            print("  - Realistic attendance data")
+        else:
+            print("\n❌ COMPREHENSIVE SEEDING FAILED!")
+            print("Check the logs above for error details.")
+            
+        return success
+        
+    except ImportError as e:
+        print(f"\n⚠️  Seeder modules not found: {e}")
+        print("Skipping comprehensive seeding...")
+        print("You can run seeding manually later with: python create_seed_users.py")
+        return True  # Don't fail database creation if seeding modules aren't available
+    except Exception as e:
+        print(f"\n❌ Error during comprehensive seeding: {e}")
+        print("Database was created successfully, but seeding failed.")
+        print("You can run seeding manually later with: python create_seed_users.py")
+        return True  # Don't fail database creation if seeding fails
+
 # Delete the database file if it exists
 if os.path.exists(DB_PATH):
     try:
@@ -251,6 +287,7 @@ if seed_statuses(DB_PATH):
     print("Status seeding completed successfully")
 else:
     print("Status seeding failed")
+    exit(1)
 
 # Create superadmin
 print("\nCreating superadmin...")
@@ -258,10 +295,29 @@ if create_superadmin(DB_PATH):
     print("Superadmin creation completed successfully")
 else:
     print("Superadmin creation failed")
+    exit(1)
 
 print("\nDatabase initialization completed!")
 print("\nYour clean database is ready with:")
 print("- Status tables for students and faculty")
 print("- Superadmin account (admin@iskolarngbayan.pup.edu.ph / admin123)")
-print("\nTo add sample data, run:")
-print("python create_seed_users.py")
+
+# Ask user if they want to run comprehensive seeding
+print("\n" + "="*60)
+user_input = input("Do you want to run comprehensive seeding now? (y/N): ").strip().lower()
+
+if user_input in ['y', 'yes']:
+    seeding_success = run_comprehensive_seeding()
+    if seeding_success:
+        print("\n🎉 COMPLETE DATABASE SETUP FINISHED!")
+        print("Your database is fully populated and ready to use!")
+    else:
+        print("\nDatabase created successfully but seeding had issues.")
+        print("You can run seeding manually later with: python create_seed_users.py")
+else:
+    print("\nSkipping comprehensive seeding.")
+    print("To add sample data later, run: python create_seed_users.py")
+
+print("\n" + "="*60)
+print("DATABASE SETUP COMPLETE")
+print("="*60)

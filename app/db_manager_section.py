@@ -82,11 +82,12 @@ class DatabaseSectionManager:
             if existing_cursor.fetchone():
                 return False, "Section already exists for this program"
             
-            # Create the section
+            # Create the section with proper datetime format
+            current_time = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
             conn.execute(
-                """INSERT INTO sections (name, program_id, created_at, updated_at)
-                   VALUES (?, ?, ?, ?)""",
-                (section_data['name'], program_id, datetime.now(), datetime.now())
+                """INSERT INTO sections (name, program_id, isDeleted, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (section_data['name'], program_id, 0, current_time, current_time)
             )
             conn.commit()
             return True, "Section created successfully"
@@ -119,11 +120,12 @@ class DatabaseSectionManager:
             if existing_cursor.fetchone():
                 return False, "Section name already exists for this program"
             
-            # Update the section
+            # Update the section with proper datetime format
+            current_time = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
             conn.execute(
                 """UPDATE sections SET name = ?, program_id = ?, updated_at = ?
                    WHERE id = ? AND isDeleted = 0""",
-                (section_data['name'], program_id, datetime.now(), section_id)
+                (section_data['name'], program_id, current_time, section_id)
             )
             conn.commit()
             return True, "Section updated successfully"
@@ -150,12 +152,13 @@ class DatabaseSectionManager:
                 conn.close()
                 return False, "Section not found or already deleted"
             
-            # Soft delete by setting isDeleted = 1
+            # Soft delete by setting isDeleted = 1 with proper datetime format
+            current_time = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
             cursor.execute("""
                 UPDATE sections 
-                SET isDeleted = 1, updated_at = CURRENT_TIMESTAMP
+                SET isDeleted = 1, updated_at = ?
                 WHERE id = ?
-            """, (section_id,))
+            """, (current_time, section_id))
             
             if cursor.rowcount == 0:
                 conn.close()
@@ -301,5 +304,62 @@ class DatabaseSectionManager:
                 'total_courses': total_courses,
                 'average_attendance': avg_attendance
             }
+        finally:
+            conn.close()
+
+    def get_section_courses(self, section_id, academic_year=None, semester=None):
+        """Get courses assigned to a specific section"""
+        conn = self.main_db_manager.get_connection()
+        try:
+            query = """
+                SELECT c.id as course_id, c.name as course_name, c.code as course_code,
+                       c.description, p.name as program_name, p.acronym as program_acronym,
+                       ac.id as assignment_id, ac.academic_year, ac.semester,
+                       u.first_name as faculty_first_name, u.last_name as faculty_last_name
+                FROM assigned_courses ac
+                JOIN courses c ON ac.course_id = c.id
+                JOIN programs p ON c.program_id = p.id
+                LEFT JOIN users u ON ac.faculty_id = u.id
+                WHERE ac.section_id = ? AND ac.isDeleted = 0 AND c.isDeleted = 0
+            """
+            params = [section_id]
+            
+            if academic_year:
+                query += " AND ac.academic_year = ?"
+                params.append(academic_year)
+            
+            if semester:
+                query += " AND ac.semester = ?"
+                params.append(semester)
+            
+            query += " ORDER BY c.name"
+            
+            cursor = conn.execute(query, params)
+            courses = cursor.fetchall()
+            
+            if not courses:
+                return True, []  # Return success with empty list
+            
+            # Convert to list of dictionaries
+            result = []
+            for row in courses:
+                result.append({
+                    'course_id': row['course_id'],
+                    'course_name': row['course_name'],
+                    'course_code': row['course_code'],
+                    'description': row['description'],
+                    'program_name': row['program_name'],
+                    'program_acronym': row['program_acronym'],
+                    'assignment_id': row['assignment_id'],
+                    'academic_year': row['academic_year'],
+                    'semester': row['semester'],
+                    'faculty_name': f"{row['faculty_first_name']} {row['faculty_last_name']}" if row['faculty_first_name'] else "No Faculty Assigned"
+                })
+            
+            return True, result
+            
+        except Exception as e:
+            print(f"Error getting section courses: {e}")
+            return False, str(e)
         finally:
             conn.close()

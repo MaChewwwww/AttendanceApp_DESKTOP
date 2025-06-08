@@ -47,10 +47,26 @@ class SectionsFilterPopup(ctk.CTkToplevel):
         # Get current filter values from parent
         current_filters = self.parent_view.current_filters
         
-        # Program filter
+        # Program filter - load from database
         ctk.CTkLabel(filter_frame, text="Program", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
         self.program_var = tk.StringVar(value=current_filters.get('program', 'All'))
-        program_options = ["All", "BSIT", "BSCS", "BSIS", "BSCpE", "BSECE"]
+        
+        # Load programs from database
+        program_options = ["All"]
+        try:
+            if self.parent_view.db_manager:
+                result = self.parent_view.db_manager.get_programs()
+                if isinstance(result, tuple) and len(result) == 2:
+                    success, programs = result
+                    if success and isinstance(programs, list):
+                        program_names = [p['name'] for p in programs if not p.get('isDeleted', False)]
+                        program_options.extend(program_names)
+                elif isinstance(result, list):
+                    program_names = [p['name'] for p in result if not p.get('isDeleted', False)]
+                    program_options.extend(program_names)
+        except Exception as e:
+            print(f"Error loading programs for filter: {e}")
+        
         program_menu = ctk.CTkOptionMenu(
             filter_frame,
             values=program_options,
@@ -679,12 +695,12 @@ class SectionsView(ctk.CTkFrame):
             
             filtered_data = new_filtered_data
         
-        # Apply program filter using Python
+        # Apply program filter using Python - use program name instead of acronym
         if self.current_filters.get('program') and self.current_filters['program'] != 'All':
             program_filter = self.current_filters['program']
             filtered_data = [
                 section for section in filtered_data
-                if section.get('program_acronym', '') == program_filter
+                if section.get('program_name', '') == program_filter
             ]
         
         # Apply year filter using Python
