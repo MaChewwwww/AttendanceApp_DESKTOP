@@ -12,6 +12,7 @@ from .db_manager_init import DatabaseInitManager
 from .db_manager_user_management import DatabaseUserManager
 from .db_manager_program import DatabaseProgramManager
 from .db_manager_course import DatabaseCourseManager
+from .db_manager_section import DatabaseSectionManager
 
 class DatabaseManager:
     def __init__(self):
@@ -26,6 +27,8 @@ class DatabaseManager:
         self.programs = DatabaseProgramManager(self)
         # Initialize course management manager with reference to this instance
         self.courses = DatabaseCourseManager(self)
+        # Initialize section management manager with reference to this instance  
+        self.sections = DatabaseSectionManager(self)
         # Initialize database tables on first run
         self.init.initialize_database()
     
@@ -216,3 +219,31 @@ class DatabaseManager:
 
     def get_course_monthly_attendance(self, course_id, academic_year=None, semester=None):
         return self.courses.get_course_monthly_attendance(course_id, academic_year, semester)
+
+    # Delegate section management methods to section manager
+    def get_sections_with_filters(self, program_filter=None, year_filter=None):
+        return self.sections.get_sections(program_filter, year_filter)
+
+    def create_section(self, section_data):
+        return self.sections.create_section(section_data)
+
+    def update_section(self, section_id, section_data):
+        return self.sections.update_section(section_id, section_data)
+
+    def delete_section(self, section_id):
+        return self.sections.delete_section(section_id)
+
+    def check_section_in_use(self, section_id):
+        return self.sections.check_section_in_use(section_id)
+
+    def get_section_details(self, section_id):
+        return self.sections.get_section_details(section_id)
+
+    def get_section_students(self, section_id, search_term="", status_filter=""):
+        return self.sections.get_section_students(section_id, search_term, status_filter)
+
+    def get_section_courses(self, section_id, academic_year=None, semester=None):
+        return self.sections.get_section_courses(section_id, academic_year, semester)
+
+    def get_section_statistics(self, section_id, academic_year=None, semester=None):
+        return self.sections.get_section_statistics(section_id, academic_year, semester)

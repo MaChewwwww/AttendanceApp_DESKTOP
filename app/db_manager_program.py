@@ -185,37 +185,42 @@ class DatabaseProgramManager:
             conn.close()
 
     def delete_program(self, program_id):
-        """Soft delete a program by setting isDeleted flag"""
+        """Soft delete a program by setting isDeleted = 1"""
         try:
             conn = self.db_manager.get_connection()
             cursor = conn.cursor()
             
-            # Check if program exists
-            cursor.execute("SELECT id, name FROM programs WHERE id = ? AND isDeleted = 0", (program_id,))
-            program = cursor.fetchone()
+            # Check if program exists and is not already deleted
+            cursor.execute("""
+                SELECT id, name FROM programs 
+                WHERE id = ? AND isDeleted = 0
+            """, (program_id,))
             
+            program = cursor.fetchone()
             if not program:
                 conn.close()
-                return False, "Program not found"
+                return False, "Program not found or already deleted"
             
-            # Since we're using soft delete, we don't need to check usage
-            # Just soft delete the program directly
-            current_time = datetime.now().isoformat()
+            # Soft delete by setting isDeleted = 1
             cursor.execute("""
                 UPDATE programs 
-                SET isDeleted = 1, updated_at = ? 
+                SET isDeleted = 1, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
-            """, (current_time, program_id))
+            """, (program_id,))
+            
+            if cursor.rowcount == 0:
+                conn.close()
+                return False, "Failed to delete program"
             
             conn.commit()
             conn.close()
-            
-            print(f"Successfully soft deleted program {program_id}: {program['name']}")
             return True, "Program deleted successfully"
             
         except Exception as e:
-            print(f"Error deleting program: {e}")
-            return False, str(e)
+            if 'conn' in locals():
+                conn.close()
+            print(f"Error in delete_program: {e}")
+            return False, f"Database error: {str(e)}"
 
     def check_program_in_use(self, program_id):
         """
@@ -729,7 +734,7 @@ class DatabaseProgramManager:
                 month = row['month']
                 year = row['year']
                 total_records = row['total_records'] or 0
-                present_count = row['present_count'] or 0
+                present_count = row['present_count'] or 0;
                 
                 # Track months that have data
                 months_with_data.add((month, year))

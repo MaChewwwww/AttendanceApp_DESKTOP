@@ -170,33 +170,42 @@ class DatabaseCourseManager:
             conn.close()
 
     def delete_course(self, course_id):
-        """Soft delete a course"""
-        conn = self.get_connection()
+        """Soft delete a course by setting isDeleted = 1"""
         try:
+            conn = self.db_manager.get_connection()
             cursor = conn.cursor()
             
-            # Check if course exists
-            cursor.execute("SELECT id FROM courses WHERE id = ? AND isDeleted = 0", (course_id,))
-            if not cursor.fetchone():
-                return False, "Course not found"
+            # Check if course exists and is not already deleted
+            cursor.execute("""
+                SELECT id, name FROM courses 
+                WHERE id = ? AND isDeleted = 0
+            """, (course_id,))
             
-            # Since we're using soft delete, we don't need to check foreign key usage
-            # Just soft delete the course directly
+            course = cursor.fetchone()
+            if not course:
+                conn.close()
+                return False, "Course not found or already deleted"
+            
+            # Soft delete by setting isDeleted = 1
             cursor.execute("""
                 UPDATE courses 
-                SET isDeleted = 1, updated_at = ?
+                SET isDeleted = 1, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
-            """, (datetime.now().isoformat(), course_id))
+            """, (course_id,))
+            
+            if cursor.rowcount == 0:
+                conn.close()
+                return False, "Failed to delete course"
             
             conn.commit()
-            return True, {"message": "Course deleted successfully"}
+            conn.close()
+            return True, "Course deleted successfully"
             
         except Exception as e:
-            conn.rollback()
-            print(f"Error deleting course: {e}")
-            return False, str(e)
-        finally:
-            conn.close()
+            if 'conn' in locals():
+                conn.close()
+            print(f"Error in delete_course: {e}")
+            return False, f"Database error: {str(e)}"
 
     def get_course_statistics(self, course_id, academic_year=None, semester=None):
         """Get comprehensive statistics for a specific course"""

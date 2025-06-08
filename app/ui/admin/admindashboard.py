@@ -7,10 +7,11 @@ from views.programs import ProgramsView
 from views.courses import CoursesView
 
 class AdminDashboard(ctk.CTk):
-    def __init__(self, on_logout=None):
+    def __init__(self, on_logout=None, db_manager=None):
         super().__init__()
         
         self.on_logout = on_logout  # Store logout callback
+        self.db_manager = db_manager  # Store database manager
         
         # Configure window
         self.title("Admin Dashboard")
@@ -84,6 +85,9 @@ class AdminDashboard(ctk.CTk):
         
     def load_sections_view(self):
         view = SectionsView(self.content_frame)
+        # Pass database manager to the view
+        if self.db_manager:
+            view.db_manager = self.db_manager
         view.pack(fill="both", expand=True, padx=20)
         
     def load_programs_view(self):
