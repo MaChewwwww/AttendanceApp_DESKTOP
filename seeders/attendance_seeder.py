@@ -1,7 +1,7 @@
 import random
 from datetime import datetime, timedelta
 from .base_seeder import BaseSeeder
-from .config import SEEDER_CONFIG
+from .config import SEEDER_CONFIG, get_current_semester, get_semester_attendance_modifier, is_semester_month, get_semester_months, get_academic_year
 
 class AttendanceSeeder(BaseSeeder):
     """Seeder for attendance logs with Philippine holidays consideration"""
@@ -57,11 +57,15 @@ class AttendanceSeeder(BaseSeeder):
         """Generate attendance for multiple weeks with realistic patterns - ensure ALL students get data"""
         current_time = self.get_current_time()
         
-        # Generate attendance for the past 8 weeks (2 months)
-        start_date = datetime.now() - timedelta(weeks=8)
-        end_date = datetime.now()
+        # Instead of using fixed past 8 weeks, generate attendance for semester periods
+        current_date = datetime.now()
+        current_semester = get_current_semester(current_date)
         
-        self.logger.info(f"Generating attendance from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+        # Generate attendance for current semester and some historical data
+        attendance_periods = self._get_semester_date_ranges(current_date)
+        
+        self.logger.info(f"Current semester: {current_semester}")
+        self.logger.info(f"Generating attendance for {len(attendance_periods)} semester periods")
         
         # Assign student performance categories
         student_performance = self._assign_student_performance(students_list)
@@ -69,80 +73,78 @@ class AttendanceSeeder(BaseSeeder):
         total_records_created = 0
         students_with_attendance = set()
         
-        # First, try to create attendance for course-section matches
-        for i, assigned_course_id in enumerate(assigned_course_ids):
-            self.logger.info(f"Processing course assignment {i+1}/{len(assigned_course_ids)} (ID: {assigned_course_id})")
+        # Generate attendance for each semester period
+        for period_name, start_date, end_date in attendance_periods:
+            self.logger.info(f"Processing {period_name}: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
             
-            # Get course and section info
-            course_info = self._get_course_info(conn, assigned_course_id)
-            if not course_info:
-                self.logger.warning(f"No course info found for assigned course {assigned_course_id}")
-                continue
+            # Filter assigned courses that match this semester
+            period_courses = self._filter_courses_by_semester_period(conn, assigned_course_ids, period_name)
             
-            course_name, section_name, program_name = course_info
-            self.logger.info(f"Course: {course_name}, Section: {section_name}, Program: {program_name}")
+            if not period_courses:
+                self.logger.info(f"No courses found for {period_name}, using all available courses")
+                period_courses = assigned_course_ids[:10]  # Use first 10 courses as fallback
             
-            # Get students enrolled in this section
-            section_students = self._get_section_students(conn, section_name, program_name)
-            if not section_students:
-                self.logger.warning(f"No students found for section {section_name} in {program_name}")
-                # If no exact match, try to get students from any section with same name
-                section_students = self._get_students_by_section_name_only(conn, section_name)
-                if not section_students:
-                    self.logger.warning(f"Still no students found for section {section_name}")
+            # First, try to create attendance for course-section matches
+            for i, assigned_course_id in enumerate(period_courses):
+                self.logger.info(f"Processing {period_name} course assignment {i+1}/{len(period_courses)} (ID: {assigned_course_id})")
+                
+                # Get course and section info
+                course_info = self._get_course_info(conn, assigned_course_id)
+                if not course_info:
                     continue
-            
-            self.logger.info(f"Found {len(section_students)} students in section {section_name}")
-            
-            # Get course schedule
-            schedule_days = self._get_course_schedule(conn, assigned_course_id)
-            if not schedule_days:
-                self.logger.warning(f"No schedule found for assigned course {assigned_course_id}")
-                continue
-            
-            # Generate class dates
-            class_dates = self._generate_class_dates(start_date, end_date, schedule_days)
-            self.logger.info(f"Generated {len(class_dates)} class dates for {course_name}")
-            
-            # Generate attendance for each class date
-            course_records = 0
-            for class_date in class_dates:
-                for student_id, first_name, last_name in section_students:
-                    # Check if record already exists
-                    existing = self.check_exists(conn, "attendance_logs", {
-                        "user_id": student_id,
-                        "assigned_course_id": assigned_course_id,
-                        "date": class_date.strftime('%Y-%m-%d')
-                    })
-                    
-                    if existing:
-                        students_with_attendance.add(student_id)
+                
+                course_name, section_name, program_name = course_info
+                
+                # Get students enrolled in this section
+                section_students = self._get_section_students(conn, section_name, program_name)
+                if not section_students:
+                    section_students = self._get_students_by_section_name_only(conn, section_name)
+                    if not section_students:
                         continue
-                    
-                    # Determine attendance status
-                    status = self._determine_attendance_status(student_id, student_performance, class_date)
-                    
-                    # Insert attendance log
-                    try:
-                        self.execute_query(conn, """
-                            INSERT INTO attendance_logs 
-                            (user_id, assigned_course_id, date, status, created_at, updated_at)
-                            VALUES (?, ?, ?, ?, ?, ?)
-                        """, (
-                            student_id, 
-                            assigned_course_id, 
-                            class_date.strftime('%Y-%m-%d'),
-                            status, 
-                            current_time, 
-                            current_time
-                        ))
-                        course_records += 1
-                        total_records_created += 1
-                        students_with_attendance.add(student_id)
-                    except Exception as e:
-                        self.logger.error(f"Failed to insert attendance for student {student_id}: {e}")
-            
-            self.logger.info(f"Created {course_records} attendance records for {course_name}")
+                
+                # Get course schedule
+                schedule_days = self._get_course_schedule(conn, assigned_course_id)
+                if not schedule_days:
+                    continue
+                
+                # Generate class dates for this semester period
+                class_dates = self._generate_class_dates(start_date, end_date, schedule_days)
+                
+                # Generate attendance for each class date
+                for class_date in class_dates:
+                    for student_id, first_name, last_name in section_students:
+                        # Check if record already exists
+                        existing = self.check_exists(conn, "attendance_logs", {
+                            "user_id": student_id,
+                            "assigned_course_id": assigned_course_id,
+                            "date": class_date.strftime('%Y-%m-%d')
+                        })
+                        
+                        if existing:
+                            students_with_attendance.add(student_id)
+                            continue
+                        
+                        # Determine attendance status
+                        status = self._determine_attendance_status(student_id, student_performance, class_date)
+                        
+                        # Insert attendance log
+                        try:
+                            self.execute_query(conn, """
+                                INSERT INTO attendance_logs 
+                                (user_id, assigned_course_id, date, status, created_at, updated_at)
+                                VALUES (?, ?, ?, ?, ?, ?)
+                            """, (
+                                student_id, 
+                                assigned_course_id, 
+                                class_date.strftime('%Y-%m-%d'),
+                                status, 
+                                current_time, 
+                                current_time
+                            ))
+                            total_records_created += 1
+                            students_with_attendance.add(student_id)
+                        except Exception as e:
+                            self.logger.error(f"Failed to insert attendance for student {student_id}: {e}")
         
         # Ensure ALL students have at least some attendance data
         all_student_ids = {student[0] for student in students_list}
@@ -306,7 +308,7 @@ class AttendanceSeeder(BaseSeeder):
         return False, None
     
     def _determine_attendance_status(self, student_id, student_performance, class_date):
-        """Determine attendance status for a student"""
+        """Determine attendance status for a student using dynamic semester configuration"""
         perf = student_performance.get(student_id, {
             'attendance_rate': 0.85, 
             'category': 'average'
@@ -321,11 +323,17 @@ class AttendanceSeeder(BaseSeeder):
         elif class_date.weekday() == 0:  # Monday
             attendance_prob *= 0.98
         
-        # Adjust for time of semester (lower attendance near holidays)
-        if class_date.month == 12:  # December
-            attendance_prob *= 0.90
-        elif class_date.month in [5, 6]:  # May-June (end of school year)
-            attendance_prob *= 0.92
+        # Use dynamic semester-based attendance modifier
+        semester = get_current_semester(class_date)
+        semester_modifier = get_semester_attendance_modifier(class_date, semester)
+        attendance_prob *= semester_modifier
+        
+        # Log semester context for debugging (only occasionally to avoid spam)
+        if random.random() < 0.001:  # 0.1% chance to log
+            self.logger.debug(f"Date: {class_date.strftime('%Y-%m-%d')}, Semester: {semester}, Modifier: {semester_modifier:.2f}")
+        
+        # Ensure probability stays within reasonable bounds
+        attendance_prob = max(0.1, min(1.0, attendance_prob))
         
         if random.random() < attendance_prob:
             # Student attends - determine if present or late
@@ -337,7 +345,15 @@ class AttendanceSeeder(BaseSeeder):
                 'poor': 0.18
             }
             
-            if random.random() < late_probability.get(perf['category'], 0.1):
+            # Increase late probability during summer months using dynamic config
+            month = class_date.month
+            if is_semester_month(month, 'Summer'):
+                base_late_prob = late_probability.get(perf['category'], 0.1)
+                late_prob = min(0.25, base_late_prob * 1.3)  # 30% increase, capped at 25%
+            else:
+                late_prob = late_probability.get(perf['category'], 0.1)
+            
+            if random.random() < late_prob:
                 return 'late'
             else:
                 return 'present'
@@ -345,41 +361,89 @@ class AttendanceSeeder(BaseSeeder):
             return 'absent'
     
     def _assign_student_performance(self, students_list):
-        """Assign performance categories to students"""
+        """Assign performance categories to students based on their status"""
         performance_config = SEEDER_CONFIG['student_performance']
         student_performance = {}
         
-        # Calculate counts for each category
-        total_students = len(students_list)
-        excellent_count = int(total_students * performance_config['excellent']['percentage'])
-        very_good_count = int(total_students * performance_config['very_good']['percentage'])
-        good_count = int(total_students * performance_config['good']['percentage'])
-        average_count = int(total_students * performance_config['average']['percentage'])
-        poor_count = max(1, total_students - excellent_count - very_good_count - good_count - average_count)
+        # Get student statuses
+        conn = self.get_connection()
+        cursor = self.execute_query(conn, """
+            SELECT u.id, st.name as status_name
+            FROM users u
+            JOIN statuses st ON u.status_id = st.id
+            WHERE u.role = 'Student' AND u.isDeleted = 0
+        """)
+        student_statuses = {row[0]: row[1] for row in cursor.fetchall()}
+        conn.close()
         
-        # Shuffle students and assign categories
-        shuffled_students = students_list.copy()
-        random.shuffle(shuffled_students)
+        # Assign performance based on status
+        for student_id, first_name, last_name, section_id in students_list:
+            status = student_statuses.get(student_id, 'Enrolled')
+            
+            # Set attendance rates based on status
+            if status == 'Suspended':
+                # Suspended students: 70% and below attendance rate
+                attendance_rate = random.uniform(0.40, 0.70)
+                category = 'poor'
+                consistency = random.uniform(0.60, 0.75)
+            elif status == 'Dropout':
+                # Dropout students: 60% and below attendance rate
+                attendance_rate = random.uniform(0.30, 0.60)
+                category = 'poor'
+                consistency = random.uniform(0.50, 0.65)
+            elif status == 'Graduated':
+                # Graduated students: 80% and above attendance rate
+                attendance_rate = random.uniform(0.80, 0.98)
+                category = random.choice(['excellent', 'very_good'])
+                consistency = random.uniform(0.85, 1.0)
+            elif status == 'On Leave':
+                # On leave students: moderate attendance before leave
+                attendance_rate = random.uniform(0.70, 0.85)
+                category = random.choice(['average', 'good'])
+                consistency = random.uniform(0.75, 0.85)
+            else:  # Enrolled students
+                # Use original distribution for enrolled students
+                categories = [
+                    ('excellent', performance_config['excellent']['percentage'], performance_config['excellent']),
+                    ('very_good', performance_config['very_good']['percentage'], performance_config['very_good']),
+                    ('good', performance_config['good']['percentage'], performance_config['good']),
+                    ('average', performance_config['average']['percentage'], performance_config['average']),
+                    ('poor', performance_config['poor']['percentage'], performance_config['poor'])
+                ]
+                
+                # Randomly assign based on distribution
+                rand = random.random()
+                cumulative = 0
+                for cat_name, percentage, config in categories:
+                    cumulative += percentage
+                    if rand <= cumulative:
+                        category = cat_name
+                        attendance_rate = random.uniform(*config['attendance_range'])
+                        consistency = random.uniform(*config['consistency_range'])
+                        break
+                else:
+                    # Fallback
+                    category = 'average'
+                    attendance_rate = random.uniform(0.80, 0.84)
+                    consistency = random.uniform(0.75, 0.85)
+            
+            student_performance[student_id] = {
+                'category': category,
+                'attendance_rate': attendance_rate,
+                'consistency': consistency,
+                'status': status
+            }
         
-        idx = 0
-        categories = [
-            ('excellent', excellent_count, performance_config['excellent']),
-            ('very_good', very_good_count, performance_config['very_good']),
-            ('good', good_count, performance_config['good']),
-            ('average', average_count, performance_config['average']),
-            ('poor', poor_count, performance_config['poor'])
-        ]
+        # Log status-based performance distribution
+        status_counts = {}
+        for perf in student_performance.values():
+            status = perf['status']
+            status_counts[status] = status_counts.get(status, 0) + 1
         
-        for category_name, count, config in categories:
-            for i in range(count):
-                if idx < len(shuffled_students):
-                    student_id = shuffled_students[idx][0]
-                    student_performance[student_id] = {
-                        'category': category_name,
-                        'attendance_rate': random.uniform(*config['attendance_range']),
-                        'consistency': random.uniform(*config['consistency_range'])
-                    }
-                    idx += 1
+        self.logger.info("Student performance by status:")
+        for status, count in status_counts.items():
+            avg_attendance = sum(p['attendance_rate'] for p in student_performance.values() if p['status'] == status) / count
+            self.logger.info(f"  - {status}: {count} students, avg attendance: {avg_attendance:.1%}")
         
         return student_performance
     
@@ -432,3 +496,90 @@ class AttendanceSeeder(BaseSeeder):
             self.logger.warning(f"⚠️  {total_students - students_with_attendance} students still have no attendance data")
         else:
             self.logger.info("✅ All students have attendance data!")
+    
+    def _get_semester_date_ranges(self, current_date):
+        """Get date ranges for all configured academic years dynamically"""
+        from .config import get_academic_years_to_generate, get_semester_date_ranges_for_academic_year
+        
+        periods = []
+        
+        # Get academic years from config
+        academic_years = get_academic_years_to_generate()
+        
+        self.logger.info(f"Generating attendance periods for academic years: {', '.join(academic_years)}")
+        
+        # Generate periods for each configured academic year
+        for academic_year in academic_years:
+            self.logger.info(f"Processing academic year: {academic_year}")
+            
+            # Get semester periods for this academic year
+            year_periods = get_semester_date_ranges_for_academic_year(academic_year)
+            
+            for semester, start_date, end_date in year_periods:
+                period_name = f"{semester} {academic_year}"
+                
+                # For current academic year, limit end date to current date
+                if academic_year == get_academic_year(current_date):
+                    end_date = min(end_date, current_date)
+                    # Skip future periods
+                    if start_date > current_date:
+                        continue
+                
+                periods.append((period_name, start_date, end_date))
+        
+        self.logger.info(f"Generated {len(periods)} semester periods across all configured academic years")
+        
+        return periods
+    
+    def _filter_courses_by_semester_period(self, conn, assigned_course_ids, period_name):
+        """Filter assigned courses that belong to the specified semester period"""
+        if not assigned_course_ids:
+            return []
+        
+        # Extract semester and academic year from period name
+        if 'Summer' in period_name:
+            semester = 'Summer'
+        elif '1st Semester' in period_name:
+            semester = '1st Semester'
+        elif '2nd Semester' in period_name:
+            semester = '2nd Semester'
+        else:
+            semester = '1st Semester'  # Default fallback
+        
+        # Extract academic year from period name
+        if '2023-2024' in period_name:
+            academic_year = '2023-2024'
+        elif '2024-2025' in period_name:
+            academic_year = '2024-2025'
+        else:
+            # Default to current academic year
+            from .config import get_academic_year
+            academic_year = get_academic_year()
+        
+        # Get assigned courses that match this semester and academic year
+        placeholders = ','.join(['?'] * len(assigned_course_ids))
+        cursor = self.execute_query(conn, f"""
+            SELECT ac.id
+            FROM assigned_courses ac
+            WHERE ac.id IN ({placeholders}) AND ac.semester = ? AND ac.academic_year = ?
+        """, assigned_course_ids + [semester, academic_year])
+        
+        matching_courses = [row[0] for row in cursor.fetchall()]
+        
+        if matching_courses:
+            self.logger.info(f"Found {len(matching_courses)} courses for {period_name} ({semester} - {academic_year})")
+            return matching_courses
+        else:
+            self.logger.warning(f"No courses found for {period_name} ({semester} - {academic_year}), using fallback")
+            # If no exact match, return a subset of available courses for this semester type
+            cursor = self.execute_query(conn, f"""
+                SELECT ac.id
+                FROM assigned_courses ac
+                WHERE ac.id IN ({placeholders}) AND ac.semester = ?
+                LIMIT 5
+            """, assigned_course_ids + [semester])
+            
+            fallback_courses = [row[0] for row in cursor.fetchall()]
+            if fallback_courses:
+                self.logger.info(f"Using {len(fallback_courses)} fallback courses for {period_name}")
+            return fallback_courses

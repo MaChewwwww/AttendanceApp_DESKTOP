@@ -1,6 +1,7 @@
 import bcrypt
 import random
 from .base_seeder import BaseSeeder
+from .config import SEEDER_CONFIG
 
 class UserSeeder(BaseSeeder):
     """Seeder for users, students, and faculty"""
@@ -14,10 +15,10 @@ class UserSeeder(BaseSeeder):
             # Get statuses
             statuses = self._get_statuses(conn)
             
-            # Seed faculty (30 faculty members)
+            # Seed faculty (20 faculty members)
             self._seed_faculty(conn, statuses['faculty'])
             
-            # Seed students (50 students)
+            # Seed students (320 students - 40 per section, 8 sections, 2 programs)
             self._seed_students(conn, statuses['student'], section_ids)
             
             conn.commit()
@@ -48,7 +49,7 @@ class UserSeeder(BaseSeeder):
         }
     
     def _seed_faculty(self, conn, faculty_statuses):
-        """Seed 30 faculty users with diverse backgrounds"""
+        """Seed 20 faculty users with diverse backgrounds"""
         faculty_data = [
             # Department Heads and Senior Faculty
             {'first_name': 'Dr. Maria', 'last_name': 'Santos', 'email': 'maria.santos@pup.edu.ph', 'birthday': '1975-03-15', 'password': 'faculty123', 'contact_number': '09123456789', 'role': 'Faculty', 'verified': 1, 'employee_number': 'EMP-2015-001', 'status': 'Tenured'},
@@ -71,22 +72,12 @@ class UserSeeder(BaseSeeder):
             {'first_name': 'Dr. Michelle', 'last_name': 'Perez', 'email': 'michelle.perez@pup.edu.ph', 'birthday': '1989-12-08', 'password': 'faculty123', 'contact_number': '09456789013', 'role': 'Faculty', 'verified': 1, 'employee_number': 'EMP-2023-014', 'status': 'Active'},
             {'first_name': 'Prof. Kevin', 'last_name': 'Gonzales', 'email': 'kevin.gonzales@pup.edu.ph', 'birthday': '1990-03-22', 'password': 'faculty123', 'contact_number': '09567890124', 'role': 'Faculty', 'verified': 1, 'employee_number': 'EMP-2024-015', 'status': 'Active'},
             
-            # Additional Faculty (15 more)
+            # Additional Faculty (5 more)
             {'first_name': 'Dr. Rachel', 'last_name': 'Rivera', 'email': 'rachel.rivera@pup.edu.ph', 'birthday': '1981-07-30', 'password': 'faculty123', 'contact_number': '09678901235', 'role': 'Faculty', 'verified': 1, 'employee_number': 'EMP-2019-016', 'status': 'Tenure Track'},
             {'first_name': 'Prof. Mark', 'last_name': 'Diaz', 'email': 'mark.diaz@pup.edu.ph', 'birthday': '1985-11-15', 'password': 'faculty123', 'contact_number': '09789012346', 'role': 'Faculty', 'verified': 1, 'employee_number': 'EMP-2021-017', 'status': 'Active'},
             {'first_name': 'Dr. Catherine', 'last_name': 'Morales', 'email': 'catherine.morales@pup.edu.ph', 'birthday': '1983-04-12', 'password': 'faculty123', 'contact_number': '09890123457', 'role': 'Faculty', 'verified': 1, 'employee_number': 'EMP-2020-018', 'status': 'Active'},
             {'first_name': 'Prof. Steven', 'last_name': 'Castillo', 'email': 'steven.castillo@pup.edu.ph', 'birthday': '1987-08-07', 'password': 'faculty123', 'contact_number': '09901234568', 'role': 'Faculty', 'verified': 1, 'employee_number': 'EMP-2022-019', 'status': 'Probationary'},
-            {'first_name': 'Dr. Amanda', 'last_name': 'Ramos', 'email': 'amanda.ramos@pup.edu.ph', 'birthday': '1986-01-25', 'password': 'faculty123', 'contact_number': '09012345679', 'role': 'Faculty', 'verified': 1, 'employee_number': 'EMP-2022-020', 'status': 'Active'},
-            {'first_name': 'Prof. Daniel', 'last_name': 'Herrera', 'email': 'daniel.herrera@pup.edu.ph', 'birthday': '1988-06-18', 'password': 'faculty123', 'contact_number': '09123456781', 'role': 'Faculty', 'verified': 1, 'employee_number': 'EMP-2023-021', 'status': 'Active'},
-            {'first_name': 'Dr. Nicole', 'last_name': 'Flores', 'email': 'nicole.flores@pup.edu.ph', 'birthday': '1984-09-03', 'password': 'faculty123', 'contact_number': '09234567892', 'role': 'Faculty', 'verified': 1, 'employee_number': 'EMP-2021-022', 'status': 'Active'},
-            {'first_name': 'Prof. Anthony', 'last_name': 'Valdez', 'email': 'anthony.valdez@pup.edu.ph', 'birthday': '1989-12-14', 'password': 'faculty123', 'contact_number': '09345678903', 'role': 'Faculty', 'verified': 1, 'employee_number': 'EMP-2023-023', 'status': 'Probationary'},
-            {'first_name': 'Dr. Stephanie', 'last_name': 'Jimenez', 'email': 'stephanie.jimenez@pup.edu.ph', 'birthday': '1987-05-09', 'password': 'faculty123', 'contact_number': '09456789014', 'role': 'Faculty', 'verified': 1, 'employee_number': 'EMP-2022-024', 'status': 'Active'},
-            {'first_name': 'Prof. Jason', 'last_name': 'Aguilar', 'email': 'jason.aguilar@pup.edu.ph', 'birthday': '1990-02-28', 'password': 'faculty123', 'contact_number': '09567890125', 'role': 'Faculty', 'verified': 1, 'employee_number': 'EMP-2024-025', 'status': 'Active'},
-            {'first_name': 'Dr. Jennifer', 'last_name': 'Vargas', 'email': 'jennifer.vargas@pup.edu.ph', 'birthday': '1985-10-21', 'password': 'faculty123', 'contact_number': '09678901236', 'role': 'Faculty', 'verified': 1, 'employee_number': 'EMP-2021-026', 'status': 'Active'},
-            {'first_name': 'Prof. Ryan', 'last_name': 'Ortega', 'email': 'ryan.ortega@pup.edu.ph', 'birthday': '1988-07-16', 'password': 'faculty123', 'contact_number': '09789012347', 'role': 'Faculty', 'verified': 1, 'employee_number': 'EMP-2023-027', 'status': 'Probationary'},
-            {'first_name': 'Dr. Melissa', 'last_name': 'Gutierrez', 'email': 'melissa.gutierrez@pup.edu.ph', 'birthday': '1986-11-05', 'password': 'faculty123', 'contact_number': '09890123458', 'role': 'Faculty', 'verified': 1, 'employee_number': 'EMP-2022-028', 'status': 'Active'},
-            {'first_name': 'Prof. Brian', 'last_name': 'Medina', 'email': 'brian.medina@pup.edu.ph', 'birthday': '1991-04-13', 'password': 'faculty123', 'contact_number': '09901234569', 'role': 'Faculty', 'verified': 1, 'employee_number': 'EMP-2024-029', 'status': 'Active'},
-            {'first_name': 'Dr. Laura', 'last_name': 'Sandoval', 'email': 'laura.sandoval@pup.edu.ph', 'birthday': '1984-08-27', 'password': 'faculty123', 'contact_number': '09012345680', 'role': 'Faculty', 'verified': 1, 'employee_number': 'EMP-2021-030', 'status': 'Active'}
+            {'first_name': 'Dr. Amanda', 'last_name': 'Ramos', 'email': 'amanda.ramos@pup.edu.ph', 'birthday': '1986-01-25', 'password': 'faculty123', 'contact_number': '09012345679', 'role': 'Faculty', 'verified': 1, 'employee_number': 'EMP-2022-020', 'status': 'Active'}
         ]
         
         current_time = self.get_current_time()
@@ -122,16 +113,40 @@ class UserSeeder(BaseSeeder):
             """, (user_id, faculty['employee_number']))
     
     def _seed_students(self, conn, student_statuses, section_ids):
-        """Seed 50 students with realistic Philippine names"""
-        # Generate 50 realistic students
+        """Seed students with random students per section using dynamic configuration"""
+        # Get section information
+        cursor = self.execute_query(conn, """
+            SELECT s.id, s.name as section_name, p.name as program_name, p.acronym
+            FROM sections s
+            JOIN programs p ON s.program_id = p.id
+            ORDER BY p.name, s.name
+        """)
+        sections_info = cursor.fetchall()
+        
+        # Create a mapping of section names to section details
+        section_details = {}
+        for section_id, section_name, program_name, program_acronym in sections_info:
+            key = f"{section_name}-{program_name}"
+            section_details[key] = {
+                'id': section_id,
+                'name': section_name,
+                'program': program_name,
+                'acronym': program_acronym
+            }
+        
+        self.logger.info(f"Found {len(section_details)} sections for student assignment")
+        
+        # Filipino names for diversity
         filipino_first_names = [
             # Male names
             'Juan', 'Jose', 'Mark', 'John', 'Miguel', 'Carlo', 'Angelo', 'Paul', 'Christian', 'Rafael',
             'Gabriel', 'Anthony', 'Daniel', 'Joshua', 'Matthew', 'Emmanuel', 'Francis', 'Vincent', 'Leo', 'Adrian',
             'Kenneth', 'Kevin', 'Ryan', 'Jerome', 'Jasper', 'Cedric', 'Ronnie', 'Rodel', 'Arnel', 'Edgar',
+            'Alexander', 'Christopher', 'Patrick', 'Stephen', 'Benjamin', 'Samuel', 'Nathan', 'Jonathan', 'David', 'Andrew',
             # Female names
             'Maria', 'Ana', 'Rose', 'Grace', 'Joy', 'Angel', 'Princess', 'Christine', 'Michelle', 'Sarah',
-            'Angelica', 'Mary', 'Cristina', 'Jennifer', 'Catherine', 'Stephanie', 'Nicole', 'Jessica', 'Patricia', 'Jasmine'
+            'Angelica', 'Mary', 'Cristina', 'Jennifer', 'Catherine', 'Stephanie', 'Nicole', 'Jessica', 'Patricia', 'Jasmine',
+            'Sophia', 'Isabella', 'Emma', 'Olivia', 'Ava', 'Emily', 'Abigail', 'Mia', 'Elizabeth', 'Sofia'
         ]
         
         filipino_last_names = [
@@ -143,83 +158,99 @@ class UserSeeder(BaseSeeder):
         ]
         
         student_data = []
-        section_list = list(section_ids.keys()) if section_ids else ['default']
+        student_counter = 1
         
-        # Get programs for proper section assignment
-        cursor = self.execute_query(conn, """
-            SELECT p.name, s.name as section_name 
-            FROM programs p 
-            JOIN sections s ON p.id = s.program_id
-        """)
-        program_sections = cursor.fetchall()
-        program_section_map = {f"{section}-{program}": program for program, section in program_sections}
+        # Get section size configuration from config
+        min_students = SEEDER_CONFIG['section_size']['min_students']
+        max_students = SEEDER_CONFIG['section_size']['max_students']
         
-        for i in range(1, 51):  # Generate 50 students
-            first_name = random.choice(filipino_first_names)
-            last_name = random.choice(filipino_last_names)
+        # Generate random students for each section using dynamic config
+        for section_key, section_info in section_details.items():
+            section_name = section_info['name']
+            program_name = section_info['program']
+            program_acronym = section_info['acronym']
             
-            # Assign to sections with realistic distribution
-            section_key = random.choice(section_list)
-            program_name = program_section_map.get(section_key, 'Bachelor of Science in Information Technology')
-            section_name = section_key.split('-')[0] + '-' + section_key.split('-')[1] if '-' in section_key else '1-1'
+            # Random number of students per section using config
+            students_in_section = random.randint(min_students, max_students)
             
-            # Generate realistic birth years based on year level
-            year_level = section_name.split('-')[0] if '-' in section_name else '1'
-            if year_level == '1':
-                birth_year = random.randint(2003, 2005)  # 19-21 years old
-            elif year_level == '2':
-                birth_year = random.randint(2002, 2004)  # 20-22 years old  
-            elif year_level == '3':
-                birth_year = random.randint(2001, 2003)  # 21-23 years old
-            else:  # 4th year
-                birth_year = random.randint(2000, 2002)  # 22-24 years old
+            # Extract year level from section name
+            try:
+                year_level = int(section_name.split('-')[0])
+            except:
+                year_level = 1
             
-            birth_month = random.randint(1, 12)
-            birth_day = random.randint(1, 28)
-            birthday = f"{birth_year}-{birth_month:02d}-{birth_day:02d}"
+            self.logger.info(f"Generating {students_in_section} students for {program_acronym} {section_name} (range: {min_students}-{max_students})")
             
-            # Generate realistic status distribution
-            status_weights = [
-                ('Enrolled', 85),     # 85% enrolled
-                ('On Leave', 8),      # 8% on leave
-                ('Suspended', 3),     # 3% suspended
-                ('Graduated', 3),     # 3% graduated (mostly 4th years)
-                ('Dropout', 1)        # 1% dropout
-            ]
-            
-            # Adjust status based on year level
-            if year_level == '4':
-                status_weights = [('Enrolled', 70), ('Graduated', 25), ('On Leave', 3), ('Suspended', 1), ('Dropout', 1)]
-            elif year_level == '1':
-                status_weights = [('Enrolled', 90), ('On Leave', 5), ('Suspended', 3), ('Graduated', 0), ('Dropout', 2)]
-            
-            statuses_list, weights = zip(*status_weights)
-            status = random.choices(statuses_list, weights=weights)[0]
-            
-            student_data.append({
-                'first_name': first_name,
-                'last_name': last_name,
-                'email': f"{first_name.lower()}.{last_name.lower().replace(' ', '')}@iskolarngbayan.pup.edu.ph",
-                'birthday': birthday,
-                'password': 'student123',
-                'contact_number': f"09{random.randint(100000000, 999999999)}",
-                'role': 'Student',
-                'verified': 1,
-                'student_number': f"2024-{i:04d}",
-                'section': section_key,
-                'status': status
-            })
+            for i in range(students_in_section):
+                first_name = random.choice(filipino_first_names)
+                last_name = random.choice(filipino_last_names)
+                
+                # Generate realistic birth years based on year level
+                if year_level == 1:
+                    birth_year = random.randint(2003, 2005)  # 19-21 years old
+                elif year_level == 2:
+                    birth_year = random.randint(2002, 2004)  # 20-22 years old  
+                elif year_level == 3:
+                    birth_year = random.randint(2001, 2003)  # 21-23 years old
+                else:  # 4th year
+                    birth_year = random.randint(2000, 2002)  # 22-24 years old
+                
+                birth_month = random.randint(1, 12)
+                birth_day = random.randint(1, 28)
+                birthday = f"{birth_year}-{birth_month:02d}-{birth_day:02d}"
+                
+                # Generate realistic status distribution
+                status_weights = [
+                    ('Enrolled', 85),     # 85% enrolled
+                    ('On Leave', 8),      # 8% on leave
+                    ('Suspended', 3),     # 3% suspended
+                    ('Graduated', 3),     # 3% graduated (mostly 4th years)
+                    ('Dropout', 1)        # 1% dropout
+                ]
+                
+                # Adjust status based on year level
+                if year_level == 4:
+                    status_weights = [('Enrolled', 70), ('Graduated', 25), ('On Leave', 3), ('Suspended', 1), ('Dropout', 1)]
+                elif year_level == 1:
+                    status_weights = [('Enrolled', 90), ('On Leave', 5), ('Suspended', 3), ('Graduated', 0), ('Dropout', 2)]
+                
+                statuses_list, weights = zip(*status_weights)
+                status = random.choices(statuses_list, weights=weights)[0]
+                
+                # Generate unique student number
+                student_number = f"2024-{student_counter:04d}"
+                student_counter += 1
+                
+                student_data.append({
+                    'first_name': first_name,
+                    'last_name': last_name,
+                    'email': f"{first_name.lower()}.{last_name.lower().replace(' ', '')}@iskolarngbayan.pup.edu.ph",
+                    'birthday': birthday,
+                    'password': 'student123',
+                    'contact_number': f"09{random.randint(100000000, 999999999)}",
+                    'role': 'Student',
+                    'verified': 1,
+                    'student_number': student_number,
+                    'section_key': section_key,
+                    'section_id': section_info['id'],
+                    'status': status
+                })
         
-        # Add key students from the original data
+        # Add some key students from the original data
         key_students = [
-            {'first_name': 'Shadrack', 'last_name': 'Castro', 'email': 'shadrack.castro@iskolarngbayan.pup.edu.ph', 'birthday': '2002-05-10', 'password': 'student123', 'contact_number': '09456789012', 'role': 'Student', 'verified': 1, 'student_number': '2024-KEY001', 'section': list(section_ids.keys())[0] if section_ids else 'default', 'status': 'Enrolled'},
-            {'first_name': 'Jerlee', 'last_name': 'Alipio', 'email': 'jerlee.alipio@iskolarngbayan.pup.edu.ph', 'birthday': '2001-09-18', 'password': 'student123', 'contact_number': '09567890123', 'role': 'Student', 'verified': 1, 'student_number': '2024-KEY002', 'section': list(section_ids.keys())[1] if len(section_ids) > 1 else list(section_ids.keys())[0] if section_ids else 'default', 'status': 'Enrolled'},
-            {'first_name': 'Steven', 'last_name': 'Masangcay', 'email': 'steven.masangcay@iskolarngbayan.pup.edu.ph', 'birthday': '2000-12-25', 'password': 'student123', 'contact_number': '09678901234', 'role': 'Student', 'verified': 1, 'student_number': '2024-KEY003', 'section': list(section_ids.keys())[2] if len(section_ids) > 2 else list(section_ids.keys())[0] if section_ids else 'default', 'status': 'Enrolled'},
-            {'first_name': 'John Mathew', 'last_name': 'Parocha', 'email': 'john.parocha@iskolarngbayan.pup.edu.ph', 'birthday': '1999-08-14', 'password': 'student123', 'contact_number': '09789012345', 'role': 'Student', 'verified': 1, 'student_number': '2024-KEY004', 'section': list(section_ids.keys())[3] if len(section_ids) > 3 else list(section_ids.keys())[0] if section_ids else 'default', 'status': 'Graduated'}
+            {'first_name': 'Shadrack', 'last_name': 'Castro', 'email': 'shadrack.castro@iskolarngbayan.pup.edu.ph', 'birthday': '2002-05-10', 'password': 'student123', 'contact_number': '09456789012', 'role': 'Student', 'verified': 1, 'student_number': '2024-KEY001', 'section_key': list(section_details.keys())[0], 'section_id': list(section_details.values())[0]['id'], 'status': 'Enrolled'},
+            {'first_name': 'Jerlee', 'last_name': 'Alipio', 'email': 'jerlee.alipio@iskolarngbayan.pup.edu.ph', 'birthday': '2001-09-18', 'password': 'student123', 'contact_number': '09567890123', 'role': 'Student', 'verified': 1, 'student_number': '2024-KEY002', 'section_key': list(section_details.keys())[1] if len(section_details) > 1 else list(section_details.keys())[0], 'section_id': list(section_details.values())[1]['id'] if len(section_details) > 1 else list(section_details.values())[0]['id'], 'status': 'Enrolled'},
+            {'first_name': 'Steven', 'last_name': 'Masangcay', 'email': 'steven.masangcay@iskolarngbayan.pup.edu.ph', 'birthday': '2000-12-25', 'password': 'student123', 'contact_number': '09678901234', 'role': 'Student', 'verified': 1, 'student_number': '2024-KEY003', 'section_key': list(section_details.keys())[2] if len(section_details) > 2 else list(section_details.keys())[0], 'section_id': list(section_details.values())[2]['id'] if len(section_details) > 2 else list(section_details.values())[0]['id'], 'status': 'Enrolled'},
+            {'first_name': 'John Mathew', 'last_name': 'Parocha', 'email': 'john.parocha@iskolarngbayan.pup.edu.ph', 'birthday': '1999-08-14', 'password': 'student123', 'contact_number': '09789012345', 'role': 'Student', 'verified': 1, 'student_number': '2024-KEY004', 'section_key': list(section_details.keys())[3] if len(section_details) > 3 else list(section_details.keys())[0], 'section_id': list(section_details.values())[3]['id'] if len(section_details) > 3 else list(section_details.values())[0]['id'], 'status': 'Graduated'}
         ]
+        
+        total_students = len(student_data)
+        self.logger.info(f"Generated {total_students} students across all sections ({min_students}-{max_students} per section)")
         
         all_students = student_data + key_students
         current_time = self.get_current_time()
+        
+        self.logger.info(f"Inserting {len(all_students)} students into database")
         
         for student in all_students:
             # Check if exists
@@ -247,8 +278,8 @@ class UserSeeder(BaseSeeder):
             user_id = cursor.lastrowid
             
             # Insert into students table
-            section_id = section_ids.get(student['section'])
-            
             self.execute_query(conn, """
                 INSERT INTO students (user_id, student_number, section) VALUES (?, ?, ?)
-            """, (user_id, student['student_number'], section_id))
+            """, (user_id, student['student_number'], student['section_id']))
+        
+        self.logger.info(f"Successfully created {len(all_students)} students across all sections with variable counts ({min_students}-{max_students} per section)")

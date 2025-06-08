@@ -304,7 +304,7 @@ print("- Superadmin account (admin@iskolarngbayan.pup.edu.ph / admin123)")
 
 # Ask user if they want to run comprehensive seeding
 print("\n" + "="*60)
-user_input = input("Do you want to run comprehensive seeding now? (y/N): ").strip().lower()
+user_input = input("Do you want to run comprehensive seeding now? (Y/N): ").strip().lower()
 
 if user_input in ['y', 'yes']:
     seeding_success = run_comprehensive_seeding()

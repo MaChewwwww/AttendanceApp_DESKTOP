@@ -1,7 +1,7 @@
 import random
 from datetime import datetime
 from .base_seeder import BaseSeeder
-from .config import SEEDER_CONFIG
+from .config import SEEDER_CONFIG, get_current_semester, get_academic_year, get_academic_years_to_generate
 
 class CourseAssignmentSeeder(BaseSeeder):
     """Seeder for course assignments and schedules"""
@@ -43,14 +43,14 @@ class CourseAssignmentSeeder(BaseSeeder):
             return False, []
     
     def _create_comprehensive_courses(self, conn):
-        """Create a comprehensive set of courses for all programs and year levels"""
+        """Create a comprehensive set of courses for 2 programs with summer only in 3rd year"""
         current_time = self.get_current_time()
         
         # Get all programs
         cursor = self.execute_query(conn, "SELECT id, name, acronym FROM programs")
         programs = cursor.fetchall()
         
-        # Define comprehensive course structure for all programs
+        # Define comprehensive course structure for 2 programs only
         course_structure = {
             'Bachelor of Science in Information Technology': {
                 1: {
@@ -59,18 +59,16 @@ class CourseAssignmentSeeder(BaseSeeder):
                         {'name': 'Programming Fundamentals', 'code': 'IT-1102', 'description': 'Basic programming concepts and logic'},
                         {'name': 'Computer Hardware Fundamentals', 'code': 'IT-1103', 'description': 'Computer components and assembly'},
                         {'name': 'Mathematics in the Modern World', 'code': 'GE-1101', 'description': 'Applied mathematics for IT'},
-                        {'name': 'Understanding the Self', 'code': 'GE-1102', 'description': 'Personal development course'}
+                        {'name': 'Understanding the Self', 'code': 'GE-1102', 'description': 'Personal development course'},
+                        {'name': 'Readings in Philippine History', 'code': 'GE-1103', 'description': 'Philippine historical perspectives'}
                     ],
                     '2nd Semester': [
                         {'name': 'Object-Oriented Programming', 'code': 'IT-1201', 'description': 'Object-oriented programming principles'},
                         {'name': 'Discrete Mathematics', 'code': 'IT-1202', 'description': 'Mathematical foundations for computing'},
                         {'name': 'Web Systems and Technologies', 'code': 'IT-1203', 'description': 'Web development fundamentals'},
                         {'name': 'Purposive Communication', 'code': 'GE-1201', 'description': 'Communication skills development'},
-                        {'name': 'Art Appreciation', 'code': 'GE-1202', 'description': 'Arts and culture appreciation'}
-                    ],
-                    'Summer': [
-                        {'name': 'National Service Training Program', 'code': 'NSTP-1', 'description': 'Civic welfare training service'},
-                        {'name': 'Physical Education 1', 'code': 'PE-1', 'description': 'Physical fitness and wellness'}
+                        {'name': 'Art Appreciation', 'code': 'GE-1202', 'description': 'Arts and culture appreciation'},
+                        {'name': 'Physical Education 1', 'code': 'PE-1201', 'description': 'Physical fitness and wellness'}
                     ]
                 },
                 2: {
@@ -79,18 +77,16 @@ class CourseAssignmentSeeder(BaseSeeder):
                         {'name': 'Database Management Systems', 'code': 'IT-2102', 'description': 'Database design and implementation'},
                         {'name': 'Computer Networks', 'code': 'IT-2103', 'description': 'Network fundamentals and protocols'},
                         {'name': 'Statistics and Probability', 'code': 'IT-2104', 'description': 'Statistical analysis for IT applications'},
-                        {'name': 'Ethics', 'code': 'GE-2101', 'description': 'Moral and ethical foundations'}
+                        {'name': 'Ethics', 'code': 'GE-2101', 'description': 'Moral and ethical foundations'},
+                        {'name': 'National Service Training Program 1', 'code': 'NSTP-2101', 'description': 'Civic welfare training service'}
                     ],
                     '2nd Semester': [
                         {'name': 'Advanced Database Systems', 'code': 'IT-2201', 'description': 'Advanced database concepts and optimization'},
                         {'name': 'Software Engineering', 'code': 'IT-2202', 'description': 'Software development methodologies'},
                         {'name': 'Network Administration', 'code': 'IT-2203', 'description': 'Network management and security'},
                         {'name': 'Human Computer Interaction', 'code': 'IT-2204', 'description': 'User interface design principles'},
-                        {'name': 'Science, Technology and Society', 'code': 'GE-2201', 'description': 'Impact of technology on society'}
-                    ],
-                    'Summer': [
-                        {'name': 'Physical Education 2', 'code': 'PE-2', 'description': 'Advanced physical fitness'},
-                        {'name': 'Technical Writing', 'code': 'IT-2301', 'description': 'Technical documentation skills'}
+                        {'name': 'Science, Technology and Society', 'code': 'GE-2201', 'description': 'Impact of technology on society'},
+                        {'name': 'Physical Education 2', 'code': 'PE-2201', 'description': 'Advanced physical fitness'}
                     ]
                 },
                 3: {
@@ -99,298 +95,116 @@ class CourseAssignmentSeeder(BaseSeeder):
                         {'name': 'System Analysis and Design', 'code': 'IT-3102', 'description': 'System development lifecycle and design patterns'},
                         {'name': 'Mobile Application Development', 'code': 'IT-3103', 'description': 'Mobile app development for Android and iOS'},
                         {'name': 'Information Security', 'code': 'IT-3104', 'description': 'Cybersecurity principles and practices'},
-                        {'name': 'Life and Works of Rizal', 'code': 'GE-3101', 'description': 'Philippine national hero study'}
+                        {'name': 'Life and Works of Rizal', 'code': 'GE-3101', 'description': 'Philippine national hero study'},
+                        {'name': 'Technical Writing', 'code': 'IT-3105', 'description': 'Technical documentation and communication'}
                     ],
                     '2nd Semester': [
                         {'name': 'Advanced Web Development', 'code': 'IT-3201', 'description': 'Full-stack web development with modern frameworks'},
                         {'name': 'Cloud Computing', 'code': 'IT-3202', 'description': 'Cloud platforms and services'},
                         {'name': 'Data Mining and Analytics', 'code': 'IT-3203', 'description': 'Big data analysis and visualization'},
                         {'name': 'Project Management', 'code': 'IT-3204', 'description': 'IT project planning and execution'},
-                        {'name': 'Contemporary World', 'code': 'GE-3201', 'description': 'Global issues and perspectives'}
+                        {'name': 'Contemporary World', 'code': 'GE-3201', 'description': 'Global issues and perspectives'},
+                        {'name': 'Research Methods in IT', 'code': 'IT-3205', 'description': 'Research methodology for information technology'}
                     ],
                     'Summer': [
-                        {'name': 'Internship/OJT', 'code': 'IT-3301', 'description': 'Industry training and experience'},
-                        {'name': 'Research Methods', 'code': 'IT-3302', 'description': 'Research methodology for IT'}
+                        {'name': 'Internship/On-the-Job Training', 'code': 'IT-3301', 'description': 'Industry training and practical experience'},
+                        {'name': 'IT Practicum', 'code': 'IT-3302', 'description': 'Hands-on IT practice and application'}
                     ]
                 },
                 4: {
                     '1st Semester': [
-                        {'name': 'Capstone Project 1', 'code': 'IT-4101', 'description': 'Senior capstone project development'},
+                        {'name': 'Capstone Project 1', 'code': 'IT-4101', 'description': 'Senior capstone project development and planning'},
                         {'name': 'IT Service Management', 'code': 'IT-4102', 'description': 'ITIL and service management frameworks'},
-                        {'name': 'Enterprise Architecture', 'code': 'IT-4103', 'description': 'Enterprise-level system design'},
-                        {'name': 'IT Elective 1', 'code': 'IT-4104', 'description': 'Specialized IT track course'},
-                        {'name': 'Reading in Philippine History', 'code': 'GE-4101', 'description': 'Philippine historical perspectives'}
+                        {'name': 'Enterprise Architecture', 'code': 'IT-4103', 'description': 'Enterprise-level system design and architecture'},
+                        {'name': 'Advanced Database Administration', 'code': 'IT-4104', 'description': 'Database optimization and administration'},
+                        {'name': 'IT Elective 1 - DevOps', 'code': 'IT-4105', 'description': 'Development and operations integration'},
+                        {'name': 'Gender and Society', 'code': 'GE-4101', 'description': 'Gender studies and social awareness'}
                     ],
                     '2nd Semester': [
-                        {'name': 'Capstone Project 2', 'code': 'IT-4201', 'description': 'Senior capstone project completion'},
-                        {'name': 'IT Governance and Strategy', 'code': 'IT-4202', 'description': 'Strategic IT management'},
-                        {'name': 'Emerging Technologies', 'code': 'IT-4203', 'description': 'Latest trends in technology'},
-                        {'name': 'IT Elective 2', 'code': 'IT-4204', 'description': 'Advanced specialized IT course'},
-                        {'name': 'Gender and Society', 'code': 'GE-4201', 'description': 'Gender studies and social issues'}
+                        {'name': 'Capstone Project 2', 'code': 'IT-4201', 'description': 'Senior capstone project implementation and completion'},
+                        {'name': 'IT Governance and Strategy', 'code': 'IT-4202', 'description': 'Strategic IT management and governance'},
+                        {'name': 'Emerging Technologies', 'code': 'IT-4203', 'description': 'Latest trends and innovations in technology'},
+                        {'name': 'Advanced Cybersecurity', 'code': 'IT-4204', 'description': 'Advanced information security and ethical hacking'},
+                        {'name': 'IT Elective 2 - Blockchain Technology', 'code': 'IT-4205', 'description': 'Blockchain development and applications'},
+                        {'name': 'Professional Development and Ethics', 'code': 'IT-4206', 'description': 'Professional skills and ethical practices in IT'}
                     ]
                 }
             },
             'Bachelor of Science in Computer Science': {
                 1: {
                     '1st Semester': [
-                        {'name': 'Introduction to Programming', 'code': 'CS-1101', 'description': 'Basic programming fundamentals'},
-                        {'name': 'Calculus 1', 'code': 'CS-1102', 'description': 'Differential calculus'},
-                        {'name': 'Discrete Mathematics 1', 'code': 'CS-1103', 'description': 'Logic and set theory'},
-                        {'name': 'Computer Fundamentals', 'code': 'CS-1104', 'description': 'Basic computer systems'},
-                        {'name': 'Understanding the Self', 'code': 'GE-1101', 'description': 'Personal development'}
+                        {'name': 'Introduction to Programming', 'code': 'CS-1101', 'description': 'Basic programming fundamentals and problem solving'},
+                        {'name': 'Calculus 1', 'code': 'CS-1102', 'description': 'Differential calculus for computer science'},
+                        {'name': 'Discrete Mathematics 1', 'code': 'CS-1103', 'description': 'Logic, sets, and mathematical reasoning'},
+                        {'name': 'Computer Fundamentals', 'code': 'CS-1104', 'description': 'Basic computer concepts and digital literacy'},
+                        {'name': 'Understanding the Self', 'code': 'GE-1101', 'description': 'Personal development and self-awareness'},
+                        {'name': 'Readings in Philippine History', 'code': 'GE-1103', 'description': 'Philippine historical perspectives'}
                     ],
                     '2nd Semester': [
-                        {'name': 'Programming Languages', 'code': 'CS-1201', 'description': 'Multiple programming paradigms'},
-                        {'name': 'Calculus 2', 'code': 'CS-1202', 'description': 'Integral calculus'},
-                        {'name': 'Discrete Mathematics 2', 'code': 'CS-1203', 'description': 'Graph theory and combinatorics'},
-                        {'name': 'Physics for Computer Science', 'code': 'CS-1204', 'description': 'Applied physics concepts'},
-                        {'name': 'Purposive Communication', 'code': 'GE-1201', 'description': 'Advanced communication skills'}
+                        {'name': 'Programming Languages', 'code': 'CS-1201', 'description': 'Multiple programming paradigms and languages'},
+                        {'name': 'Calculus 2', 'code': 'CS-1202', 'description': 'Integral calculus and applications'},
+                        {'name': 'Discrete Mathematics 2', 'code': 'CS-1203', 'description': 'Graph theory, combinatorics, and probability'},
+                        {'name': 'Physics for Computer Science', 'code': 'CS-1204', 'description': 'Applied physics concepts for computing'},
+                        {'name': 'Purposive Communication', 'code': 'GE-1201', 'description': 'Advanced communication skills'},
+                        {'name': 'Physical Education 1', 'code': 'PE-1201', 'description': 'Physical fitness and wellness'}
                     ]
                 },
                 2: {
                     '1st Semester': [
-                        {'name': 'Data Structures', 'code': 'CS-2101', 'description': 'Abstract data types and structures'},
-                        {'name': 'Computer Organization', 'code': 'CS-2102', 'description': 'Computer architecture fundamentals'},
-                        {'name': 'Linear Algebra', 'code': 'CS-2103', 'description': 'Mathematical foundations for CS'},
-                        {'name': 'Statistics for Computer Science', 'code': 'CS-2104', 'description': 'Statistical methods in computing'},
-                        {'name': 'Ethics', 'code': 'GE-2101', 'description': 'Computer ethics and morality'}
+                        {'name': 'Data Structures', 'code': 'CS-2101', 'description': 'Abstract data types and algorithmic structures'},
+                        {'name': 'Computer Organization and Architecture', 'code': 'CS-2102', 'description': 'Computer hardware and system architecture'},
+                        {'name': 'Linear Algebra', 'code': 'CS-2103', 'description': 'Mathematical foundations for computer graphics and ML'},
+                        {'name': 'Statistics for Computer Science', 'code': 'CS-2104', 'description': 'Statistical methods and data analysis'},
+                        {'name': 'Ethics in Computing', 'code': 'GE-2101', 'description': 'Computer ethics and professional responsibility'},
+                        {'name': 'National Service Training Program 1', 'code': 'NSTP-2101', 'description': 'Civic welfare and community service'}
                     ],
                     '2nd Semester': [
-                        {'name': 'Algorithms', 'code': 'CS-2201', 'description': 'Algorithm design and analysis'},
-                        {'name': 'Operating Systems', 'code': 'CS-2202', 'description': 'OS concepts and implementation'},
-                        {'name': 'Database Systems', 'code': 'CS-2203', 'description': 'Database theory and implementation'},
-                        {'name': 'Software Engineering 1', 'code': 'CS-2204', 'description': 'Software development processes'},
-                        {'name': 'Science, Technology and Society', 'code': 'GE-2201', 'description': 'Technology impact on society'}
+                        {'name': 'Algorithms and Complexity', 'code': 'CS-2201', 'description': 'Algorithm design, analysis, and computational complexity'},
+                        {'name': 'Operating Systems', 'code': 'CS-2202', 'description': 'OS concepts, processes, and system management'},
+                        {'name': 'Database Systems', 'code': 'CS-2203', 'description': 'Database theory, design, and implementation'},
+                        {'name': 'Software Engineering 1', 'code': 'CS-2204', 'description': 'Software development processes and methodologies'},
+                        {'name': 'Science, Technology and Society', 'code': 'GE-2201', 'description': 'Impact of technology on society'},
+                        {'name': 'Physical Education 2', 'code': 'PE-2201', 'description': 'Advanced physical fitness and sports'}
                     ]
                 },
                 3: {
                     '1st Semester': [
-                        {'name': 'Machine Learning', 'code': 'CS-3101', 'description': 'ML algorithms and statistical learning'},
-                        {'name': 'Computer Networks', 'code': 'CS-3102', 'description': 'Network protocols and architecture'},
-                        {'name': 'Theory of Computation', 'code': 'CS-3103', 'description': 'Formal languages and automata'},
-                        {'name': 'Computer Graphics', 'code': 'CS-3104', 'description': 'Graphics programming and visualization'},
-                        {'name': 'Life and Works of Rizal', 'code': 'GE-3101', 'description': 'Philippine national hero'}
+                        {'name': 'Machine Learning', 'code': 'CS-3101', 'description': 'ML algorithms, statistical learning, and data mining'},
+                        {'name': 'Computer Networks', 'code': 'CS-3102', 'description': 'Network protocols, architecture, and security'},
+                        {'name': 'Theory of Computation', 'code': 'CS-3103', 'description': 'Formal languages, automata, and computability'},
+                        {'name': 'Computer Graphics', 'code': 'CS-3104', 'description': 'Graphics programming and 3D visualization'},
+                        {'name': 'Life and Works of Rizal', 'code': 'GE-3101', 'description': 'Study of Philippine national hero'},
+                        {'name': 'Software Engineering 2', 'code': 'CS-3105', 'description': 'Advanced software engineering and project management'}
                     ],
                     '2nd Semester': [
-                        {'name': 'Artificial Intelligence', 'code': 'CS-3201', 'description': 'AI principles and applications'},
-                        {'name': 'Software Engineering 2', 'code': 'CS-3202', 'description': 'Advanced software engineering'},
-                        {'name': 'Compiler Design', 'code': 'CS-3203', 'description': 'Language processors and compilers'},
-                        {'name': 'Human-Computer Interaction', 'code': 'CS-3204', 'description': 'UI/UX design principles'},
-                        {'name': 'Contemporary World', 'code': 'GE-3201', 'description': 'Global perspectives'}
+                        {'name': 'Artificial Intelligence', 'code': 'CS-3201', 'description': 'AI principles, search algorithms, and knowledge representation'},
+                        {'name': 'Compiler Design', 'code': 'CS-3202', 'description': 'Language processors, parsers, and code generation'},
+                        {'name': 'Human-Computer Interaction', 'code': 'CS-3203', 'description': 'UI/UX design principles and usability'},
+                        {'name': 'Advanced Database Systems', 'code': 'CS-3204', 'description': 'Distributed databases and data warehousing'},
+                        {'name': 'Contemporary World', 'code': 'GE-3201', 'description': 'Global perspectives and international relations'},
+                        {'name': 'Research Methods in Computer Science', 'code': 'CS-3205', 'description': 'Scientific research methodology and technical writing'}
+                    ],
+                    'Summer': [
+                        {'name': 'CS Practicum', 'code': 'CS-3301', 'description': 'Hands-on computer science practice and application'},
+                        {'name': 'Industry Immersion', 'code': 'CS-3302', 'description': 'Real-world CS experience in industry settings'}
                     ]
                 },
                 4: {
                     '1st Semester': [
-                        {'name': 'Thesis 1', 'code': 'CS-4101', 'description': 'Research thesis development'},
-                        {'name': 'Parallel and Distributed Computing', 'code': 'CS-4102', 'description': 'Concurrent programming'},
-                        {'name': 'Information Security', 'code': 'CS-4103', 'description': 'Cryptography and security'},
-                        {'name': 'CS Elective 1', 'code': 'CS-4104', 'description': 'Specialized CS track'},
-                        {'name': 'Reading in Philippine History', 'code': 'GE-4101', 'description': 'Philippine history'}
+                        {'name': 'Thesis 1', 'code': 'CS-4101', 'description': 'Research thesis development and proposal'},
+                        {'name': 'Parallel and Distributed Computing', 'code': 'CS-4102', 'description': 'Concurrent programming and distributed systems'},
+                        {'name': 'Information Security and Cryptography', 'code': 'CS-4103', 'description': 'Advanced security and cryptographic algorithms'},
+                        {'name': 'Advanced Algorithms', 'code': 'CS-4104', 'description': 'Complex algorithmic techniques and optimization'},
+                        {'name': 'CS Elective 1 - Computer Vision', 'code': 'CS-4105', 'description': 'Image processing and computer vision algorithms'},
+                        {'name': 'Gender and Society', 'code': 'GE-4101', 'description': 'Gender studies and social equality'}
                     ],
                     '2nd Semester': [
-                        {'name': 'Thesis 2', 'code': 'CS-4201', 'description': 'Research thesis completion'},
-                        {'name': 'Software Project Management', 'code': 'CS-4202', 'description': 'Managing software projects'},
-                        {'name': 'Advanced Algorithms', 'code': 'CS-4203', 'description': 'Complex algorithmic techniques'},
-                        {'name': 'CS Elective 2', 'code': 'CS-4204', 'description': 'Advanced specialized course'},
-                        {'name': 'Gender and Society', 'code': 'GE-4201', 'description': 'Gender studies'}
-                    ]
-                }
-            },
-            'Bachelor of Science in Information Systems': {
-                1: {
-                    '1st Semester': [
-                        {'name': 'Introduction to Information Systems', 'code': 'IS-1101', 'description': 'Fundamentals of information systems'},
-                        {'name': 'Business Mathematics', 'code': 'IS-1102', 'description': 'Mathematical foundations for business'},
-                        {'name': 'Computer Fundamentals', 'code': 'IS-1103', 'description': 'Basic computer concepts'},
-                        {'name': 'Accounting Principles', 'code': 'IS-1104', 'description': 'Basic accounting concepts'},
-                        {'name': 'Understanding the Self', 'code': 'GE-1101', 'description': 'Personal development'}
-                    ],
-                    '2nd Semester': [
-                        {'name': 'Programming for Business', 'code': 'IS-1201', 'description': 'Business-oriented programming'},
-                        {'name': 'Microeconomics', 'code': 'IS-1202', 'description': 'Economic principles'},
-                        {'name': 'Statistics for Business', 'code': 'IS-1203', 'description': 'Business statistics'},
-                        {'name': 'Management Concepts', 'code': 'IS-1204', 'description': 'Basic management principles'},
-                        {'name': 'Purposive Communication', 'code': 'GE-1201', 'description': 'Communication skills'}
-                    ]
-                },
-                2: {
-                    '1st Semester': [
-                        {'name': 'Database Systems', 'code': 'IS-2101', 'description': 'Database design and management'},
-                        {'name': 'Systems Analysis and Design', 'code': 'IS-2102', 'description': 'System development lifecycle'},
-                        {'name': 'Business Process Management', 'code': 'IS-2103', 'description': 'Process optimization'},
-                        {'name': 'Financial Management', 'code': 'IS-2104', 'description': 'Corporate finance'},
-                        {'name': 'Ethics', 'code': 'GE-2101', 'description': 'Business ethics'}
-                    ],
-                    '2nd Semester': [
-                        {'name': 'Enterprise Resource Planning', 'code': 'IS-2201', 'description': 'ERP systems'},
-                        {'name': 'Web Development for Business', 'code': 'IS-2202', 'description': 'Business web applications'},
-                        {'name': 'Operations Management', 'code': 'IS-2203', 'description': 'Business operations'},
-                        {'name': 'Marketing Management', 'code': 'IS-2204', 'description': 'Marketing principles'},
-                        {'name': 'Science, Technology and Society', 'code': 'GE-2201', 'description': 'Technology impact'}
-                    ]
-                },
-                3: {
-                    '1st Semester': [
-                        {'name': 'Business Intelligence', 'code': 'IS-3101', 'description': 'Data analytics for business'},
-                        {'name': 'IT Project Management', 'code': 'IS-3102', 'description': 'Managing IT projects'},
-                        {'name': 'E-Commerce Systems', 'code': 'IS-3103', 'description': 'Online business systems'},
-                        {'name': 'Strategic Management', 'code': 'IS-3104', 'description': 'Business strategy'},
-                        {'name': 'Life and Works of Rizal', 'code': 'GE-3101', 'description': 'Philippine history'}
-                    ],
-                    '2nd Semester': [
-                        {'name': 'Information Security Management', 'code': 'IS-3201', 'description': 'Security in business'},
-                        {'name': 'Supply Chain Management', 'code': 'IS-3202', 'description': 'Supply chain optimization'},
-                        {'name': 'Customer Relationship Management', 'code': 'IS-3203', 'description': 'CRM systems'},
-                        {'name': 'Quality Management', 'code': 'IS-3204', 'description': 'Quality assurance'},
-                        {'name': 'Contemporary World', 'code': 'GE-3201', 'description': 'Global perspectives'}
-                    ]
-                },
-                4: {
-                    '1st Semester': [
-                        {'name': 'Capstone Project 1', 'code': 'IS-4101', 'description': 'Senior project development'},
-                        {'name': 'IT Governance', 'code': 'IS-4102', 'description': 'IT governance frameworks'},
-                        {'name': 'Business Analytics', 'code': 'IS-4103', 'description': 'Advanced analytics'},
-                        {'name': 'IS Elective 1', 'code': 'IS-4104', 'description': 'Specialized IS course'},
-                        {'name': 'Reading in Philippine History', 'code': 'GE-4101', 'description': 'Philippine history'}
-                    ],
-                    '2nd Semester': [
-                        {'name': 'Capstone Project 2', 'code': 'IS-4201', 'description': 'Senior project completion'},
-                        {'name': 'Enterprise Architecture', 'code': 'IS-4202', 'description': 'Enterprise system design'},
-                        {'name': 'Digital Transformation', 'code': 'IS-4203', 'description': 'Business digitalization'},
-                        {'name': 'IS Elective 2', 'code': 'IS-4204', 'description': 'Advanced specialized course'},
-                        {'name': 'Gender and Society', 'code': 'GE-4201', 'description': 'Gender studies'}
-                    ]
-                }
-            },
-            'Bachelor of Science in Computer Engineering': {
-                1: {
-                    '1st Semester': [
-                        {'name': 'Engineering Drawing', 'code': 'CPE-1101', 'description': 'Technical drawing fundamentals'},
-                        {'name': 'Engineering Mathematics 1', 'code': 'CPE-1102', 'description': 'Advanced mathematics'},
-                        {'name': 'Physics 1', 'code': 'CPE-1103', 'description': 'Mechanics and thermodynamics'},
-                        {'name': 'Chemistry for Engineers', 'code': 'CPE-1104', 'description': 'Applied chemistry'},
-                        {'name': 'Understanding the Self', 'code': 'GE-1101', 'description': 'Personal development'}
-                    ],
-                    '2nd Semester': [
-                        {'name': 'Computer Programming 1', 'code': 'CPE-1201', 'description': 'Programming fundamentals'},
-                        {'name': 'Engineering Mathematics 2', 'code': 'CPE-1202', 'description': 'Differential equations'},
-                        {'name': 'Physics 2', 'code': 'CPE-1203', 'description': 'Electricity and magnetism'},
-                        {'name': 'Materials Science', 'code': 'CPE-1204', 'description': 'Engineering materials'},
-                        {'name': 'Purposive Communication', 'code': 'GE-1201', 'description': 'Communication skills'}
-                    ]
-                },
-                2: {
-                    '1st Semester': [
-                        {'name': 'Digital Logic Design', 'code': 'CPE-2101', 'description': 'Digital circuits and logic'},
-                        {'name': 'Circuit Analysis', 'code': 'CPE-2102', 'description': 'Electrical circuit fundamentals'},
-                        {'name': 'Data Structures and Algorithms', 'code': 'CPE-2103', 'description': 'Programming data structures'},
-                        {'name': 'Engineering Statistics', 'code': 'CPE-2104', 'description': 'Statistical analysis'},
-                        {'name': 'Ethics', 'code': 'GE-2101', 'description': 'Engineering ethics'}
-                    ],
-                    '2nd Semester': [
-                        {'name': 'Microprocessors and Microcontrollers', 'code': 'CPE-2201', 'description': 'Embedded systems'},
-                        {'name': 'Electronics Circuits', 'code': 'CPE-2202', 'description': 'Electronic circuit design'},
-                        {'name': 'Object-Oriented Programming', 'code': 'CPE-2203', 'description': 'OOP concepts'},
-                        {'name': 'Signals and Systems', 'code': 'CPE-2204', 'description': 'Signal processing'},
-                        {'name': 'Science, Technology and Society', 'code': 'GE-2201', 'description': 'Technology impact'}
-                    ]
-                },
-                3: {
-                    '1st Semester': [
-                        {'name': 'Computer Architecture', 'code': 'CPE-3101', 'description': 'Computer system design'},
-                        {'name': 'Operating Systems', 'code': 'CPE-3102', 'description': 'OS concepts'},
-                        {'name': 'Communication Systems', 'code': 'CPE-3103', 'description': 'Data communication'},
-                        {'name': 'Control Systems', 'code': 'CPE-3104', 'description': 'Automatic control'},
-                        {'name': 'Life and Works of Rizal', 'code': 'GE-3101', 'description': 'Philippine history'}
-                    ],
-                    '2nd Semester': [
-                        {'name': 'VLSI Design', 'code': 'CPE-3201', 'description': 'VLSI circuit design'},
-                        {'name': 'Computer Networks', 'code': 'CPE-3202', 'description': 'Network systems'},
-                        {'name': 'Digital Signal Processing', 'code': 'CPE-3203', 'description': 'Signal processing'},
-                        {'name': 'Software Engineering', 'code': 'CPE-3204', 'description': 'Software development'},
-                        {'name': 'Contemporary World', 'code': 'GE-3201', 'description': 'Global perspectives'}
-                    ]
-                },
-                4: {
-                    '1st Semester': [
-                        {'name': 'Design Project 1', 'code': 'CPE-4101', 'description': 'Senior design project'},
-                        {'name': 'Embedded Systems Design', 'code': 'CPE-4102', 'description': 'Advanced embedded systems'},
-                        {'name': 'Computer Engineering Elective 1', 'code': 'CPE-4103', 'description': 'Specialized CPE course'},
-                        {'name': 'Engineering Management', 'code': 'CPE-4104', 'description': 'Engineering leadership'},
-                        {'name': 'Reading in Philippine History', 'code': 'GE-4101', 'description': 'Philippine history'}
-                    ],
-                    '2nd Semester': [
-                        {'name': 'Design Project 2', 'code': 'CPE-4201', 'description': 'Senior design completion'},
-                        {'name': 'Computer Engineering Elective 2', 'code': 'CPE-4202', 'description': 'Advanced specialized course'},
-                        {'name': 'Professional Ethics and Law', 'code': 'CPE-4203', 'description': 'Professional ethics'},
-                        {'name': 'Technopreneurship', 'code': 'CPE-4204', 'description': 'Technology entrepreneurship'},
-                        {'name': 'Gender and Society', 'code': 'GE-4201', 'description': 'Gender studies'}
-                    ]
-                }
-            },
-            'Bachelor of Science in Software Engineering': {
-                1: {
-                    '1st Semester': [
-                        {'name': 'Introduction to Software Engineering', 'code': 'SE-1101', 'description': 'Software engineering fundamentals'},
-                        {'name': 'Programming Fundamentals', 'code': 'SE-1102', 'description': 'Basic programming'},
-                        {'name': 'Discrete Mathematics', 'code': 'SE-1103', 'description': 'Mathematical foundations'},
-                        {'name': 'Technical Communication', 'code': 'SE-1104', 'description': 'Technical writing'},
-                        {'name': 'Understanding the Self', 'code': 'GE-1101', 'description': 'Personal development'}
-                    ],
-                    '2nd Semester': [
-                        {'name': 'Object-Oriented Programming', 'code': 'SE-1201', 'description': 'OOP principles'},
-                        {'name': 'Calculus for Software Engineers', 'code': 'SE-1202', 'description': 'Applied calculus'},
-                        {'name': 'Computer Systems Fundamentals', 'code': 'SE-1203', 'description': 'Computer systems'},
-                        {'name': 'Software Engineering Tools', 'code': 'SE-1204', 'description': 'Development tools'},
-                        {'name': 'Purposive Communication', 'code': 'GE-1201', 'description': 'Communication skills'}
-                    ]
-                },
-                2: {
-                    '1st Semester': [
-                        {'name': 'Data Structures and Algorithms', 'code': 'SE-2101', 'description': 'Programming data structures'},
-                        {'name': 'Software Requirements Engineering', 'code': 'SE-2102', 'description': 'Requirements analysis'},
-                        {'name': 'Database Systems', 'code': 'SE-2103', 'description': 'Database management'},
-                        {'name': 'Statistics and Probability', 'code': 'SE-2104', 'description': 'Statistical methods'},
-                        {'name': 'Ethics', 'code': 'GE-2101', 'description': 'Software ethics'}
-                    ],
-                    '2nd Semester': [
-                        {'name': 'Software Design and Architecture', 'code': 'SE-2201', 'description': 'Software architecture'},
-                        {'name': 'Web Development', 'code': 'SE-2202', 'description': 'Web application development'},
-                        {'name': 'Software Testing', 'code': 'SE-2203', 'description': 'Testing methodologies'},
-                        {'name': 'Human-Computer Interaction', 'code': 'SE-2204', 'description': 'UI/UX design'},
-                        {'name': 'Science, Technology and Society', 'code': 'GE-2201', 'description': 'Technology impact'}
-                    ]
-                },
-                3: {
-                    '1st Semester': [
-                        {'name': 'Software Project Management', 'code': 'SE-3101', 'description': 'Project management'},
-                        {'name': 'Mobile Application Development', 'code': 'SE-3102', 'description': 'Mobile app development'},
-                        {'name': 'Software Quality Assurance', 'code': 'SE-3103', 'description': 'Quality management'},
-                        {'name': 'Advanced Algorithms', 'code': 'SE-3104', 'description': 'Complex algorithms'},
-                        {'name': 'Life and Works of Rizal', 'code': 'GE-3101', 'description': 'Philippine history'}
-                    ],
-                    '2nd Semester': [
-                        {'name': 'DevOps and Deployment', 'code': 'SE-3201', 'description': 'DevOps practices'},
-                        {'name': 'Software Maintenance', 'code': 'SE-3202', 'description': 'Software maintenance'},
-                        {'name': 'Agile Development', 'code': 'SE-3203', 'description': 'Agile methodologies'},
-                        {'name': 'Cloud Computing', 'code': 'SE-3204', 'description': 'Cloud platforms'},
-                        {'name': 'Contemporary World', 'code': 'GE-3201', 'description': 'Global perspectives'}
-                    ]
-                },
-                4: {
-                    '1st Semester': [
-                        {'name': 'Capstone Project 1', 'code': 'SE-4101', 'description': 'Senior project development'},
-                        {'name': 'Software Engineering Research', 'code': 'SE-4102', 'description': 'Research methods'},
-                        {'name': 'SE Elective 1', 'code': 'SE-4103', 'description': 'Specialized SE course'},
-                        {'name': 'Professional Practice', 'code': 'SE-4104', 'description': 'Professional skills'},
-                        {'name': 'Reading in Philippine History', 'code': 'GE-4101', 'description': 'Philippine history'}
-                    ],
-                    '2nd Semester': [
-                        {'name': 'Capstone Project 2', 'code': 'SE-4201', 'description': 'Senior project completion'},
-                        {'name': 'Emerging Technologies', 'code': 'SE-4202', 'description': 'Latest technologies'},
-                        {'name': 'SE Elective 2', 'code': 'SE-4203', 'description': 'Advanced specialized course'},
-                        {'name': 'Software Engineering Ethics', 'code': 'SE-4204', 'description': 'Professional ethics'},
-                        {'name': 'Gender and Society', 'code': 'GE-4201', 'description': 'Gender studies'}
+                        {'name': 'Thesis 2', 'code': 'CS-4201', 'description': 'Research thesis implementation and defense'},
+                        {'name': 'Software Project Management', 'code': 'CS-4202', 'description': 'Managing large-scale software development projects'},
+                        {'name': 'Natural Language Processing', 'code': 'CS-4203', 'description': 'Computational linguistics and text processing'},
+                        {'name': 'Advanced Computer Architecture', 'code': 'CS-4204', 'description': 'High-performance computing and processor design'},
+                        {'name': 'CS Elective 2 - Quantum Computing', 'code': 'CS-4205', 'description': 'Quantum algorithms and quantum programming'},
+                        {'name': 'Professional Development in CS', 'code': 'CS-4206', 'description': 'Career preparation and professional ethics'}
                     ]
                 }
             }
@@ -457,18 +271,17 @@ class CourseAssignmentSeeder(BaseSeeder):
         return cursor.fetchall()
     
     def _create_year_based_assignments(self, conn, faculty_list, courses_list, sections_list):
-        """Create course assignments based on year levels"""
+        """Create course assignments for multiple academic years dynamically"""
         assigned_course_ids = []
         current_time = self.get_current_time()
-        current_date = datetime.now()
         
-        # Generate current academic year
-        if current_date.month >= 9:
-            academic_year = f"{current_date.year}-{current_date.year + 1}"
-        else:
-            academic_year = f"{current_date.year - 1}-{current_date.year}"
+        # Get academic years to generate from config
+        academic_years_to_generate = get_academic_years_to_generate()
         
-        semesters = ["1st Semester", "2nd Semester", "Summer"]
+        self.logger.info(f"Creating course assignments for academic years: {', '.join(academic_years_to_generate)}")
+        
+        # Only 3rd year has summer semester
+        semesters = ["1st Semester", "2nd Semester"]
         
         # Group sections by program and year level
         sections_by_program_year = {}
@@ -501,59 +314,106 @@ class CourseAssignmentSeeder(BaseSeeder):
         self.logger.info(f"Found {len(sections_by_program_year)} program-year combinations")
         self.logger.info(f"Found {len(courses_by_program_year)} course groups by program-year")
         
-        # For each semester, assign courses to sections
-        for semester in semesters:
-            self.logger.info(f"Processing assignments for {semester}")
+        # Create assignments for each academic year
+        for academic_year in academic_years_to_generate:
+            self.logger.info(f"Processing academic year: {academic_year}")
             
-            # For each program-year combination
-            for (program_name, year_level), sections in sections_by_program_year.items():
-                # Get courses for this program and year level
-                matching_courses = courses_by_program_year.get((program_name, year_level), [])
+            # For each semester, assign courses to sections
+            for semester in semesters:
+                self.logger.info(f"Processing assignments for {semester} {academic_year}")
                 
-                if not matching_courses:
-                    continue
-                
-                # Filter courses by semester (based on course code pattern)
-                semester_courses = self._filter_courses_by_semester(matching_courses, semester)
-                
-                if not semester_courses:
-                    continue
-                
-                self.logger.info(f"Assigning {len(semester_courses)} courses to {len(sections)} sections for {program_name} Year {year_level} - {semester}")
-                
-                # Assign each course to ALL sections in this year level
-                for course_id, course_name, course_code in semester_courses:
-                    # Assign one faculty member to teach this course across all sections
-                    faculty_user_id, first_name, last_name = random.choice(faculty_list)
+                # For each program-year combination
+                for (program_name, year_level), sections in sections_by_program_year.items():
+                    # Get courses for this program and year level
+                    matching_courses = courses_by_program_year.get((program_name, year_level), [])
                     
-                    for section_id, section_name in sections:
-                        room = random.choice(SEEDER_CONFIG['rooms'])
+                    if not matching_courses:
+                        continue
+                    
+                    # Filter courses by semester (based on course code pattern)
+                    semester_courses = self._filter_courses_by_semester(matching_courses, semester)
+                    
+                    if not semester_courses:
+                        continue
+                    
+                    self.logger.info(f"Assigning {len(semester_courses)} courses to {len(sections)} sections for {program_name} Year {year_level} - {semester} {academic_year}")
+                    
+                    # Assign each course to ALL sections in this year level
+                    for course_id, course_name, course_code in semester_courses:
+                        # Assign one faculty member to teach this course across all sections
+                        faculty_user_id, first_name, last_name = random.choice(faculty_list)
                         
-                        # Check if assignment already exists
-                        existing = self.check_exists(conn, "assigned_courses", {
-                            "faculty_id": faculty_user_id,
-                            "course_id": course_id,
-                            "section_id": section_id,
-                            "academic_year": academic_year,
-                            "semester": semester
-                        })
-                        
-                        if existing:
-                            assigned_course_ids.append(existing[0])
-                            continue
-                        
-                        # Insert assigned course
-                        cursor = self.execute_query(conn, """
-                            INSERT INTO assigned_courses 
-                            (faculty_id, course_id, section_id, academic_year, semester, room, isDeleted, created_at, updated_at)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """, (faculty_user_id, course_id, section_id, academic_year, semester, room, 0, current_time, current_time))
-                        
-                        assigned_course_id = cursor.lastrowid
-                        assigned_course_ids.append(assigned_course_id)
-                
-                self.logger.info(f"✓ Assigned courses for {program_name} Year {year_level} Section(s): {', '.join([s[1] for s in sections])}")
+                        for section_id, section_name in sections:
+                            room = random.choice(SEEDER_CONFIG['rooms'])
+                            
+                            # Check if assignment already exists
+                            existing = self.check_exists(conn, "assigned_courses", {
+                                "faculty_id": faculty_user_id,
+                                "course_id": course_id,
+                                "section_id": section_id,
+                                "academic_year": academic_year,
+                                "semester": semester
+                            })
+                            
+                            if existing:
+                                assigned_course_ids.append(existing[0])
+                                continue
+                            
+                            # Insert assigned course
+                            cursor = self.execute_query(conn, """
+                                INSERT INTO assigned_courses 
+                                (faculty_id, course_id, section_id, academic_year, semester, room, isDeleted, created_at, updated_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """, (faculty_user_id, course_id, section_id, academic_year, semester, room, 0, current_time, current_time))
+                            
+                            assigned_course_id = cursor.lastrowid
+                            assigned_course_ids.append(assigned_course_id)
+                    
+                    self.logger.info(f"✓ Assigned courses for {program_name} Year {year_level} Section(s): {', '.join([s[1] for s in sections])} - {semester} {academic_year}")
+            
+            # Handle summer semester only for 3rd year for each academic year
+            self.logger.info(f"Processing Summer semester assignments for 3rd year only - {academic_year}")
+            summer_config = SEEDER_CONFIG['academic_calendar']['semesters']['Summer']
+            self.logger.info(f"Summer period: {summer_config['description']}")
+            
+            for (program_name, year_level), sections in sections_by_program_year.items():
+                if year_level == 3:  # Only 3rd year has summer
+                    matching_courses = courses_by_program_year.get((program_name, year_level), [])
+                    if matching_courses:
+                        summer_courses = self._filter_courses_by_semester(matching_courses, "Summer")
+                        if summer_courses:
+                            self.logger.info(f"Assigning {len(summer_courses)} summer courses ({summer_config['description']}) to {len(sections)} sections for {program_name} Year 3 - {academic_year}")
+                            
+                            for course_id, course_name, course_code in summer_courses:
+                                faculty_user_id, first_name, last_name = random.choice(faculty_list)
+                                
+                                for section_id, section_name in sections:
+                                    room = random.choice(SEEDER_CONFIG['rooms'])
+                                    
+                                    # Check if assignment already exists
+                                    existing = self.check_exists(conn, "assigned_courses", {
+                                        "faculty_id": faculty_user_id,
+                                        "course_id": course_id,
+                                        "section_id": section_id,
+                                        "academic_year": academic_year,
+                                        "semester": "Summer"
+                                    })
+                                    
+                                    if existing:
+                                        assigned_course_ids.append(existing[0])
+                                        continue
+                                    
+                                    # Insert assigned course
+                                    cursor = self.execute_query(conn, """
+                                        INSERT INTO assigned_courses 
+                                        (faculty_id, course_id, section_id, academic_year, semester, room, isDeleted, created_at, updated_at)
+                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                    """, (faculty_user_id, course_id, section_id, academic_year, "Summer", room, 0, current_time, current_time))
+                                    
+                                    assigned_course_id = cursor.lastrowid
+                                    assigned_course_ids.append(assigned_course_id)
         
+        self.logger.info(f"Total course assignments created across all academic years: {len(assigned_course_ids)}")
         return assigned_course_ids
     
     def _filter_courses_by_semester(self, courses, semester):
