@@ -251,8 +251,8 @@ class AddAssignmentModal(ctk.CTkToplevel):
                     assignment_data['semester'],
                     assignment_data['room'],
                     0,
-                    datetime.now().isoformat(),
-                    datetime.now().isoformat()
+                    datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
+                    datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
                 ))
                 
                 conn.commit()
@@ -523,7 +523,7 @@ class EditAssignmentModal(ctk.CTkToplevel):
                     academic_year,
                     semester,
                     room if room else None,
-                    datetime.now().isoformat(),
+                    datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
                     self.assignment_data['assignment_id']
                 ))
                 
@@ -610,9 +610,41 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
             if self.db_manager:
                 success, assignments = self.db_manager.get_section_courses(self.section_data['id'])
                 if success:
+                    # Check schedule status for each assignment
+                    for assignment in assignments:
+                        assignment['has_schedule'] = self.check_assignment_schedule(assignment['assignment_id'])
                     self.existing_assignments = assignments
         except Exception as e:
             print(f"Error loading assignments: {e}")
+
+    def check_assignment_schedule(self, assignment_id):
+        """Check if an assigned course has any schedules"""
+        try:
+            conn = self.db_manager.get_connection()
+            try:
+                cursor = conn.execute("""
+                    SELECT COUNT(*) as schedule_count
+                    FROM schedules
+                    WHERE assigned_course_id = ?
+                """, (assignment_id,))
+                
+                result = cursor.fetchone()
+                return result['schedule_count'] > 0 if result else False
+                
+            finally:
+                conn.close()
+                
+        except Exception as e:
+            print(f"Error checking schedule: {e}")
+            return False
+
+    def center_window(self):
+        self.update_idletasks()
+        width = self.winfo_width()
+        height = self.winfo_height()
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry(f'{width}x{height}+{x}+{y}')
 
     def setup_ui(self):
         # Main container
@@ -681,13 +713,14 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
         header_frame = ctk.CTkFrame(table_header, fg_color="transparent")
         header_frame.pack(fill="both", expand=True, padx=15, pady=8)
         
-        # Header columns - adjusted widths
+        # Header columns - adjusted widths to include Schedule column
         headers = [
-            ("Course", 350),
-            ("Academic Year", 120),
-            ("Semester", 130),
-            ("Room", 100),
-            ("Faculty", 200),
+            ("Course", 320),
+            ("Academic Year", 110),
+            ("Semester", 120),
+            ("Room", 90),
+            ("Faculty", 180),
+            ("Schedule", 80),
             ("Actions", 90)
         ]
         
@@ -734,9 +767,25 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
             self.create_assignment_row(assignment)
 
     def create_assignment_row(self, assignment):
-        # Row container
-        row_frame = ctk.CTkFrame(self.scroll_frame, fg_color="#FFFFFF", corner_radius=0, height=40)
-        row_frame.pack(fill="x", pady=1, padx=15)
+        # Determine row color based on schedule status
+        has_schedule = assignment.get('has_schedule', False)
+        if has_schedule:
+            row_fg_color = "#F0FDF4"  # Light green background
+            border_color = "#BBF7D0"  # Light green border
+        else:
+            row_fg_color = "#FEF2F2"  # Light red background
+            border_color = "#FECACA"  # Light red border
+        
+        # Row container with conditional coloring
+        row_frame = ctk.CTkFrame(
+            self.scroll_frame, 
+            fg_color=row_fg_color, 
+            corner_radius=4, 
+            height=40,
+            border_width=1,
+            border_color=border_color
+        )
+        row_frame.pack(fill="x", pady=2, padx=15)
         row_frame.pack_propagate(False)
         
         content_frame = ctk.CTkFrame(row_frame, fg_color="transparent")
@@ -752,21 +801,21 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
         else:
             course_display = course_name
         
-        # Truncate if too long (limit to ~40 characters for larger width)
-        if len(course_display) > 40:
-            course_display = course_display[:37] + "..."
+        # Truncate if too long (adjusted for smaller width)
+        if len(course_display) > 35:
+            course_display = course_display[:32] + "..."
         
         # Truncate faculty name if too long
         faculty_name = assignment.get('faculty_name', '')
-        if len(faculty_name) > 25:
-            faculty_name = faculty_name[:22] + "..."
+        if len(faculty_name) > 22:
+            faculty_name = faculty_name[:19] + "..."
         
         data_columns = [
-            (course_display, 350),
-            (assignment.get('academic_year', ''), 120),
-            (assignment.get('semester', ''), 130),
-            (assignment.get('room', ''), 100),
-            (faculty_name, 200)
+            (course_display, 320),
+            (assignment.get('academic_year', ''), 110),
+            (assignment.get('semester', ''), 120),
+            (assignment.get('room', ''), 90),
+            (faculty_name, 180)
         ]
         
         for text, width in data_columns:
@@ -779,11 +828,24 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
                 anchor="w"
             ).pack(side="left", padx=(0, 8))
         
-        # Actions dropdown - slightly larger
+        # Schedule Status column
+        schedule_status = "✓ Yes" if has_schedule else "✗ No"
+        schedule_color = "#059669" if has_schedule else "#DC2626"
+        
+        ctk.CTkLabel(
+            content_frame,
+            text=schedule_status,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            text_color=schedule_color,
+            width=80,
+            anchor="w"
+        ).pack(side="left", padx=(0, 8))
+        
+        # Actions dropdown
         action_var = tk.StringVar(value="Actions")
         action_menu = ctk.CTkOptionMenu(
             content_frame,
-            values=["Edit", "Delete"],
+            values=["Edit", "Delete", "Schedule"],
             variable=action_var,
             width=90,
             height=26,
@@ -804,6 +866,9 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
             self.edit_assignment(assignment_data)
         elif action == "Delete":
             self.delete_assignment(assignment_data)
+        elif action == "Schedule":
+            from .schedules_edit import ScheduleEditPopup
+            ScheduleEditPopup(self, self.db_manager, assignment_data)
 
     def add_assignment(self):
         AddAssignmentModal(
@@ -851,7 +916,7 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
                     UPDATE assigned_courses 
                     SET isDeleted = 1, updated_at = ?
                     WHERE id = ?
-                """, (datetime.now().isoformat(), assignment_id))
+                """, (datetime.now().strftime('%Y-%m-%dT%H:%M:%S'), assignment_id))
                 
                 conn.commit()
                 return True, "Assignment deleted successfully"

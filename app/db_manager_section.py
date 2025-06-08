@@ -332,7 +332,8 @@ class DatabaseSectionManager:
                        c.description, p.name as program_name, p.acronym as program_acronym,
                        ac.id as assignment_id, ac.academic_year, ac.semester, ac.room,
                        u.first_name as faculty_first_name, u.last_name as faculty_last_name,
-                       u.id as faculty_id, f.employee_number
+                       u.id as faculty_id, f.employee_number,
+                       (SELECT COUNT(*) FROM schedules s WHERE s.assigned_course_id = ac.id) as schedule_count
                 FROM assigned_courses ac
                 JOIN courses c ON ac.course_id = c.id
                 JOIN programs p ON c.program_id = p.id
@@ -376,7 +377,9 @@ class DatabaseSectionManager:
                     'faculty_first_name': row['faculty_first_name'] or '',
                     'faculty_last_name': row['faculty_last_name'] or '',
                     'employee_number': row['employee_number'] or '',
-                    'faculty_name': f"{row['faculty_first_name']} {row['faculty_last_name']}" if row['faculty_first_name'] and row['faculty_last_name'] else "No Faculty Assigned"
+                    'faculty_name': f"{row['faculty_first_name']} {row['faculty_last_name']}" if row['faculty_first_name'] and row['faculty_last_name'] else "No Faculty Assigned",
+                    'has_schedule': row['schedule_count'] > 0,
+                    'schedule_count': row['schedule_count']
                 }
                 result.append(assignment_data)
             

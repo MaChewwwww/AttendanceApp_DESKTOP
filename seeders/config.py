@@ -129,8 +129,8 @@ SEEDER_CONFIG = {
     
     # Section size configuration
     'section_size': {
-        'min_students': 20,
-        'max_students': 35
+        'min_students': 15,
+        'max_students': 30
     },
     
     'course_schedule': {
@@ -146,8 +146,8 @@ SEEDER_CONFIG = {
             ('17:30:00', '19:00:00')
         ],
         'meetings_per_week': {
-            'regular': [2, 3],
-            'summer': [2, 3]
+            'regular': [1, 3],
+            'summer': [1, 2]
         }
     },
     
