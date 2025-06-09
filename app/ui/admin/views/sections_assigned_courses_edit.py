@@ -845,7 +845,7 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
         action_var = tk.StringVar(value="Actions")
         action_menu = ctk.CTkOptionMenu(
             content_frame,
-            values=["Edit", "Delete", "Schedule"],
+            values=["Edit", "Schedule", "Delete"],
             variable=action_var,
             width=90,
             height=26,
@@ -864,11 +864,11 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
     def handle_action(self, action, assignment_data):
         if action == "Edit":
             self.edit_assignment(assignment_data)
+        elif action == "Schedule":
+            from .sections_schedules_edit import ScheduleEditPopup
+            ScheduleEditPopup(self, self.db_manager, assignment_data)
         elif action == "Delete":
             self.delete_assignment(assignment_data)
-        elif action == "Schedule":
-            from .schedules_edit import ScheduleEditPopup
-            ScheduleEditPopup(self, self.db_manager, assignment_data)
 
     def add_assignment(self):
         AddAssignmentModal(

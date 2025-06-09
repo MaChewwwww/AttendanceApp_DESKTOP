@@ -12,7 +12,7 @@ class DatabaseSectionManager:
         conn.row_factory = sqlite3.Row
         return conn
 
-    def get_sections(self, program_filter=None, year_filter=None):
+    def get_sections(self, program_filter=None, year_filter=None, academic_year=None, semester=None):
         """Get all sections with optional filters"""
         conn = self.db_manager.get_connection()
         try:
@@ -25,8 +25,15 @@ class DatabaseSectionManager:
                 LEFT JOIN students st ON s.id = st.section AND st.user_id IN (
                     SELECT id FROM users WHERE isDeleted = 0
                 )
-                WHERE s.isDeleted = 0
             """
+            
+            # Add joins for academic year and semester filtering if needed
+            if academic_year or semester:
+                query += """
+                    LEFT JOIN assigned_courses ac ON s.id = ac.section_id AND ac.isDeleted = 0
+                """
+            
+            query += " WHERE s.isDeleted = 0"
             params = []
             
             if program_filter and program_filter != "All":
@@ -38,6 +45,14 @@ class DatabaseSectionManager:
                 year_num = year_filter.split()[0].replace('st', '').replace('nd', '').replace('rd', '').replace('th', '')
                 query += " AND s.name LIKE ?"
                 params.append(f"{year_num}%")
+            
+            if academic_year:
+                query += " AND ac.academic_year = ?"
+                params.append(academic_year)
+            
+            if semester:
+                query += " AND ac.semester = ?"
+                params.append(semester)
             
             query += " GROUP BY s.id, s.name, p.name, p.acronym ORDER BY p.acronym, s.name"
             
@@ -388,5 +403,86 @@ class DatabaseSectionManager:
         except Exception as e:
             print(f"Error getting section courses: {e}")
             return False, str(e)
+        finally:
+            conn.close()
+
+    def get_section_courses_attendance_stats(self, section_id, academic_year=None, semester=None):
+        """Get attendance statistics for all courses in a section with filters"""
+        conn = self.db_manager.get_connection()
+        try:
+            query = """
+                SELECT 
+                    c.id as course_id,
+                    c.name as course_name,
+                    c.code as course_code,
+                    ac.academic_year,
+                    ac.semester,
+                    COUNT(CASE WHEN al.status = 'present' THEN 1 END) as present_count,
+                    COUNT(CASE WHEN al.status = 'absent' THEN 1 END) as absent_count,
+                    COUNT(CASE WHEN al.status = 'late' THEN 1 END) as late_count,
+                    COUNT(al.id) as total_logs,
+                    COUNT(DISTINCT al.user_id) as student_count
+                FROM assigned_courses ac
+                JOIN courses c ON ac.course_id = c.id
+                LEFT JOIN attendance_logs al ON ac.id = al.assigned_course_id
+                LEFT JOIN users u ON al.user_id = u.id AND u.isDeleted = 0
+                LEFT JOIN students s ON u.id = s.user_id AND s.section = ?
+                WHERE ac.section_id = ? 
+                  AND ac.isDeleted = 0 
+                  AND c.isDeleted = 0
+            """
+            
+            params = [section_id, section_id]
+            
+            if academic_year:
+                query += " AND ac.academic_year = ?"
+                params.append(academic_year)
+            
+            if semester:
+                query += " AND ac.semester = ?"
+                params.append(semester)
+            
+            query += """
+                GROUP BY c.id, c.name, c.code, ac.academic_year, ac.semester
+                ORDER BY c.name
+            """
+            
+            cursor = conn.execute(query, params)
+            results = cursor.fetchall()
+            
+            courses_stats = []
+            for row in results:
+                present_count = row['present_count'] or 0
+                absent_count = row['absent_count'] or 0
+                late_count = row['late_count'] or 0
+                total_logs = row['total_logs'] or 0
+                
+                # Count late as present for attendance rate calculation
+                effective_present = present_count + late_count
+                
+                if total_logs > 0:
+                    present_rate = (effective_present / total_logs) * 100
+                    absent_rate = (absent_count / total_logs) * 100
+                else:
+                    present_rate = 0.0
+                    absent_rate = 0.0
+                
+                courses_stats.append({
+                    'course_id': row['course_id'],
+                    'course_name': row['course_name'] or 'Unknown Course',
+                    'course_code': row['course_code'] or 'N/A',
+                    'academic_year': row['academic_year'],
+                    'semester': row['semester'],
+                    'present_rate': round(present_rate, 1),
+                    'absent_rate': round(absent_rate, 1),
+                    'total_logs': total_logs,
+                    'student_count': row['student_count'] or 0
+                })
+            
+            return True, courses_stats
+            
+        except Exception as e:
+            print(f"Error getting section courses attendance stats: {e}")
+            return False, []
         finally:
             conn.close()

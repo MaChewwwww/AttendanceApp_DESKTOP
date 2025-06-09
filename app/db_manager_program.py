@@ -410,37 +410,49 @@ class DatabaseProgramManager:
             conn.close()
 
     def get_available_academic_years(self):
-        """Get list of available academic years from assigned_courses"""
-        conn = self.get_connection()
+        """Get all available academic years from assigned courses"""
+        conn = self.db_manager.get_connection()
         try:
-            cursor = conn.cursor()
-            cursor.execute("""
+            query = """
                 SELECT DISTINCT academic_year 
                 FROM assigned_courses 
+                WHERE academic_year IS NOT NULL 
+                  AND academic_year != '' 
+                  AND isDeleted = 0
                 ORDER BY academic_year DESC
-            """)
+            """
+            cursor = conn.execute(query)
             years = [row['academic_year'] for row in cursor.fetchall()]
             return True, years
         except Exception as e:
-            print(f"Error getting academic years: {e}")
+            print(f"Error getting available academic years: {e}")
             return False, []
         finally:
             conn.close()
 
     def get_available_semesters(self):
-        """Get list of available semesters from assigned_courses"""
-        conn = self.get_connection()
+        """Get all available semesters from assigned courses"""
+        conn = self.db_manager.get_connection()
         try:
-            cursor = conn.cursor()
-            cursor.execute("""
+            query = """
                 SELECT DISTINCT semester 
                 FROM assigned_courses 
-                ORDER BY semester
-            """)
+                WHERE semester IS NOT NULL 
+                  AND semester != '' 
+                  AND isDeleted = 0
+                ORDER BY 
+                    CASE semester
+                        WHEN '1st Semester' THEN 1
+                        WHEN '2nd Semester' THEN 2
+                        WHEN 'Summer' THEN 3
+                        ELSE 4
+                    END
+            """
+            cursor = conn.execute(query)
             semesters = [row['semester'] for row in cursor.fetchall()]
             return True, semesters
         except Exception as e:
-            print(f"Error getting semesters: {e}")
+            print(f"Error getting available semesters: {e}")
             return False, []
         finally:
             conn.close()

@@ -224,8 +224,8 @@ class DatabaseManager:
         return self.courses.get_course_monthly_attendance(course_id, academic_year, semester)
 
     # Delegate section management methods to section manager
-    def get_sections_with_filters(self, program_filter=None, year_filter=None):
-        return self.sections.get_sections(program_filter, year_filter)
+    def get_sections_with_filters(self, program_filter=None, year_filter=None, academic_year=None, semester=None):
+        return self.sections.get_sections(program_filter, year_filter, academic_year, semester)
 
     def create_section(self, section_data):
         return self.sections.create_section(section_data)

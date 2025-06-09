@@ -5,8 +5,9 @@ import winsound  # For Windows system sounds
 class FilterPopup(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
-        self.title("Filter Users")
-        self.geometry("400x500")
+        self.parent_view = parent
+        self.title("Filter Sections")
+        self.geometry("400x600")  # Increased height for semester filter
         self.resizable(False, False)
         
         # Set background color to white
@@ -30,7 +31,7 @@ class FilterPopup(ctk.CTkToplevel):
         # Header
         ctk.CTkLabel(
             self,
-            text="Filter Users",
+            text="Filter Sections",
             font=ctk.CTkFont(family="Inter", size=20, weight="bold"),
             text_color="black"
         ).pack(anchor="w", padx=20, pady=(20, 10))
@@ -39,14 +40,103 @@ class FilterPopup(ctk.CTkToplevel):
         filter_frame = ctk.CTkFrame(self, fg_color="transparent")
         filter_frame.pack(fill="both", expand=True, padx=20, pady=10)
         
+        # Get current filter values from parent
+        current_filters = self.parent_view.current_filters
+        
+        # Academic Year filter (NEW)
+        ctk.CTkLabel(filter_frame, text="Academic Year", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
+        self.academic_year_var = tk.StringVar(value=current_filters.get('academic_year', 'All Years'))
+        
+        # Get available academic years from database
+        academic_year_options = ["All Years"]
+        try:
+            if self.parent_view.db_manager:
+                success, years = self.parent_view.db_manager.get_available_academic_years()
+                if success and years:
+                    academic_year_options.extend(years)
+        except Exception as e:
+            print(f"Error loading academic years: {e}")
+            academic_year_options.extend(["2024-2025", "2023-2024"])
+        
+        academic_year_menu = ctk.CTkOptionMenu(
+            filter_frame,
+            values=academic_year_options,
+            variable=self.academic_year_var,
+            fg_color="#F3F4F6",
+            text_color="#222",
+            button_color="#E5E7EB",
+            button_hover_color="#D1D5DB",
+            dropdown_fg_color="#fff",
+            dropdown_hover_color="#E5E7EB",
+            dropdown_text_color="#222"
+        )
+        academic_year_menu.pack(fill="x", pady=(0, 15))
+        
+        # Semester filter (NEW)
+        ctk.CTkLabel(filter_frame, text="Semester", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
+        self.semester_var = tk.StringVar(value=current_filters.get('semester', 'All Semesters'))
+        
+        # Get available semesters from database
+        semester_options = ["All Semesters"]
+        try:
+            if self.parent_view.db_manager:
+                success, semesters = self.parent_view.db_manager.get_available_semesters()
+                if success and semesters:
+                    semester_options.extend(semesters)
+        except Exception as e:
+            print(f"Error loading semesters: {e}")
+            semester_options.extend(["1st Semester", "2nd Semester", "Summer"])
+        
+        semester_menu = ctk.CTkOptionMenu(
+            filter_frame,
+            values=semester_options,
+            variable=self.semester_var,
+            fg_color="#F3F4F6",
+            text_color="#222",
+            button_color="#E5E7EB",
+            button_hover_color="#D1D5DB",
+            dropdown_fg_color="#fff",
+            dropdown_hover_color="#E5E7EB",
+            dropdown_text_color="#222"
+        )
+        semester_menu.pack(fill="x", pady=(0, 15))
+        
+        # Program filter - load from database
+        ctk.CTkLabel(filter_frame, text="Program", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
+        self.program_var = tk.StringVar(value=current_filters.get('program', 'All'))
+        
+        program_options = ["All"]
+        try:
+            if self.parent_view.db_manager:
+                success, programs = self.parent_view.db_manager.get_available_programs()
+                if success and programs:
+                    program_options.extend(programs)
+        except Exception as e:
+            print(f"Error loading programs: {e}")
+            program_options.extend(["BSIT", "BSCS", "BSIS"])
+        
+        program_menu = ctk.CTkOptionMenu(
+            filter_frame,
+            values=program_options,
+            variable=self.program_var,
+            fg_color="#F3F4F6",
+            text_color="#222",
+            button_color="#E5E7EB",
+            button_hover_color="#D1D5DB",
+            dropdown_fg_color="#fff",
+            dropdown_hover_color="#E5E7EB",
+            dropdown_text_color="#222"
+        )
+        program_menu.pack(fill="x", pady=(0, 15))
+        
         # Year filter
         ctk.CTkLabel(filter_frame, text="Year", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
-        year_var = tk.StringVar(value="All")
+        self.year_var = tk.StringVar(value=current_filters.get('year', 'All'))
         year_options = ["All", "1st Year", "2nd Year", "3rd Year", "4th Year"]
         year_menu = ctk.CTkOptionMenu(
             filter_frame,
             values=year_options,
-            variable=year_var,
+            variable=self.year_var,
             fg_color="#F3F4F6",
             text_color="#222",
             button_color="#E5E7EB",
@@ -56,42 +146,6 @@ class FilterPopup(ctk.CTkToplevel):
             dropdown_text_color="#222"
         )
         year_menu.pack(fill="x", pady=(0, 15))
-        
-        # Section filter
-        ctk.CTkLabel(filter_frame, text="Section", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
-        section_var = tk.StringVar(value="All")
-        section_options = ["All", "1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"]
-        section_menu = ctk.CTkOptionMenu(
-            filter_frame,
-            values=section_options,
-            variable=section_var,
-            fg_color="#F3F4F6",
-            text_color="#222",
-            button_color="#E5E7EB",
-            button_hover_color="#D1D5DB",
-            dropdown_fg_color="#fff",
-            dropdown_hover_color="#E5E7EB",
-            dropdown_text_color="#222"
-        )
-        section_menu.pack(fill="x", pady=(0, 15))
-        
-        # Programs filter
-        ctk.CTkLabel(filter_frame, text="Programs", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
-        programs_var = tk.StringVar(value="All")
-        programs_options = ["All", "BSIT", "BSCS", "BSIS"]
-        programs_menu = ctk.CTkOptionMenu(
-            filter_frame,
-            values=programs_options,
-            variable=programs_var,
-            fg_color="#F3F4F6",
-            text_color="#222",
-            button_color="#E5E7EB",
-            button_hover_color="#D1D5DB",
-            dropdown_fg_color="#fff",
-            dropdown_hover_color="#E5E7EB",
-            dropdown_text_color="#222"
-        )
-        programs_menu.pack(fill="x", pady=(0, 15))
         
         # Buttons
         button_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -116,11 +170,40 @@ class FilterPopup(ctk.CTkToplevel):
         ).pack(side="right")
     
     def apply_filters(self):
-        # TODO: Implement filter logic
+        """Apply filters and update the parent view"""
+        filter_values = {}
+        
+        # Academic year filter
+        academic_year_value = self.academic_year_var.get().strip()
+        if academic_year_value and academic_year_value != "All Years":
+            filter_values['academic_year'] = academic_year_value
+        
+        # Semester filter
+        semester_value = self.semester_var.get().strip()
+        if semester_value and semester_value != "All Semesters":
+            filter_values['semester'] = semester_value
+        
+        program_value = self.program_var.get().strip()
+        if program_value and program_value != "All":
+            filter_values['program'] = program_value
+            
+        year_value = self.year_var.get().strip()
+        if year_value and year_value != "All":
+            filter_values['year'] = year_value
+        
+        # Apply filters to parent view
+        self.parent_view.apply_filters(filter_values)
         self.destroy()
     
     def reset_filters(self):
-        # TODO: Implement reset logic
+        """Reset all filters to default values"""
+        self.academic_year_var.set("All Years")
+        self.semester_var.set("All Semesters")
+        self.program_var.set("All")
+        self.year_var.set("All")
+        
+        # Apply reset filters
+        self.parent_view.reset_filters()
         self.destroy()
 
 class CautionModal(ctk.CTkToplevel):

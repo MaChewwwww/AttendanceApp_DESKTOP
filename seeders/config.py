@@ -146,7 +146,7 @@ SEEDER_CONFIG = {
             ('17:30:00', '19:00:00')
         ],
         'meetings_per_week': {
-            'regular': [1, 3],
+            'regular': [1, 2],
             'summer': [1, 2]
         }
     },
