@@ -358,8 +358,201 @@ class SectionViewPopup(ctk.CTkToplevel):
     def handle_course_action(self, action, course_data):
         """Handle course action selection"""
         if action == "View Details":
-            print(f"View details for course: {course_data['course_name']}")
-            # TODO: Open course details popup
+            from .sections_course_students_view import CourseStudentsViewModal
+            CourseStudentsViewModal(self, self.db_manager, course_data, self.section_data)
         elif action == "Export Data":
-            print(f"Export data for course: {course_data['course_name']}")
-            # TODO: Export course attendance data
+            self.export_course_data(course_data)
+
+    def export_course_data(self, course_data):
+        """Export course attendance data to CSV"""
+        try:
+            import csv
+            from tkinter import filedialog, messagebox
+            from datetime import datetime
+            
+            # Get course attendance data for this section
+            section_id = self.section_data.get('id')
+            if not section_id:
+                messagebox.showerror("Error", "Section information not available")
+                return
+            
+            # Get filter values
+            academic_year = None if self.year_var.get() == "All Years" else self.year_var.get()
+            semester = None if self.semester_var.get() == "All Semesters" else self.semester_var.get()
+            
+            # Get detailed student attendance data for this course
+            students_data = self.get_course_student_attendance_data(course_data, academic_year, semester)
+            
+            if not students_data:
+                messagebox.showwarning("No Data", "No attendance data available for this course.")
+                return
+            
+            # Prepare filename
+            course_name = course_data.get('course_name', 'Unknown Course').replace(' ', '_')
+            section_name = self.section_data.get('name', 'Unknown Section')
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            
+            # Ask user where to save the file
+            filename = filedialog.asksaveasfilename(
+                defaultextension=".csv",
+                filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+                title="Export Course Attendance Data",
+                initialfile=f"{course_name}_{section_name}_attendance_{timestamp}.csv"
+            )
+            
+            if not filename:
+                return
+            
+            # Write to CSV
+            with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                
+                # Write header information
+                writer.writerow([f"Course Attendance Report"])
+                writer.writerow([f"Course: {course_data.get('course_name', 'Unknown')}"])
+                writer.writerow([f"Course Code: {course_data.get('course_code', 'N/A')}"])
+                writer.writerow([f"Section: {section_name}"])
+                writer.writerow([f"Academic Year: {academic_year or 'All Years'}"])
+                writer.writerow([f"Semester: {semester or 'All Semesters'}"])
+                writer.writerow([f"Export Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"])
+                writer.writerow([])  # Empty row
+                
+                # Course statistics
+                writer.writerow(["Course Statistics:"])
+                writer.writerow(["Overall Attendance Rate", f"{course_data.get('present_rate', 0):.1f}%"])
+                writer.writerow(["Total Students", len(students_data)])
+                writer.writerow(["Total Attendance Logs", course_data.get('total_logs', 0)])
+                writer.writerow([])  # Empty row
+                
+                # Student data headers
+                writer.writerow(["Student Attendance Details:"])
+                writer.writerow([
+                    "Student Name", "Student ID", "Email", 
+                    "Present", "Absent", "Late", "Total", "Attendance %"
+                ])
+                
+                # Student data rows
+                for student in students_data:
+                    writer.writerow([
+                        student.get('student_name', ''),
+                        student.get('student_number', ''),
+                        student.get('email', ''),
+                        student.get('present', 0),
+                        student.get('absent', 0),
+                        student.get('late', 0),
+                        student.get('total', 0),
+                        f"{student.get('percentage', 0):.1f}%"
+                    ])
+            
+            # Show success message
+            messagebox.showinfo("Export Successful", 
+                              f"Course attendance data exported successfully!\n\nFile: {filename}\nStudents: {len(students_data)}")
+            
+        except Exception as e:
+            print(f"Error exporting course data: {e}")
+            messagebox.showerror("Export Error", f"Failed to export course data:\n{str(e)}")
+
+    def get_course_student_attendance_data(self, course_data, academic_year=None, semester=None):
+        """Get detailed student attendance data for a specific course"""
+        try:
+            if not self.db_manager:
+                return []
+            
+            section_id = self.section_data.get('id')
+            course_id = course_data.get('course_id')
+            
+            if not section_id or not course_id:
+                return []
+            
+            # Get all students in this section
+            conn = self.db_manager.get_connection()
+            
+            # Get students query
+            students_query = """
+                SELECT u.id, u.first_name, u.last_name, u.email, 
+                       s.student_number
+                FROM students s
+                JOIN users u ON s.user_id = u.id
+                WHERE s.section = ? AND u.isDeleted = 0
+                ORDER BY u.last_name, u.first_name
+            """
+            
+            cursor = conn.execute(students_query, (section_id,))
+            students = cursor.fetchall()
+            
+            if not students:
+                conn.close()
+                return []
+            
+            # Get assigned course ID
+            assigned_course_query = """
+                SELECT id FROM assigned_courses 
+                WHERE course_id = ? AND section_id = ? AND isDeleted = 0
+            """
+            params = [course_id, section_id]
+            
+            if academic_year:
+                assigned_course_query += " AND academic_year = ?"
+                params.append(academic_year)
+            
+            if semester:
+                assigned_course_query += " AND semester = ?"
+                params.append(semester)
+            
+            cursor = conn.execute(assigned_course_query, params)
+            assigned_course = cursor.fetchone()
+            
+            if not assigned_course:
+                conn.close()
+                return []
+            
+            assigned_course_id = assigned_course['id']
+            
+            # Get attendance data for each student
+            students_data = []
+            for student in students:
+                # Get attendance statistics for this student and course
+                attendance_query = """
+                    SELECT 
+                        COUNT(CASE WHEN status = 'present' THEN 1 END) as present_count,
+                        COUNT(CASE WHEN status = 'absent' THEN 1 END) as absent_count,
+                        COUNT(CASE WHEN status = 'late' THEN 1 END) as late_count,
+                        COUNT(*) as total_logs
+                    FROM attendance_logs
+                    WHERE user_id = ? AND assigned_course_id = ?
+                """
+                
+                cursor = conn.execute(attendance_query, (student['id'], assigned_course_id))
+                result = cursor.fetchone()
+                
+                if result:
+                    present = result['present_count'] or 0
+                    absent = result['absent_count'] or 0
+                    late = result['late_count'] or 0
+                    total = result['total_logs'] or 0
+                    
+                    # Calculate percentage (count late as present)
+                    if total > 0:
+                        percentage = ((present + late) / total) * 100
+                    else:
+                        percentage = 0.0
+                    
+                    students_data.append({
+                        'student_name': f"{student['first_name']} {student['last_name']}",
+                        'student_number': student['student_number'] or 'N/A',
+                        'email': student['email'] or 'N/A',
+                        'present': present,
+                        'absent': absent,
+                        'late': late,
+                        'total': total,
+                        'percentage': percentage
+                    })
+            
+            conn.close()
+            return students_data
+            
+        except Exception as e:
+            print(f"Error getting course student attendance data: {e}")
+            if 'conn' in locals():
+                conn.close()
+            return []

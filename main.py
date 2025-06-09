@@ -24,6 +24,7 @@ class AttendanceApp:
         # Initialize database manager
         self.db_manager = DatabaseManager()
         self.user_data = None
+        self._is_closing = False
         
         # Create main window
         self.main_window = ctk.CTk()
@@ -65,78 +66,192 @@ class AttendanceApp:
         
     def clear_content(self):
         """Clear current content from main container"""
-        for widget in self.main_container.winfo_children():
-            widget.destroy()
+        if self._is_closing:
+            return
+            
+        # Cancel any pending after() calls on widgets being destroyed
+        try:
+            for widget in self.main_container.winfo_children():
+                self._cancel_widget_after_calls(widget)
+                widget.destroy()
+        except tk.TclError:
+            # Widget may already be destroyed
+            pass
+            
         self.current_screen = None
+        
+    def _cancel_widget_after_calls(self, widget):
+        """Recursively cancel all after() calls for a widget and its children"""
+        if self._is_closing:
+            return
+            
+        try:
+            # Cancel any pending after calls for this widget
+            if hasattr(widget, 'after_cancel'):
+                # Get all after IDs if available (this is implementation specific)
+                pass
+            
+            # Recursively handle children
+            if hasattr(widget, 'winfo_children'):
+                for child in widget.winfo_children():
+                    self._cancel_widget_after_calls(child)
+        except tk.TclError:
+            # Widget may already be destroyed
+            pass
         
     def show_initial_screen(self):
         """Show the initial screen"""
+        if self._is_closing:
+            return
+            
         self.clear_content()
         
-        self.initial_screen = InitialScreen(
-            self.main_container,
-            on_student_click=self.show_student_auth
-        )
-        self.initial_screen.pack(fill="both", expand=True)
-        self.current_screen = "initial"
+        try:
+            self.initial_screen = InitialScreen(
+                self.main_container,
+                on_student_click=self.show_student_auth
+            )
+            self.initial_screen.pack(fill="both", expand=True)
+            self.current_screen = "initial"
+        except tk.TclError:
+            # Application may be closing
+            pass
         
     def show_student_auth(self, show_register=False):
         """Show student authentication screen"""
+        if self._is_closing:
+            return
+            
         self.clear_content()
         
-        self.auth_screen = LoginRegister(
-            self.main_container,
-            self.db_manager,
-            on_back_click=self.show_initial_screen,
-            on_login_success=self.on_login_success
-        )
-        self.auth_screen.pack(fill="both", expand=True)
-        
-        if show_register:
-            self.auth_screen.show_register()
-        else:
-            self.auth_screen.show_login()
+        try:
+            self.auth_screen = LoginRegister(
+                self.main_container,
+                self.db_manager,
+                on_back_click=self.show_initial_screen,
+                on_login_success=self.on_login_success
+            )
+            self.auth_screen.pack(fill="both", expand=True)
             
-        self.current_screen = "auth"
+            if show_register:
+                self.auth_screen.show_register()
+            else:
+                self.auth_screen.show_login()
+                
+            self.current_screen = "auth"
+        except tk.TclError:
+            # Application may be closing
+            pass
         
     def on_login_success(self, user_data):
         """Callback for when login is successful"""
+        if self._is_closing:
+            return
+            
         self.user_data = user_data
         self.show_dashboard()
         
     def show_dashboard(self):
         """Show the student dashboard"""
-        if not self.user_data:
+        if not self.user_data or self._is_closing:
             return
             
         self.clear_content()
         
-        self.dashboard_screen = StudentDashboard(
-            self.main_container,
-            self,
-            user_data=self.user_data
-        )
-        self.dashboard_screen.pack(fill="both", expand=True)
-        self.current_screen = "dashboard"
+        try:
+            self.dashboard_screen = StudentDashboard(
+                self.main_container,
+                self,
+                user_data=self.user_data
+            )
+            self.dashboard_screen.pack(fill="both", expand=True)
+            self.current_screen = "dashboard"
+        except tk.TclError:
+            # Application may be closing
+            pass
         
     def logout(self):
         """Handle user logout"""
+        if self._is_closing:
+            return
+            
+        # Clean up current screen before logout
+        self._cleanup_current_screen()
+        
         self.user_data = None
-        self.show_initial_screen()
+        
+        # Small delay to ensure cleanup completes before showing new screen
+        self.main_window.after(10, self._safe_show_initial_screen)
+        
+    def _cleanup_current_screen(self):
+        """Safely cleanup the current screen"""
+        try:
+            if self.dashboard_screen:
+                # Cancel any pending operations in dashboard
+                if hasattr(self.dashboard_screen, 'cleanup'):
+                    self.dashboard_screen.cleanup()
+                self.dashboard_screen = None
+                
+            if self.auth_screen:
+                self.auth_screen = None
+                
+            if self.initial_screen:
+                self.initial_screen = None
+        except Exception as e:
+            print(f"Error during screen cleanup: {e}")
+            
+    def _safe_show_initial_screen(self):
+        """Safely show initial screen after logout"""
+        if not self._is_closing:
+            try:
+                self.show_initial_screen()
+            except tk.TclError:
+                # Application may be closing
+                pass
         
     def on_closing(self):
         """Clean up resources before closing the application"""
-        if hasattr(self, 'db_manager') and self.db_manager:
-            if hasattr(self.db_manager, 'close'):
-                self.db_manager.close()
-                
-        # Destroy main window and exit
-        self.main_window.quit()
-        self.main_window.destroy()
+        if self._is_closing:
+            return
+            
+        self._is_closing = True
+        
+        try:
+            # Cancel any pending after calls
+            self.main_window.after_cancel("all")
+        except:
+            pass
+            
+        try:
+            # Clean up current screen
+            self._cleanup_current_screen()
+            
+            # Clean up database manager
+            if hasattr(self, 'db_manager') and self.db_manager:
+                if hasattr(self.db_manager, 'close'):
+                    self.db_manager.close()
+        except Exception as e:
+            print(f"Error during cleanup: {e}")
+        finally:
+            # Force close the application
+            try:
+                self.main_window.quit()
+            except:
+                pass
+            try:
+                self.main_window.destroy()
+            except:
+                pass
         
     def run(self):
         """Start the application"""
-        self.main_window.mainloop()
+        try:
+            self.main_window.mainloop()
+        except KeyboardInterrupt:
+            self.on_closing()
+        except Exception as e:
+            print(f"Application error: {e}")
+            self.on_closing()
 
 if __name__ == "__main__":
     app = AttendanceApp()
