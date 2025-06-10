@@ -345,7 +345,7 @@ class DatabaseSectionManager:
             query = """
                 SELECT c.id as course_id, c.name as course_name, c.code as course_code,
                        c.description, p.name as program_name, p.acronym as program_acronym,
-                       ac.id as assignment_id, ac.academic_year, ac.semester, ac.room,
+                       ac.id as assignment_id, ac.section_id, ac.academic_year, ac.semester, ac.room,
                        u.first_name as faculty_first_name, u.last_name as faculty_last_name,
                        u.id as faculty_id, f.employee_number,
                        (SELECT COUNT(*) FROM schedules s WHERE s.assigned_course_id = ac.id) as schedule_count
@@ -385,6 +385,7 @@ class DatabaseSectionManager:
                     'program_name': row['program_name'] or '',
                     'program_acronym': row['program_acronym'] or '',
                     'assignment_id': row['assignment_id'],
+                    'section_id': row['section_id'],  # Added section_id to the returned data
                     'academic_year': row['academic_year'] or '',
                     'semester': row['semester'] or '',
                     'room': row['room'] or '',

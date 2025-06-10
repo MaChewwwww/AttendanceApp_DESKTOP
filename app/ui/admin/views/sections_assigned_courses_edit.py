@@ -545,9 +545,11 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
         self.parent_view = parent
         self.db_manager = db_manager
         self.section_data = section_data
-        self.current_academic_year_filter = "All"
         self.assignments_data = []
         self.filtered_assignments = []
+        self.current_academic_year_filter = "All"
+        self.courses_data = []
+        self.faculty_data = []
         
         self.title(f"Assigned Courses - {section_data.get('name', 'Section')}")
         self.geometry("1200x700")
@@ -556,9 +558,49 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
         self.transient(parent)
         self.grab_set()
         
+        self.load_data()
         self.center_window()
         self.setup_ui()
         self.load_assignments()
+
+    def load_data(self):
+        """Load courses and faculty data"""
+        try:
+            if self.db_manager:
+                # Load courses for the section's program
+                program_id = self.section_data.get('program_id')
+                if not program_id:
+                    # Try to get program_id from program_name
+                    success, programs = self.db_manager.get_programs()
+                    if success:
+                        program_name = self.section_data.get('program_name', '')
+                        for program in programs:
+                            if program.get('name') == program_name:
+                                program_id = program.get('id')
+                                break
+                
+                if program_id:
+                    success, courses = self.db_manager.get_courses_by_program_id(program_id)
+                    if success:
+                        self.courses_data = courses
+                    else:
+                        print(f"Error loading courses: {courses}")
+                        self.courses_data = []
+                else:
+                    print("Could not determine program ID for section")
+                    self.courses_data = []
+                
+                # Load all faculty
+                success, faculty = self.db_manager.get_all_faculty()
+                if success:
+                    self.faculty_data = faculty
+                else:
+                    print(f"Error loading faculty: {faculty}")
+                    self.faculty_data = []
+        except Exception as e:
+            print(f"Error loading data: {e}")
+            self.courses_data = []
+            self.faculty_data = []
 
     def center_window(self):
         self.update_idletasks()
@@ -608,13 +650,26 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
         # Refresh the table display
         self.refresh_assignments_table()
 
+    def clear_academic_year_filter(self):
+        """Clear the academic year filter"""
+        self.academic_year_filter_var.set("All")
+        self.apply_academic_year_filter("All")
+
+    def update_filter_clear_button(self):
+        """Update visibility of clear filter button"""
+        current_filter = self.academic_year_filter_var.get()
+        if current_filter and current_filter != "All":
+            self.clear_filter_btn.pack(side="left", padx=(5, 0))
+        else:
+            self.clear_filter_btn.pack_forget()
+
     def setup_ui(self):
         # Main container
         main_container = ctk.CTkFrame(self, fg_color="#FFFFFF", corner_radius=0)
         main_container.pack(fill="both", expand=True)
         
         # Header section with filter
-        header_section = ctk.CTkFrame(main_container, fg_color="#FAFAFA", corner_radius=0, height=120)
+        header_section = ctk.CTkFrame(main_container, fg_color="#F8FAFC", corner_radius=0, height=120)
         header_section.pack(fill="x", padx=0, pady=0)
         header_section.pack_propagate(False)
         
@@ -643,38 +698,33 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
             text_color="#6B7280",
         ).pack(side="right", anchor="e")
         
-        # Filter row
-        filter_row = ctk.CTkFrame(header_content, fg_color="transparent")
-        filter_row.pack(fill="x", pady=(0, 12))
+        # Filter and action row
+        filter_action_row = ctk.CTkFrame(header_content, fg_color="transparent")
+        filter_action_row.pack(fill="x")
         
         # Filter controls (left side)
-        filter_frame = ctk.CTkFrame(filter_row, fg_color="transparent")
-        filter_frame.pack(side="left")
+        filter_container = ctk.CTkFrame(filter_action_row, fg_color="transparent")
+        filter_container.pack(side="left")
         
-        # Filter label
-        ctk.CTkLabel(
-            filter_frame,
-            text="Filter by Academic Year:",
-            font=ctk.CTkFont(size=12, weight="normal"),
-            text_color="#6B7280",
-        ).pack(side="left", padx=(0, 8))
+        # Check if filter is active
+        has_active_filter = self.current_academic_year_filter != "All"
         
-        # Academic year filter dropdown
+        # Academic year filter dropdown with active state styling
         academic_years = self.get_unique_academic_years()
         filter_options = ["All"] + academic_years
         
         self.academic_year_filter_var = ctk.StringVar(value="All")
         
         self.academic_year_filter_dropdown = ctk.CTkOptionMenu(
-            filter_frame,
+            filter_container,
             variable=self.academic_year_filter_var,
             values=filter_options,
             height=32,
             width=140,
-            fg_color="#FFFFFF",
-            text_color="#374151",
-            button_color="#F3F4F6",
-            button_hover_color="#E5E7EB",
+            fg_color="#1E3A8A" if has_active_filter else "#FFFFFF",
+            text_color="#FFFFFF" if has_active_filter else "#374151",
+            button_color="#1E3A8A" if has_active_filter else "#F3F4F6",
+            button_hover_color="#1D4ED8" if has_active_filter else "#E5E7EB",
             dropdown_fg_color="#FFFFFF",
             dropdown_hover_color="#F9FAFB",
             dropdown_text_color="#374151",
@@ -684,31 +734,32 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
         )
         self.academic_year_filter_dropdown.pack(side="left", padx=(0, 12))
         
-        # Clear filter button
-        clear_filter_btn = ctk.CTkButton(
-            filter_frame,
-            text="Clear",
-            width=60,
-            height=32,
-            fg_color="#F3F4F6",
-            text_color="#6B7280",
-            hover_color="#E5E7EB",
-            font=ctk.CTkFont(size=11),
-            corner_radius=6,
-            command=lambda: self.apply_academic_year_filter("All")
+        # Clear filter button (only show when filter is active)
+        self.clear_filter_btn = ctk.CTkButton(
+            filter_container,
+            text="✕",
+            width=20,
+            height=20,
+            font=ctk.CTkFont(size=12),
+            fg_color="transparent",
+            text_color="#1E3A8A",
+            hover_color="#F3F4F6",
+            border_width=0,
+            command=self.clear_academic_year_filter
         )
-        clear_filter_btn.pack(side="left")
+        if has_active_filter:
+            self.clear_filter_btn.pack(side="left", padx=(5, 0))
         
         # Add new course button (right side)
         add_course_btn = ctk.CTkButton(
-            filter_row,
-            text="Assign New Course",
-            width=140,
+            filter_action_row,
+            text="+ Assign New Course",
+            width=150,
             height=32,
             fg_color="#22C55E",
             hover_color="#16A34A",
             text_color="#FFFFFF",
-            font=ctk.CTkFont(size=12, weight="normal"),
+            font=ctk.CTkFont(size=12, weight="bold"),
             corner_radius=6,
             command=self.assign_new_course
         )
@@ -918,14 +969,114 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
             CourseStudentsViewModal(self, self.db_manager, assignment_data, self.section_data)
 
     def edit_assignment(self, assignment_data):
-        """Edit an assignment"""
-        messagebox.showinfo("Edit", f"Edit functionality for {assignment_data.get('course_name')} will be implemented.")
+        """Edit an assignment by opening the edit modal with existing data"""
+        try:
+            # Ensure assignment_data has section_id for the edit modal
+            if 'section_id' not in assignment_data:
+                assignment_data['section_id'] = self.section_data['id']
+            
+            # Use the EditAssignmentModal instead of the form-based popup
+            EditAssignmentModal(
+                self, 
+                self.db_manager, 
+                assignment_data, 
+                self.courses_data, 
+                self.faculty_data, 
+                on_success=self.refresh_assignments
+            )
+        except Exception as e:
+            print(f"Error opening edit assignment: {e}")
+            messagebox.showerror("Error", f"Failed to open edit assignment: {str(e)}")
 
     def delete_assignment(self, assignment_data):
         """Delete an assignment"""
-        messagebox.showinfo("Delete", f"Delete functionality for {assignment_data.get('course_name')} will be implemented.")
+        try:
+            from app.ui.admin.components.modals import DeleteModal
+            
+            def on_delete():
+                try:
+                    assignment_id = assignment_data.get('assignment_id')
+                    if not assignment_id:
+                        messagebox.showerror("Error", "Assignment ID not found")
+                        return
+                    
+                    # Delete the assignment
+                    success, message = self.delete_assigned_course(assignment_id)
+                    if success:
+                        # Refresh the table
+                        self.load_assignments()
+                        # Show success message
+                        from app.ui.admin.components.modals import SuccessModal
+                        SuccessModal(self)
+                    else:
+                        messagebox.showerror("Error", f"Failed to delete assignment: {message}")
+                        
+                except Exception as e:
+                    print(f"Error in delete callback: {e}")
+                    messagebox.showerror("Error", f"An error occurred: {str(e)}")
+            
+            # Show delete confirmation modal
+            DeleteModal(self, on_delete=on_delete)
+            
+        except Exception as e:
+            print(f"Error deleting assignment: {e}")
+            messagebox.showerror("Error", f"Failed to delete assignment: {str(e)}")
+
+    def delete_assigned_course(self, assignment_id):
+        """Delete an assigned course entry with proper connection management"""
+        try:
+            from datetime import datetime
+            
+            # Use a single connection for this operation
+            conn = self.db_manager.get_connection()
+            try:
+                cursor = conn.cursor()
+                
+                # Soft delete by setting isDeleted = 1
+                cursor.execute("""
+                    UPDATE assigned_courses 
+                    SET isDeleted = 1, updated_at = ?
+                    WHERE id = ? AND isDeleted = 0
+                """, (
+                    datetime.now().isoformat(),
+                    assignment_id
+                ))
+                
+                if cursor.rowcount == 0:
+                    return False, "Assignment not found or already deleted"
+                
+                conn.commit()
+                return True, "Assignment deleted successfully"
+                
+            except Exception as e:
+                conn.rollback()
+                raise e
+            finally:
+                conn.close()
+            
+        except Exception as e:
+            print(f"Error deleting assigned course: {e}")
+            return False, str(e)
 
     def assign_new_course(self):
         """Open popup to assign new course"""
-        from .sections_assigned_courses import SectionAssignedCoursesPopup
-        SectionAssignedCoursesPopup(self, self.db_manager, self.section_data)
+        try:
+            AddAssignmentModal(
+                self, 
+                self.db_manager, 
+                self.section_data, 
+                self.courses_data, 
+                self.faculty_data, 
+                on_success=self.refresh_assignments
+            )
+        except Exception as e:
+            print(f"Error opening assign new course: {e}")
+            messagebox.showerror("Error", f"Failed to open course assignment: {str(e)}")
+
+    def refresh_assignments(self):
+        """Refresh the assignments table"""
+        self.load_assignments()
+        
+        # Also refresh parent if it has refresh method
+        if hasattr(self.parent_view, 'refresh_sections'):
+            self.parent_view.after(100, self.parent_view.refresh_sections)
