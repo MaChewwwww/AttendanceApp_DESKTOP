@@ -486,3 +486,52 @@ class DatabaseSectionManager:
             return False, []
         finally:
             conn.close()
+
+    def get_available_academic_years_for_section(self, section_id):
+        """Get unique academic years from assigned courses for a specific section"""
+        conn = self.db_manager.get_connection()
+        try:
+            cursor = conn.execute("""
+                SELECT DISTINCT ac.academic_year
+                FROM assigned_courses ac
+                WHERE ac.section_id = ? AND ac.isDeleted = 0
+                  AND ac.academic_year IS NOT NULL 
+                  AND ac.academic_year != ''
+                ORDER BY ac.academic_year DESC
+            """, (section_id,))
+            
+            rows = cursor.fetchall()
+            academic_years = [row['academic_year'] for row in rows]
+            
+            return True, academic_years
+            
+        except Exception as e:
+            print(f"Error getting academic years for section: {e}")
+            return False, []
+        finally:
+            conn.close()
+
+    def get_available_academic_years_for_course_section(self, course_id, section_id):
+        """Get unique academic years for a specific course and section combination"""
+        conn = self.db_manager.get_connection()
+        try:
+            cursor = conn.execute("""
+                SELECT DISTINCT ac.academic_year
+                FROM assigned_courses ac
+                WHERE ac.course_id = ? AND ac.section_id = ?
+                  AND ac.isDeleted = 0 
+                  AND ac.academic_year IS NOT NULL 
+                  AND ac.academic_year != ''
+                ORDER BY ac.academic_year DESC
+            """, (course_id, section_id))
+            
+            rows = cursor.fetchall()
+            academic_years = [row['academic_year'] for row in rows]
+            
+            return True, academic_years
+            
+        except Exception as e:
+            print(f"Error getting academic years for course and section: {e}")
+            return False, []
+        finally:
+            conn.close()
