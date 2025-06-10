@@ -939,7 +939,7 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
         
         # Actions dropdown
         action_var = tk.StringVar(value="Actions")
-        actions = ["Edit", "Delete", "View Students"]
+        actions = ["View Students", "Edit", "Delete"]  # Changed order: Edit first, View Students second, Delete last
         action_menu = ctk.CTkOptionMenu(
             content_frame,
             values=actions,
