@@ -939,7 +939,7 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
         
         # Actions dropdown
         action_var = tk.StringVar(value="Actions")
-        actions = ["View Students", "Edit", "Delete"]  # Changed order: Edit first, View Students second, Delete last
+        actions = ["View Students", "Edit", "Manage Schedule", "Delete"]
         action_menu = ctk.CTkOptionMenu(
             content_frame,
             values=actions,
@@ -967,6 +967,17 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
         elif action == "View Students":
             from .sections_course_students_view import CourseStudentsViewModal
             CourseStudentsViewModal(self, self.db_manager, assignment_data, self.section_data)
+        elif action == "Manage Schedule":
+            self.manage_schedule(assignment_data)
+
+    def manage_schedule(self, assignment_data):
+        """Open schedule management for the assignment"""
+        try:
+            from .sections_schedules_edit import ScheduleEditPopup
+            ScheduleEditPopup(self, self.db_manager, assignment_data)
+        except Exception as e:
+            print(f"Error opening schedule management: {e}")
+            messagebox.showerror("Error", f"Failed to open schedule management: {str(e)}")
 
     def edit_assignment(self, assignment_data):
         """Edit an assignment by opening the edit modal with existing data"""
