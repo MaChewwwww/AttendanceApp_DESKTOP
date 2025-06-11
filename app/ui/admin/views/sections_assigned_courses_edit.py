@@ -939,7 +939,7 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
         
         # Actions dropdown
         action_var = tk.StringVar(value="Actions")
-        actions = ["View Students", "Edit", "Manage Schedule", "Delete"]
+        actions = ["View Students", "Edit Course", "Manage Schedule", "Delete"]
         action_menu = ctk.CTkOptionMenu(
             content_frame,
             values=actions,
@@ -960,7 +960,7 @@ class SectionAssignedCoursesEditPopup(ctk.CTkToplevel):
 
     def handle_assignment_action(self, action, assignment_data):
         """Handle assignment action selection"""
-        if action == "Edit":
+        if action == "Edit Course":
             self.edit_assignment(assignment_data)
         elif action == "Delete":
             self.delete_assignment(assignment_data)
