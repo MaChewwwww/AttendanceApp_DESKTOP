@@ -262,5 +262,11 @@ class DatabaseManager:
     def get_section_statistics(self, section_id, academic_year=None, semester=None):
         return self.sections.get_section_statistics(section_id, academic_year, semester)
 
+    def get_available_academic_years_for_section(self, section_id):
+        return self.sections.get_available_academic_years_for_section(section_id)
+
+    def get_available_academic_years_for_course_section(self, course_id, section_id):
+        return self.sections.get_available_academic_years_for_course_section(course_id, section_id)
+
     def get_all_faculty(self):
         return self.users.get_all_faculty()

@@ -97,43 +97,7 @@ class SectionsFilterPopup(ctk.CTkToplevel):
             dropdown_hover_color="#E5E7EB",
             dropdown_text_color="#222"
         )
-        year_menu.pack(fill="x", pady=(0, 15))
-        
-        # Academic Year filter
-        ctk.CTkLabel(filter_frame, text="Academic Year", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
-        self.academic_year_var = tk.StringVar(value=current_filters.get('academic_year', 'All'))
-        academic_year_options = ["All", "2021-2022", "2022-2023", "2023-2024"]
-        academic_year_menu = ctk.CTkOptionMenu(
-            filter_frame,
-            values=academic_year_options,
-            variable=self.academic_year_var,
-            fg_color="#F3F4F6",
-            text_color="#222",
-            button_color="#E5E7EB",
-            button_hover_color="#D1D5DB",
-            dropdown_fg_color="#fff",
-            dropdown_hover_color="#E5E7EB",
-            dropdown_text_color="#222"
-        )
-        academic_year_menu.pack(fill="x", pady=(0, 15))
-        
-        # Semester filter
-        ctk.CTkLabel(filter_frame, text="Semester", font=ctk.CTkFont(weight="bold"), text_color="black").pack(anchor="w", pady=(0, 5))
-        self.semester_var = tk.StringVar(value=current_filters.get('semester', 'All'))
-        semester_options = ["All", "1st Semester", "2nd Semester"]
-        semester_menu = ctk.CTkOptionMenu(
-            filter_frame,
-            values=semester_options,
-            variable=self.semester_var,
-            fg_color="#F3F4F6",
-            text_color="#222",
-            button_color="#E5E7EB",
-            button_hover_color="#D1D5DB",
-            dropdown_fg_color="#fff",
-            dropdown_hover_color="#E5E7EB",
-            dropdown_text_color="#222"
-        )
-        semester_menu.pack(fill="x", pady=(0, 15))
+        year_menu.pack(fill="x", pady=(0, 30))  # Increased bottom padding
         
         # Buttons
         button_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -169,14 +133,6 @@ class SectionsFilterPopup(ctk.CTkToplevel):
         if year_value and year_value != "All":
             filter_values['year'] = year_value
         
-        academic_year_value = self.academic_year_var.get().strip()
-        if academic_year_value and academic_year_value != "All":
-            filter_values['academic_year'] = academic_year_value
-        
-        semester_value = self.semester_var.get().strip()
-        if semester_value and semester_value != "All":
-            filter_values['semester'] = semester_value
-        
         # Apply filters to parent view
         self.parent_view.apply_filters(filter_values)
         self.destroy()
@@ -185,8 +141,6 @@ class SectionsFilterPopup(ctk.CTkToplevel):
         """Reset all filters to default values"""
         self.program_var.set("All")
         self.year_var.set("All")
-        self.academic_year_var.set("All")
-        self.semester_var.set("All")
         
         # Apply reset filters
         self.parent_view.reset_filters()
@@ -244,14 +198,10 @@ class SectionsView(ctk.CTkFrame):
             # Get existing filters including new academic year and semester
             program_filter = self.current_filters.get('program')
             year_filter = self.current_filters.get('year')
-            academic_year = self.current_filters.get('academic_year')
-            semester = self.current_filters.get('semester')
             
             sections = self.db_manager.get_sections_with_filters(
                 program_filter=program_filter, 
-                year_filter=year_filter,
-                academic_year=academic_year,
-                semester=semester
+                year_filter=year_filter
             )
             if sections:
                 self.sections_data = sections
@@ -774,22 +724,6 @@ class SectionsView(ctk.CTkFrame):
             filtered_data = [
                 section for section in filtered_data
                 if section.get('year', '') == year_filter
-            ]
-        
-        # Apply academic year filter using Python
-        if self.current_filters.get('academic_year') and self.current_filters['academic_year'] != 'All':
-            academic_year_filter = self.current_filters['academic_year']
-            filtered_data = [
-                section for section in filtered_data
-                if section.get('academic_year', '') == academic_year_filter
-            ]
-        
-        # Apply semester filter using Python
-        if self.current_filters.get('semester') and self.current_filters['semester'] != 'All':
-            semester_filter = self.current_filters['semester']
-            filtered_data = [
-                section for section in filtered_data
-                if section.get('semester', '') == semester_filter
             ]
         
         # Update filtered data and refresh table

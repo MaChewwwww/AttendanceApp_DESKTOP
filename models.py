@@ -100,6 +100,16 @@ class Assigned_Course(Base):
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
+class Assigned_Course_Approval(Base):
+    __tablename__ = "assigned_course_approvals"
+    id = Column(Integer, primary_key=True, index=True)
+    assigned_course_id = Column(Integer, ForeignKey("assigned_courses.id"), nullable=False)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    status = Column(String(50), nullable=False)  # e.g., "pending", "enrolled", "rejected", "passed"
+    rejection_reason = Column(String(255), nullable=True)  # Reason for rejection, if any
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
 class Schedule(Base):
     __tablename__ = "schedules"
     id = Column(Integer, primary_key=True, index=True)

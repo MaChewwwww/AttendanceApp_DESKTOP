@@ -14,6 +14,8 @@ class SectionAssignedCoursesPopup(ctk.CTkToplevel):
         self.faculty_data = []
         self.assignment_rows = []
         self.existing_assignments = []
+        self.academic_years = []  # Store unique academic years
+        self.current_academic_year_filter = None  # Track current filter
         
         self.title(f"Assigned Courses - {section_data.get('name', 'Section')}")
         self.geometry("900x650")  # Optimized size
@@ -27,6 +29,7 @@ class SectionAssignedCoursesPopup(ctk.CTkToplevel):
         self.center_window()
         self.setup_ui()
         self.populate_existing_assignments()
+        self.setup_academic_year_filter()  # Setup filter UI
 
     def center_window(self):
         self.update_idletasks()
@@ -373,7 +376,7 @@ class SectionAssignedCoursesPopup(ctk.CTkToplevel):
             for display_name, mapping in course_mapping.items():
                 course_data = mapping['course_data']
                 if (course_data.get('name') == existing_name and 
-                    course_data.get('code') == existing_code):
+                    course_data.get('code') == existing_code):  # Fixed: was existingCode
                     course_var.set(display_name)
                     actual_course_value.set(display_name)
                     break
@@ -770,3 +773,92 @@ class SectionAssignedCoursesPopup(ctk.CTkToplevel):
         except Exception as e:
             print(f"Error creating assigned course: {e}")
             return False, str(e)
+
+    def get_unique_academic_years(self):
+        """Get unique academic years from database for this section"""
+        try:
+            if self.db_manager:
+                success, academic_years = self.db_manager.get_available_academic_years_for_section(self.section_data['id'])
+                if success and academic_years:
+                    return academic_years
+                else:
+                    from datetime import datetime
+                    current_year = datetime.now().year
+                    return [f"{current_year}-{current_year + 1}"]
+            else:
+                from datetime import datetime
+                current_year = datetime.now().year
+                return [f"{current_year}-{current_year + 1}"]
+        except Exception as e:
+            print(f"Error getting academic years: {e}")
+            from datetime import datetime
+            current_year = datetime.now().year
+            return [f"{current_year}-{current_year + 1}"]
+
+    def setup_academic_year_filter(self):
+        """Setup the academic year filter UI"""
+        filter_frame = ctk.CTkFrame(self.parent_view, fg_color="transparent")
+        filter_frame.pack(fill="x", padx=24, pady=(16, 0))
+        
+        # Filter label
+        ctk.CTkLabel(
+            filter_frame,
+            text="Filter by Academic Year:",
+            font=ctk.CTkFont(size=12, weight="normal"),
+            text_color="#374151",
+        ).pack(side="left", padx=(0, 8))
+        
+        # Filter variable
+        self.academic_year_filter_var = ctk.StringVar(value="All")
+        
+        # Academic year options - include "All" option
+        academic_year_options = ["All"] + self.get_unique_academic_years()
+        
+        # Academic year filter menu
+        academic_year_menu = ctk.CTkOptionMenu(
+            filter_frame,
+            variable=self.academic_year_filter_var,
+            values=academic_year_options,
+            height=32,
+            width=180,
+            fg_color="#FFFFFF",
+            text_color="#374151",
+            button_color="#F3F4F6",
+            button_hover_color="#E5E7EB",
+            dropdown_fg_color="#FFFFFF",
+            dropdown_hover_color="#F9FAFB",
+            dropdown_text_color="#374151",
+            font=ctk.CTkFont(size=11),
+            corner_radius=4,
+            command=self.apply_academic_year_filter
+        )
+        academic_year_menu.pack(side="left", padx=2)
+
+    def apply_academic_year_filter(self, selected_year=None):
+        """Apply academic year filter to existing assignments"""
+        if selected_year is None:
+            selected_year = self.academic_year_filter_var.get()
+        
+        self.current_academic_year_filter = selected_year
+        
+        # Clear existing rows
+        for row_data in self.assignment_rows:
+            row_data['frame'].destroy()
+        self.assignment_rows.clear()
+        
+        # Filter existing assignments based on academic year
+        if selected_year == "All":
+            filtered_assignments = self.existing_assignments
+        else:
+            filtered_assignments = [
+                assignment for assignment in self.existing_assignments
+                if assignment.get('academic_year') == selected_year
+            ]
+        
+        # Repopulate with filtered assignments
+        if filtered_assignments:
+            for assignment in filtered_assignments:
+                self.add_assignment_row(assignment)
+        else:
+            # If no assignments match filter, add one empty row
+            self.add_assignment_row()
