@@ -3,6 +3,10 @@ import customtkinter as ctk
 import os
 import sys
 from tkinter import messagebox
+from dotenv import load_dotenv
+
+# Load environment variables first, before any other imports
+load_dotenv()
 
 # Set CustomTkinter appearance
 ctk.set_appearance_mode("dark")
@@ -124,10 +128,6 @@ class AttendanceApp:
             
         self.clear_content()
         
-        try:
-            self.auth_screen = LoginRegister(
-                self.main_container,
-                self.db_manager,
                 on_back_click=self.show_initial_screen,
                 on_login_success=self.on_login_success
             )

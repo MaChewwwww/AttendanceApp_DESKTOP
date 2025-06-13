@@ -5,7 +5,15 @@ import os
 import random
 import string
 from datetime import datetime, timedelta
-from .config import DB_PATH, UPLOAD_DIR
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Get configuration from environment variables
+DB_PATH = os.getenv('DB_PATH')
+UPLOAD_DIR = os.getenv('UPLOAD_DIR')
+
 from .email_service import EmailService
 from .db_manager_auth import DatabaseAuthManager
 from .db_manager_init import DatabaseInitManager

@@ -3,9 +3,9 @@ from pathlib import Path
 from datetime import datetime
 
 # Database configuration
-SCRIPT_DIR = Path(__file__).parent.parent
-DATA_DIR = SCRIPT_DIR / "data"
-DB_PATH = DATA_DIR / "attendance_app.db"
+SCRIPT_DIR = os.getenv('SCRIPT_DIR', Path(__file__).resolve().parent)
+DATA_DIR = os.getenv('DATA_DIR', SCRIPT_DIR / 'data')
+DB_PATH = os.getenv('DB_PATH', DATA_DIR / 'attendance.db')
 
 # Philippine holidays for 2024-2025
 PHILIPPINE_HOLIDAYS = {
