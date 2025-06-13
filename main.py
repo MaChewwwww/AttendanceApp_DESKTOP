@@ -128,6 +128,10 @@ class AttendanceApp:
             
         self.clear_content()
         
+        try:
+            self.auth_screen = LoginRegister(
+                self.main_container,
+                self.db_manager,
                 on_back_click=self.show_initial_screen,
                 on_login_success=self.on_login_success
             )
