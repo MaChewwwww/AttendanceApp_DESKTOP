@@ -24,11 +24,16 @@ from .db_manager_section import DatabaseSectionManager
 
 class DatabaseManager:
     def __init__(self):
+        # Initialize database init manager with reference to this instance
+        self.init = DatabaseInitManager(self)
+        
+        # Check if database is properly initialized
+        if not self.init.initialize_database():
+            raise Exception("Database initialization failed")
+        
         self.email_service = EmailService()
         # Initialize auth manager with reference to this instance
         self.auth = DatabaseAuthManager(self)
-        # Initialize database init manager with reference to this instance
-        self.init = DatabaseInitManager(self)
         # Initialize user management manager with reference to this instance
         self.users = DatabaseUserManager(self)
         # Initialize program management manager with reference to this instance
@@ -37,8 +42,6 @@ class DatabaseManager:
         self.courses = DatabaseCourseManager(self)
         # Initialize section management manager with reference to this instance  
         self.sections = DatabaseSectionManager(self)
-        # Initialize database tables on first run
-        self.init.initialize_database()
     
     def get_connection(self):
         """Create and return a new database connection."""

@@ -25,8 +25,17 @@ class AttendanceApp:
     """Main application controller for the Attendance App"""
     
     def __init__(self):
-        # Initialize database manager
-        self.db_manager = DatabaseManager()
+        try:
+            # Initialize database manager
+            self.db_manager = DatabaseManager()
+        except Exception as e:
+            print(f"❌ Failed to initialize database: {e}")
+            print("\nPlease ensure:")
+            print("1. Database exists (run: python create_db.py)")
+            print("2. .env file is properly configured")
+            print("3. All required dependencies are installed")
+            sys.exit(1)
+        
         self.user_data = None
         self._is_closing = False
         
