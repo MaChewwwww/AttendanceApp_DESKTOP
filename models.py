@@ -137,3 +137,4 @@ class AttendanceLog(Base):
 class LoginRequest(BaseModel):
     email: str
     password: str
+
