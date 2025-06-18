@@ -260,41 +260,8 @@ class Sidebar(ctk.CTkFrame):
         except Exception as e:
             print(f"Font loading issue: {e}")
 
-    def cleanup(self):
-        """Clean up any pending animations or callbacks"""
-        try:
-            # Simply disable all interactive widgets to prevent new animations
-            widgets_to_clean = list(self.buttons.values()) + [self.logout_button]
-            
-            for widget in widgets_to_clean:
-                if widget and widget.winfo_exists():
-                    try:
-                        # Set hover color to a solid color (not transparent)
-                        widget.configure(hover_color="#1E3A8A")  # Use the sidebar color
-                        
-                        # Disable the widget to prevent interactions
-                        widget.configure(state="disabled")
-                        
-                        # Unbind hover events
-                        widget.unbind("<Enter>")
-                        widget.unbind("<Leave>")
-                        
-                    except Exception as e:
-                        # If individual widget cleanup fails, just disable it
-                        try:
-                            widget.configure(state="disabled")
-                        except:
-                            pass
-                            
-        except Exception as e:
-            print(f"Error during sidebar cleanup: {e}")
-    
     def destroy(self):
-        """Override destroy to cleanup first"""
-        try:
-            self.cleanup()
-        except:
-            pass
+        """Override destroy to clean up first (no custom cleanup needed)"""
         super().destroy()
 
 class DateTimePill(ctk.CTkFrame):
