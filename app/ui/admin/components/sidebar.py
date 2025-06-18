@@ -7,200 +7,230 @@ import tkinter as tk
 
 class Sidebar(ctk.CTkFrame):
     def __init__(self, master, switch_view_callback, **kwargs):
-        # Remove border radius and border width for clean edges
         kwargs.update({"corner_radius": 0, "border_width": 0})
         super().__init__(master, **kwargs)
-
+        self._switch_view_callback = switch_view_callback
+        
+        # Define fonts and colors
+        self.normal_font = ctk.CTkFont(family="Inter", size=14)
+        self.bold_font = ctk.CTkFont(family="Inter", size=14, weight="bold")
+        self.active_color = "#FFFFFF"
+        
         self.load_inter_font()
-        
-        # Set the background color to blue
-        self.configure(fg_color="#1E3A8A")  # A nice material blue color
-        
-        # Fixed width of 250px
+        self.configure(fg_color="#1E3A8A")
         self.width = 250
-        self.current_view = None  # Track current active view
-        
-        # Configure the containing frame to maintain width
+        self.current_view = None
         self.grid_propagate(False)
         
-        # Load icons immediately but safely
-        self.icons = {}
-        self.load_icons()
+        # Initialize storage for icons and button references
+        self.icon_images = {}  # Store the PIL Image objects
+        self.icons = {}        # Store the CTkImage objects
+        self.buttons = {}      # Store button references
         
-        # Header with app title
+        # Load all icons first
+        self._load_icons()
+        
+        # Header with app title and logo
+        logo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "icons", "white-logo.png")
+        if os.path.exists(logo_path):
+            logo_img = ctk.CTkImage(light_image=Image.open(logo_path), dark_image=Image.open(logo_path), size=(48, 48))
+        else:
+            logo_img = None
         self.header_frame = ctk.CTkFrame(self, fg_color="transparent", corner_radius=0)
         self.header_frame.pack(fill="x", padx=10, pady=(20, 10))
+        # Logo and text in a row
+        logo_label = ctk.CTkLabel(self.header_frame, image=logo_img, text="", width=52)
+        logo_label.pack(side="left", padx=(0, 8), pady=0)
+        text_frame = ctk.CTkFrame(self.header_frame, fg_color="transparent")
+        text_frame.pack(side="left", fill="y")
+        self.title_label = ctk.CTkLabel(text_frame, text="Attendify", font=ctk.CTkFont(size=20, weight="bold"), text_color="white")
+        self.title_label.pack(anchor="w")
+        self.subtitle_label = ctk.CTkLabel(text_frame, text="Admin", font=ctk.CTkFont(size=15, weight="normal"), text_color="#D1D5DB")
+        self.subtitle_label.pack(anchor="w", pady=(0, 0))
         
-        self.title_label = ctk.CTkLabel(self.header_frame, text="Attendify", 
-                                       font=ctk.CTkFont(size=20, weight="bold"),
-                                       text_color="white")
-        self.title_label.pack(side="left", padx=10)
-        
-        # Create a separator
+        # Create separator
         separator = ctk.CTkFrame(self, height=1, fg_color="#ffffff", corner_radius=0)
         separator.pack(fill="x", padx=10, pady=10)
         
-        # Menu options with corresponding icons - Updated order
-        menu_items = [
-            {"name": "Dashboard", "view": "dashboard", "icon": self.icons.get("dashboard", "■")},
-            {"name": "Programs", "view": "programs", "icon": self.icons.get("book_open", "■")},
-            {"name": "Courses", "view": "courses", "icon": self.icons.get("graduation_cap", "■")},
-            {"name": "Sections", "view": "sections", "icon": self.icons.get("folder", "■")},
-            {"name": "Users", "view": "users", "icon": self.icons.get("users", "■")}
-        ]
-        
-        # Menu buttons container
+        # Menu frame
         self.menu_frame = ctk.CTkFrame(self, fg_color="transparent", corner_radius=0)
         self.menu_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
-        # Define colors and fonts for buttons
-        self.normal_font = ctk.CTkFont(family="Inter", size=14)
-        self.bold_font = ctk.CTkFont(family="Inter", size=14, weight="bold")
-        self.active_color = "#FFFFFF"  # White for active button
-        self.active_text_color = "#1E3A8A"  # Blue text on white background
+        # Create menu items with explicit icon keys
+        menu_items = [
+            {"name": "Dashboard", "view": "dashboard", "icon_key": "dashboard", "icon_active_key": "dashboard_active"},
+            {"name": "Programs", "view": "programs", "icon_key": "book_open", "icon_active_key": "book_open_active"},
+            {"name": "Courses", "view": "courses", "icon_key": "graduation_cap", "icon_active_key": "graduation_cap_active"},
+            {"name": "Sections", "view": "sections", "icon_key": "folder", "icon_active_key": "folder_active"},
+            {"name": "Users", "view": "users", "icon_key": "users", "icon_active_key": "users_active"}
+        ]
         
-        # Create menu buttons with text icons
-        self.menu_buttons = {}
+        # Create menu buttons
         for item in menu_items:
-            btn = ctk.CTkButton(
-                self.menu_frame,
-                text=f"{item['icon']}  {item['name']}",  # Combine icon and text
-                anchor="w",
-                fg_color="transparent",
-                hover_color="#f5f5f5",
-                text_color="white",
-                height=40,
-                corner_radius=0,
-                command=lambda view=item["view"]: self.handle_view_switch(view, switch_view_callback)
-            )
-            btn.pack(fill="x", pady=5)
-            btn._original_text = f"{item['icon']}  {item['name']}"  # Store original text with icon
-            btn._icon = item['icon']  # Store just the icon
-            btn._name = item['name']  # Store just the name
-            self.menu_buttons[item["view"]] = btn
+            self._create_menu_button(item)
             
-            # Update hover bindings with proper active state checking
-            btn.bind("<Enter>", lambda event, b=btn, v=item["view"]: 
-                 self.on_button_hover(b, v, True))
-                 
-            btn.bind("<Leave>", lambda event, b=btn, v=item["view"]: 
-                 self.on_button_hover(b, v, False))
-
-        # Create logout button at the bottom with icon
+        # Bottom frame for logout
         bottom_frame = ctk.CTkFrame(self, fg_color="transparent", corner_radius=0)
         bottom_frame.pack(fill="x", side="bottom", padx=10, pady=20)
         
+        # Create logout button
+        self._create_logout_button(bottom_frame, switch_view_callback)
+        
+        # Set initial active view
+        self.set_active("dashboard")
+        
+    def _create_menu_button(self, item):
+        icon = self.icons.get(item["icon_key"])
+        btn = ctk.CTkButton(
+            self.menu_frame,
+            text=f"  {item['name']}",
+            image=icon,
+            compound="left",
+            anchor="w",
+            fg_color="transparent",
+            hover_color="#f5f5f5",
+            text_color="white",
+            height=40,
+            corner_radius=0,
+            command=lambda view=item["view"]: self.handle_view_switch(view, self._switch_view_callback)
+        )
+        btn.pack(fill="x", pady=5)
+        
+        # Store button reference with its associated data
+        self.buttons[item["view"]] = {
+            "button": btn,
+            "icon_key": item["icon_key"],
+            "icon_active_key": item["icon_active_key"],
+            "name": item["name"]
+        }
+        
+        # Bind hover events
+        btn.bind("<Enter>", lambda e, v=item["view"]: self.on_button_hover(v, True))
+        btn.bind("<Leave>", lambda e, v=item["view"]: self.on_button_hover(v, False))
+        
+    def _create_logout_button(self, parent_frame, callback):
+        logout_icon = self.icons.get("logout")
         self.logout_button = ctk.CTkButton(
-            bottom_frame,
-            text=f"{self.icons.get('logout', '■')}  Logout",  # Combine icon and text
+            parent_frame,
+            text="  Logout",
+            image=logout_icon,
+            compound="left",
             anchor="w",
             fg_color="#1E3A8A",
             hover_color="#F5F5F5",
             text_color="white",
             height=40,
             corner_radius=0,
-            command=lambda: switch_view_callback("logout")
+            command=lambda: callback("logout")
         )
         self.logout_button.pack(fill="x")
         
-        # Update hover bindings for the logout button to keep text white
+        # Use the same hover system as other navigation items
         self.logout_button.bind("<Enter>", lambda event: 
-            self.logout_button.configure(text_color="white", font=self.bold_font))
+            self.on_button_hover("logout", True))
         self.logout_button.bind("<Leave>", lambda event: 
-            self.logout_button.configure(text_color="white", font=self.normal_font))
+            self.on_button_hover("logout", False))
         
-        # Set initial active view
-        self.set_active("dashboard")
-
-    def load_icons(self):
-        """Load icons from assets folder - using dummy text icons for now"""
+        # Store logout button reference
+        self.buttons["logout"] = {
+            "button": self.logout_button,
+            "icon": logout_icon,
+            "name": "Logout"
+        }
+        
+    def _load_icons(self):
+        """Load icons from assets directory, including active variants"""
         try:
-            print("Using dummy text icons")
-            
-            # Create simple text-based icons using Unicode symbols
-            self.icons = {
-                "dashboard": "📊",
-                "users": "👥", 
-                "graduation_cap": "🎓",
-                "folder": "📁",
-                "book_open": "📖",
-                "logout": "🚪"
+            current_file = os.path.abspath(__file__)
+            components_dir = os.path.dirname(current_file)
+            admin_dir = os.path.dirname(components_dir)
+            icons_dir = os.path.join(admin_dir, "assets", "icons")
+            # Icon file mapping (default and active)
+            icon_files = {
+                "dashboard": "bar-chart-3.png",
+                "dashboard_active": "bar-chart-3-active.png",
+                "users": "users.png",
+                "users_active": "users-active.png",
+                "graduation_cap": "graduation-cap.png",
+                "graduation_cap_active": "graduation-cap-active.png",
+                "folder": "folder.png",
+                "folder_active": "folder-active.png",
+                "book_open": "book-open.png",
+                "book_open_active": "book-open-active.png",
+                "logout": "log-out.png"
             }
-            
-            print("Successfully loaded dummy icons")
-                    
+            for key, filename in icon_files.items():
+                icon_path = os.path.join(icons_dir, filename)
+                if os.path.exists(icon_path):
+                    self.icon_images[key] = Image.open(icon_path)
+                    self.icons[key] = ctk.CTkImage(
+                        light_image=self.icon_images[key],
+                        dark_image=self.icon_images[key],
+                        size=(20, 20)
+                    )
+                else:
+                    self.icons[key] = None
+                    self.icon_images[key] = None
         except Exception as e:
-            print(f"Error in load_icons: {e}")
-            # Fallback to simple text
-            self.icons = {
-                "dashboard": "■",
-                "users": "■",
-                "graduation_cap": "■",
-                "folder": "■",
-                "book_open": "■",
-                "logout": "■"
-            }
+            print(f"Error loading icons: {e}")
+            for k in [
+                "dashboard", "dashboard_active", "users", "users_active",
+                "graduation_cap", "graduation_cap_active", "folder", "folder_active",
+                "book_open", "book_open_active", "logout"
+            ]:
+                self.icons[k] = None
+                self.icon_images[k] = None
 
-    def handle_view_switch(self, view, switch_view_callback):
-        """Handle switching views and update active state"""
+    def handle_view_switch(self, view, callback):
+        """Handle switching between views"""
         if view != self.current_view:
             self.set_active(view)
-            switch_view_callback(view)
-    
+            callback(view)
+            
     def set_active(self, view_name):
-        """Set the active state for the selected view"""
-        # Reset all buttons to inactive state
-        for view, btn in self.menu_buttons.items():
+        """Set the active state of a button and update icons"""
+        for view, data in self.buttons.items():
+            button = data["button"]
+            icon_key = data.get("icon_key", view)
+            icon_active_key = data.get("icon_active_key", f"{view}_active")
+            # Always set the icon, fallback to default if active icon is missing
             if view == view_name:
-                # Set active button with 5px border radius and bold font
-                btn.configure(
-                    fg_color=self.active_color,
-                    text_color="black",  # Text becomes black when active
-                    font=self.bold_font,  # This makes the text bold
-                    corner_radius=5
+                icon = self.icons.get(icon_active_key) or self.icons.get(icon_key)
+                button.configure(
+                    fg_color="#ffffff",
+                    text_color="#1E3A8A",
+                    font=self.bold_font,
+                    corner_radius=5,
+                    image=icon
                 )
             else:
-                # Set inactive button with normal (non-bold) font
-                btn.configure(
+                icon = self.icons.get(icon_key)
+                button.configure(
                     fg_color="transparent",
-                    text_color="white", 
+                    text_color="white",
                     font=self.normal_font,
-                    corner_radius=0
+                    corner_radius=0,
+                    image=icon
                 )
-    
-        # Also ensure the logout button has normal font
-        self.logout_button.configure(font=self.normal_font)
-        
         self.current_view = view_name
-
-    def on_button_hover(self, button, view, is_hover):
-        """Handle hover state while respecting active state"""
-        is_active = (view == self.current_view)
         
-        if is_active:
-            # Always keep active buttons with black text and bold font
-            button.configure(
-                text_color="black", 
-                font=self.bold_font
-            )
-        else:
-            # For inactive buttons, make bold on hover but keep text white
-            if is_hover:
-                button.configure(text_color="white", font=self.bold_font)
+    def on_button_hover(self, view, is_hover):
+        """Handle button hover states"""
+        if view in self.buttons:
+            button = self.buttons[view]["button"]
+            is_active = (view == self.current_view)
+            
+            if is_active:
+                button.configure(
+                    text_color="black",
+                    font=self.bold_font
+                )
             else:
-                button.configure(text_color="white", font=self.normal_font)
+                if is_hover:
+                    button.configure(text_color="white", font=self.bold_font)
+                else:
+                    button.configure(text_color="white", font=self.normal_font)
 
-    def get_icon_name_for_view(self, view):
-        """Helper method to get icon name for a view"""
-        icon_mapping = {
-            "dashboard": "dashboard",
-            "users": "users",
-            "courses": "graduation_cap",
-            "sections": "folder",
-            "programs": "book_open"
-        }
-        return icon_mapping.get(view, "dashboard")  # Default to dashboard if not found
-    
     def load_inter_font(self):
         """Check if Inter font is available or add it from file"""
         try:
@@ -234,7 +264,7 @@ class Sidebar(ctk.CTkFrame):
         """Clean up any pending animations or callbacks"""
         try:
             # Simply disable all interactive widgets to prevent new animations
-            widgets_to_clean = list(self.menu_buttons.values()) + [self.logout_button]
+            widgets_to_clean = list(self.buttons.values()) + [self.logout_button]
             
             for widget in widgets_to_clean:
                 if widget and widget.winfo_exists():
