@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from PIL import Image, ImageTk
+from PIL import Image
 import os
 from tkinter import font
 from datetime import datetime
@@ -18,8 +18,6 @@ class Sidebar(ctk.CTkFrame):
         
         # Fixed width of 250px
         self.width = 250
-        self.collapsed_width = 50  
-        self.is_collapsed = False
         self.current_view = None  # Track current active view
         
         # Configure the containing frame to maintain width
@@ -37,15 +35,6 @@ class Sidebar(ctk.CTkFrame):
                                        font=ctk.CTkFont(size=20, weight="bold"),
                                        text_color="white")
         self.title_label.pack(side="left", padx=10)
-        
-        # Toggle button for sidebar collapse
-        self.toggle_button = ctk.CTkButton(self.header_frame, text=self.icons.get("back_btn", "◀"), width=30,
-                                          fg_color="transparent", 
-                                          hover_color="#1976D2",
-                                          corner_radius=0, 
-                                          text_color="white", 
-                                          command=self.toggle_sidebar)
-        self.toggle_button.pack(side="right")
         
         # Create a separator
         separator = ctk.CTkFrame(self, height=1, fg_color="#ffffff", corner_radius=0)
@@ -135,8 +124,7 @@ class Sidebar(ctk.CTkFrame):
                 "graduation_cap": "🎓",
                 "folder": "📁",
                 "book_open": "📖",
-                "logout": "🚪",
-                "back_btn": "◀"
+                "logout": "🚪"
             }
             
             print("Successfully loaded dummy icons")
@@ -150,8 +138,7 @@ class Sidebar(ctk.CTkFrame):
                 "graduation_cap": "■",
                 "folder": "■",
                 "book_open": "■",
-                "logout": "■",
-                "back_btn": "◀"
+                "logout": "■"
             }
 
     def handle_view_switch(self, view, switch_view_callback):
@@ -185,26 +172,6 @@ class Sidebar(ctk.CTkFrame):
         self.logout_button.configure(font=self.normal_font)
         
         self.current_view = view_name
-
-    def toggle_sidebar(self):
-        if self.is_collapsed:
-            # Expand sidebar
-            self.configure(width=self.width)
-            self.title_label.pack(side="left", padx=10)
-            for btn in self.menu_buttons.values():
-                btn.configure(text=btn._original_text)
-            self.logout_button.configure(text=f"{self.icons.get('logout', '■')}  Logout")
-            self.toggle_button.configure(text=self.icons.get("back_btn", "◀"))
-        else:
-            # Collapse sidebar
-            self.configure(width=self.collapsed_width)
-            self.title_label.pack_forget()
-            for btn in self.menu_buttons.values():
-                btn.configure(text=btn._icon)  # Show only icon
-            self.logout_button.configure(text=self.icons.get('logout', '■'))  # Show only icon
-            self.toggle_button.configure(text="▶")  # Arrow pointing right
-        
-        self.is_collapsed = not self.is_collapsed
 
     def on_button_hover(self, button, view, is_hover):
         """Handle hover state while respecting active state"""
@@ -267,7 +234,7 @@ class Sidebar(ctk.CTkFrame):
         """Clean up any pending animations or callbacks"""
         try:
             # Simply disable all interactive widgets to prevent new animations
-            widgets_to_clean = [self.toggle_button] + list(self.menu_buttons.values()) + [self.logout_button]
+            widgets_to_clean = list(self.menu_buttons.values()) + [self.logout_button]
             
             for widget in widgets_to_clean:
                 if widget and widget.winfo_exists():

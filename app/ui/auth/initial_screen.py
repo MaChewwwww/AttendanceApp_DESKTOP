@@ -1,6 +1,6 @@
 import customtkinter as ctk
 import tkinter as tk
-from PIL import Image, ImageTk
+from PIL import Image
 import os
 
 class InitialScreen(ctk.CTkFrame):
@@ -31,19 +31,19 @@ class InitialScreen(ctk.CTkFrame):
         # Load and display logo
         logo_path = os.path.join(os.path.dirname(__file__), "assets", "Logo.png")
         if os.path.exists(logo_path):
-            # Load the image
-            logo_image = Image.open(logo_path)
-            # Resize the image (adjust size as needed)
-            logo_image = logo_image.resize((120, 120), Image.Resampling.LANCZOS)
-            logo_photo = ImageTk.PhotoImage(logo_image)
+            # Load the image using CTkImage for better HighDPI support
+            logo_image = ctk.CTkImage(
+                light_image=Image.open(logo_path),
+                dark_image=Image.open(logo_path),
+                size=(120, 120)
+            )
             
             # Create label for logo
             logo_label = ctk.CTkLabel(
                 center_container,
-                image=logo_photo,
+                image=logo_image,
                 text=""
             )
-            logo_label.image = logo_photo  # Keep a reference
             logo_label.pack(pady=(0, 20))
         
         ctk.CTkLabel(
