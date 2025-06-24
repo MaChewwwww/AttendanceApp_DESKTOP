@@ -17,7 +17,6 @@ __pycache__/
 *.so
 
 # Data directories
-data/
 database/
 logs/
 
