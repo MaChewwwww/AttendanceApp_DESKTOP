@@ -130,7 +130,7 @@ SEEDER_CONFIG = {
     # Section size configuration
     'section_size': {
         'min_students': 5,
-        'max_students': 20
+        'max_students': 10
     },
     
     'course_schedule': {
