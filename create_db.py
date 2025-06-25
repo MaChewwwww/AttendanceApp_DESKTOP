@@ -14,16 +14,15 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
-# Use relative path from the current script location
-SCRIPT_DIR = Path(__file__).parent  # Directory where create_db.py is located
-DATA_DIR = SCRIPT_DIR / "data"  # data folder relative to script
-DEFAULT_DB_PATH = DATA_DIR / "attendance_app.db"
+# Get script directory
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Get database path from environment variable or use default
-DB_PATH = os.getenv("DB_PATH", str(DEFAULT_DB_PATH))
+# Get configuration from environment variables with fallbacks
+DATA_DIR = os.getenv("DATA_DIR", os.path.join(os.path.dirname(__file__), "data"))
+DB_PATH = os.getenv("DB_PATH", os.path.join(DATA_DIR, "attendance.db"))
 
 # Also define the remembered credentials file path
-REMEMBERED_CREDENTIALS_PATH = DATA_DIR / "remembered_credentials.json"
+REMEMBERED_CREDENTIALS_PATH = os.getenv("DATA_DIR", os.path.join(DATA_DIR, "remembered_credentials.txt"))
 
 def seed_statuses(db_path):
     """Seed status data directly into the database"""
@@ -223,8 +222,8 @@ if os.path.exists(REMEMBERED_CREDENTIALS_PATH):
         logger.warning(f"Failed to remove remembered credentials file: {str(e)}")
         # Don't exit for this - it's not critical
 
-# Ensure directory exists
-DATA_DIR.mkdir(exist_ok=True)  # Create data directory if it doesn't exist
+# Create data directory if it doesn't exist
+os.makedirs(DATA_DIR, exist_ok=True)
 
 logger.info(f"Creating new database at: {DB_PATH}")
 

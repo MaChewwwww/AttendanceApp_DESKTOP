@@ -1,6 +1,10 @@
 import os
 import sys
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables first
+load_dotenv()
 
 # Add the project root to the Python path
 project_root = os.path.dirname(os.path.abspath(__file__))
@@ -25,8 +29,13 @@ def main():
         print("  - Realistic attendance data")
         print("=" * 60)
         
-        # Check if database exists
-        from seeders.config import DB_PATH
+        # Get database path from environment variable
+        DB_PATH = os.getenv('DB_PATH')
+        if not DB_PATH:
+            print("❌ DB_PATH not found in environment variables")
+            print("Please check your .env file")
+            return False
+            
         if not os.path.exists(DB_PATH):
             print(f"❌ Database not found at: {DB_PATH}")
             print("Please run 'python create_db.py' first to create the database")

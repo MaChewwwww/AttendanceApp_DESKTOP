@@ -1,11 +1,12 @@
 import os
 from pathlib import Path
+import random
 from datetime import datetime
 
 # Database configuration
-SCRIPT_DIR = Path(__file__).parent.parent
-DATA_DIR = SCRIPT_DIR / "data"
-DB_PATH = DATA_DIR / "attendance_app.db"
+SCRIPT_DIR = os.getenv('SCRIPT_DIR', Path(__file__).resolve().parent)
+DATA_DIR = os.getenv('DATA_DIR', SCRIPT_DIR / 'data')
+DB_PATH = os.getenv('DB_PATH', DATA_DIR / 'attendance.db')
 
 # Philippine holidays for 2024-2025
 PHILIPPINE_HOLIDAYS = {
@@ -100,6 +101,39 @@ ACADEMIC_CALENDAR = {
 }
 
 # Seeder configuration
+def random_time_slot():
+    """Randomly select a time slot and its duration (1, 2, or 3 hours)"""
+    # Define possible start times for each duration
+    one_hour_starts = [
+        '07:30:00', '08:00:00', '09:00:00', '10:00:00',
+        '11:00:00', '13:00:00', '14:00:00', '15:00:00', '16:00:00'
+    ]
+    two_hour_starts = [
+        '07:30:00', '08:00:00', '09:00:00', '10:00:00',
+        '13:00:00', '14:00:00', '15:00:00', '16:00:00'
+    ]
+    three_hour_starts = [
+        '07:30:00', '08:00:00', '09:00:00', '10:00:00',
+        '13:00:00', '14:00:00', '15:00:00'
+    ]
+    duration = random.choice([1, 2, 3])
+    if duration == 1:
+        start = random.choice(one_hour_starts)
+        h, m, s = map(int, start.split(':'))
+        end_h = h + 1
+        end = f"{end_h:02d}:{m:02d}:{s:02d}"
+    elif duration == 2:
+        start = random.choice(two_hour_starts)
+        h, m, s = map(int, start.split(':'))
+        end_h = h + 2
+        end = f"{end_h:02d}:{m:02d}:{s:02d}"
+    else:
+        start = random.choice(three_hour_starts)
+        h, m, s = map(int, start.split(':'))
+        end_h = h + 3
+        end = f"{end_h:02d}:{m:02d}:{s:02d}"
+    return (start, end)
+
 SEEDER_CONFIG = {
     'academic_years': {
         'generate_previous': True,
@@ -129,22 +163,13 @@ SEEDER_CONFIG = {
     
     # Section size configuration
     'section_size': {
-        'min_students': 5,
-        'max_students': 20
+        'min_students': 30,
+        'max_students': 60
     },
     
     'course_schedule': {
-        'days_of_week': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-        'time_slots': [
-            ('07:00:00', '08:30:00'),
-            ('08:30:00', '10:00:00'),
-            ('10:00:00', '11:30:00'),
-            ('11:30:00', '13:00:00'),
-            ('13:00:00', '14:30:00'),
-            ('14:30:00', '16:00:00'),
-            ('16:00:00', '17:30:00'),
-            ('17:30:00', '19:00:00')
-        ],
+        'days_of_week': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+        'time_slots': [random_time_slot() for _ in range(15)],
         'meetings_per_week': {
             'regular': [1, 2],
             'summer': [1, 2]
