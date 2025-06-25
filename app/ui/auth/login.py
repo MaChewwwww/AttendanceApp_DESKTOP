@@ -337,14 +337,13 @@ class LoginForm(ctk.CTkFrame):
                         # Use after_idle to ensure proper cleanup
                         def create_admin_dashboard():
                             try:
-                                admin_app = AdminDashboard(on_logout=admin_logout)
+                                admin_app = AdminDashboard(root_window, on_logout=admin_logout)
                                 admin_app.protocol("WM_DELETE_WINDOW", admin_app.logout)
-                                admin_app.mainloop()
-                                
+                                # Do NOT call mainloop on a Toplevel window
+                                # admin_app.mainloop()
                                 # Clean up - remove from path
                                 if admin_dir in sys.path:
                                     sys.path.remove(admin_dir)
-                                    
                             except Exception as e:
                                 print(f"Admin dashboard error: {e}")
                                 # If admin dashboard fails, show main window again
@@ -352,7 +351,6 @@ class LoginForm(ctk.CTkFrame):
                                     root_window.deiconify()
                                 except:
                                     pass
-                                
                                 # Clean up - remove from path
                                 if admin_dir in sys.path:
                                     sys.path.remove(admin_dir)
