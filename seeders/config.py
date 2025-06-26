@@ -26,7 +26,7 @@ PHILIPPINE_HOLIDAYS = {
         "11-30": "Bonifacio Day",
         "12-25": "Christmas Day",
         "12-30": "Rizal Day",
-        "12-31": "New Year's Eve"
+        "12-31": "New Year's Eve",
     },
     2025: {
         "01-01": "New Year's Day",
@@ -95,13 +95,14 @@ ACADEMIC_CALENDAR = {
             'start_month': 7,    # July
             'end_month': 8,      # August
             'description': 'Summer Semester (July - August)'
-        }
+        },
     },
     'academic_year_start_month': 9,  # Academic year starts in September
 }
 
 # Seeder configuration
 def random_time_slot():
+    
     """Randomly select a time slot and its duration (1, 2, or 3 hours)"""
     # Define possible start times for each duration
     one_hour_starts = [
