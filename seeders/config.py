@@ -139,7 +139,7 @@ SEEDER_CONFIG = {
     'academic_years': {
         'generate_previous': True,
         'generate_current': True,
-        'years_to_generate': ['2022-2023','2023-2024', '2024-2025'],  # Can add more years as needed
+        'years_to_generate': ['2022-2023','2023-2024'],  # Can add more years as needed
         'semesters': ["1st Semester", "2nd Semester", "Summer"]
     },
     
@@ -164,8 +164,8 @@ SEEDER_CONFIG = {
     
     # Section size configuration
     'section_size': {
-        'min_students': 30,
-        'max_students': 60
+        'min_students': 5,
+        'max_students': 10
     },
     
     'course_schedule': {
