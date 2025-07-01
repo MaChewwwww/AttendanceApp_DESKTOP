@@ -53,7 +53,7 @@ class RegisterForm(ctk.CTkFrame):
         
         ctk.CTkLabel(
             title_frame,
-            text="Sign up as ",
+            text="Register a ",
             font=ctk.CTkFont("Roboto", 20, "bold"),
             text_color="#000000"
         ).pack(side="left")

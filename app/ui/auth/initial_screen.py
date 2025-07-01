@@ -83,7 +83,7 @@ class InitialScreen(ctk.CTkFrame):
         
         ctk.CTkLabel(
             padding_frame,
-            text="Sign in as",
+            text="Sign in",
             font=ctk.CTkFont("Roboto", 24, "bold"),
             text_color="#000000"
         ).pack(pady=(30, 10))
@@ -113,7 +113,7 @@ class InitialScreen(ctk.CTkFrame):
         
         self.student_btn = ctk.CTkButton(
             padding_frame,
-            text="Student",
+            text="Admin",
             width=325,
             height=27,
             corner_radius=8,
@@ -188,7 +188,7 @@ class InitialScreen(ctk.CTkFrame):
         
         account_label = ctk.CTkLabel(
             signup_container,
-            text="Don't have an account yet?",
+            text="Need to register a student?",
             font=ctk.CTkFont("Roboto", 11),
             text_color="#666666"
         )
@@ -199,7 +199,7 @@ class InitialScreen(ctk.CTkFrame):
         
         signup_label = tk.Label(
             signup_frame,
-            text="Sign up here",
+            text="Register Student",
             font=("Roboto", 10, "underline"),
             fg="#000000",
             cursor="hand2",
