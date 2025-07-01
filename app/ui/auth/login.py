@@ -113,7 +113,7 @@ class LoginForm(ctk.CTkFrame):
         ctk.CTkLabel(
             padding_frame,
             text="Sign in as",
-            font=ctk.CTkFont("Roboto", 24, "bold"),
+            font=ctk.CTkFont("Inter", 24, "bold"),
             text_color="#000000"
         ).pack(pady=(0, 2))
         
@@ -121,7 +121,7 @@ class LoginForm(ctk.CTkFrame):
         ctk.CTkLabel(
             padding_frame,
             text="Student",
-            font=ctk.CTkFont("Roboto", 24, "bold"),
+            font=ctk.CTkFont("Inter", 24, "bold"),
             text_color="#1E3A8A"
         ).pack(pady=(0, 5))
         
@@ -142,7 +142,7 @@ class LoginForm(ctk.CTkFrame):
         ctk.CTkLabel(
             padding_frame,
             text="Email Address",
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Source Sans 3", 12),
             text_color="#707070"
         ).pack(anchor="w", padx=17, pady=(0, 3))
         
@@ -152,7 +152,7 @@ class LoginForm(ctk.CTkFrame):
             width=420,
             height=27,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Source Sans 3", 12),
             fg_color="#ffffff",
             border_color="#d1d1d1",
             text_color="#000000"
@@ -163,7 +163,7 @@ class LoginForm(ctk.CTkFrame):
         ctk.CTkLabel(
             padding_frame,
             text="Password",
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Source Sans 3", 12),
             text_color="#707070"
         ).pack(anchor="w", padx=17, pady=(0, 3))
         
@@ -173,7 +173,7 @@ class LoginForm(ctk.CTkFrame):
             width=420,
             height=27,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Source Sans 3", 12),
             fg_color="#ffffff",
             border_color="#d1d1d1",
             text_color="#000000",
@@ -189,7 +189,7 @@ class LoginForm(ctk.CTkFrame):
             checkbox_frame,
             text="Remember me",
             variable=self.remember_me,
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Source Sans 3", 12),
             text_color="#707070",
             checkbox_width=15,
             checkbox_height=15,
@@ -207,7 +207,7 @@ class LoginForm(ctk.CTkFrame):
             width=120,
             height=27,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 12, "bold"),
+            font=ctk.CTkFont("Source Sans 3", 12, "bold"),
             fg_color="#1E3A8A",
             hover_color="#1E3A8A",
             command=self.handle_login
@@ -218,7 +218,7 @@ class LoginForm(ctk.CTkFrame):
         forgot_password = tk.Label(
             padding_frame,
             text="I forgot password",
-            font=("Roboto", 10, "underline"),
+            font=("Source Sans 3", 10, "underline"),
             fg="#F87171",
             cursor="hand2",
             bg="#ffffff"

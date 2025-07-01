@@ -49,7 +49,7 @@ class InitialScreen(ctk.CTkFrame):
         ctk.CTkLabel(
             center_container,
             text="Attendify",
-            font=ctk.CTkFont("Roboto", 32, "bold"),
+            font=ctk.CTkFont("Inter", 32, "bold"),
             text_color="#ffffff"
         ).pack()
         
@@ -84,7 +84,7 @@ class InitialScreen(ctk.CTkFrame):
         ctk.CTkLabel(
             padding_frame,
             text="Sign in",
-            font=ctk.CTkFont("Roboto", 24, "bold"),
+            font=ctk.CTkFont("Inter", 24, "bold"),
             text_color="#000000"
         ).pack(pady=(30, 10))
         
@@ -117,7 +117,7 @@ class InitialScreen(ctk.CTkFrame):
             width=325,
             height=27,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Source Sans 3", 12),
             fg_color="#1E3A8A",
             hover_color="#1E3A8A",
             command=lambda: self.on_student_click(False) if self.on_student_click else None
@@ -130,7 +130,7 @@ class InitialScreen(ctk.CTkFrame):
         first_line = ctk.CTkLabel(
             terms_container,
             text="By using this service, you understand and agree to the",
-            font=ctk.CTkFont("Roboto", 11),
+            font=ctk.CTkFont("Source Sans 3", 11),
             text_color="#666666"
         )
         first_line.pack()
@@ -141,7 +141,7 @@ class InitialScreen(ctk.CTkFrame):
         terms_link = tk.Label(
             second_line_container,
             text="Terms of Use",
-            font=("Roboto", 10),
+            font=("Source Sans 3", 10),
             fg="#1E3A8A",
             cursor="hand2",
             bg="#ffffff"
@@ -152,7 +152,7 @@ class InitialScreen(ctk.CTkFrame):
         and_label = ctk.CTkLabel(
             second_line_container,
             text=" and ",
-            font=ctk.CTkFont("Roboto", 11),
+            font=ctk.CTkFont("Source Sans 3", 11),
             text_color="#666666"
         )
         and_label.pack(side="left")
@@ -160,7 +160,7 @@ class InitialScreen(ctk.CTkFrame):
         privacy_link = tk.Label(
             second_line_container,
             text="Privacy Statement",
-            font=("Roboto", 10),
+            font=("Source Sans 3", 10),
             fg="#1E3A8A",
             cursor="hand2",
             bg="#ffffff"
@@ -189,7 +189,7 @@ class InitialScreen(ctk.CTkFrame):
         account_label = ctk.CTkLabel(
             signup_container,
             text="Need to register a student?",
-            font=ctk.CTkFont("Roboto", 11),
+            font=ctk.CTkFont("Source Sans 3", 11),
             text_color="#666666"
         )
         account_label.pack()
@@ -200,7 +200,7 @@ class InitialScreen(ctk.CTkFrame):
         signup_label = tk.Label(
             signup_frame,
             text="Register Student",
-            font=("Roboto", 10, "underline"),
+            font=("Source Sans 3", 10, "underline"),
             fg="#000000",
             cursor="hand2",
             bg="#ffffff"
@@ -326,7 +326,7 @@ By using this service, you acknowledge that you have read, understood, and agree
         terms_label = ctk.CTkLabel(
             text_frame,
             text=terms_content.strip(),
-            font=ctk.CTkFont("Roboto", 11),
+            font=ctk.CTkFont("Source Sans 3", 11),
             text_color="#333333",
             justify="left",
             wraplength=620  # Increased wrap length
@@ -345,7 +345,7 @@ By using this service, you acknowledge that you have read, understood, and agree
             width=120,
             height=35,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 12, "bold"),
+            font=ctk.CTkFont("Source Sans 3", 12, "bold"),
             fg_color="#666666",
             hover_color="#555555",
             command=self.close_terms_modal
