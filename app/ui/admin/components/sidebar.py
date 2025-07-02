@@ -268,22 +268,8 @@ class DateTimePill(ctk.CTkFrame):
     def __init__(self, parent, *args, **kwargs):
         super().__init__(parent, fg_color="transparent", *args, **kwargs)
         self.configure(bg_color="transparent")
-        self._load_icons()
         self.build_ui()
         self.update_time()
-
-    def _load_icons(self):
-        # Load bell.png and user.png from assets/icons
-        try:
-            icons_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "icons")
-            bell_path = os.path.join(icons_dir, "bell.png")
-            user_path = os.path.join(icons_dir, "user.png")
-            self.bell_icon = ctk.CTkImage(light_image=Image.open(bell_path), dark_image=Image.open(bell_path), size=(20, 20)) if os.path.exists(bell_path) else None
-            self.user_icon = ctk.CTkImage(light_image=Image.open(user_path), dark_image=Image.open(user_path), size=(20, 20)) if os.path.exists(user_path) else None
-        except Exception as e:
-            print(f"Error loading DateTimePill icons: {e}")
-            self.bell_icon = None
-            self.user_icon = None
 
     def build_ui(self):
         # Date/time pill
@@ -300,33 +286,6 @@ class DateTimePill(ctk.CTkFrame):
             text_color="#222"
         )
         self.date_label.pack(padx=16, pady=4)
-
-        # Bell icon button (circle, white bg, black border, no hover color)
-        self.bell_btn = ctk.CTkButton(
-            self,
-            width=36, height=36,
-            fg_color="#fff",
-            corner_radius=18,
-            text="",
-            image=self.bell_icon,
-            hover_color="#fff",
-            border_width=1,
-            border_color="#222"
-        )
-        self.bell_btn.pack(side="left", padx=(0, 10))
-
-        # User icon button (circle, blue bg, white icon, no border)
-        self.user_btn = ctk.CTkButton(
-            self,
-            width=36, height=36,
-            fg_color="#1E3A8A",
-            corner_radius=18,
-            text="",
-            image=self.user_icon,
-            hover_color="#1E3A8A",
-            border_width=0
-        )
-        self.user_btn.pack(side="left")
 
     def update_time(self):
         now = datetime.now()
