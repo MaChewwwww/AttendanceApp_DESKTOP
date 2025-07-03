@@ -1,5 +1,7 @@
 import customtkinter as ctk
 import tkinter as tk
+from PIL import Image
+import os
 
 class InitialScreen(ctk.CTkFrame):
     def __init__(self, parent, on_student_click=None):
@@ -22,12 +24,34 @@ class InitialScreen(ctk.CTkFrame):
         self.left_panel.pack(side="left", fill="y")
         self.left_panel.pack_propagate(False)
         
+        # Center container for logo and text
+        center_container = ctk.CTkFrame(self.left_panel, fg_color="transparent")
+        center_container.place(relx=0.5, rely=0.5, anchor="center")
+        
+        # Load and display logo
+        logo_path = os.path.join(os.path.dirname(__file__), "assets", "Logo.png")
+        if os.path.exists(logo_path):
+            # Load the image using CTkImage for better HighDPI support
+            logo_image = ctk.CTkImage(
+                light_image=Image.open(logo_path),
+                dark_image=Image.open(logo_path),
+                size=(120, 120)
+            )
+            
+            # Create label for logo
+            logo_label = ctk.CTkLabel(
+                center_container,
+                image=logo_image,
+                text=""
+            )
+            logo_label.pack(pady=(0, 20))
+        
         ctk.CTkLabel(
-            self.left_panel,
+            center_container,
             text="Attendify",
-            font=ctk.CTkFont("Roboto", 32, "bold"),
+            font=ctk.CTkFont("Inter", 32, "bold"),
             text_color="#ffffff"
-        ).pack(expand=True)
+        ).pack()
         
         # Right panel
         self.right_panel = ctk.CTkFrame(
@@ -51,26 +75,31 @@ class InitialScreen(ctk.CTkFrame):
             border_width=1,
             border_color="#d1d1d1"
         )
-        card.pack(padx=20, pady=20)
+        card.pack(expand=True, fill="both", padx=20, pady=20)  # Use expand and fill
         card.pack_propagate(False)
         
+        # Padding frame (centralizes content vertically)
         padding_frame = ctk.CTkFrame(card, fg_color="transparent")
-        padding_frame.pack(fill="both", expand=True, padx=10, pady=10)
-        
+        padding_frame.pack(expand=True, fill="both", padx=10, pady=10)  # Use expand and fill
+
+        # Use a container to centralize all content vertically and horizontally
+        content_center = ctk.CTkFrame(padding_frame, fg_color="transparent")
+        content_center.place(relx=0.5, rely=0.5, anchor="center")
+
         ctk.CTkLabel(
-            padding_frame,
-            text="Sign in as",
-            font=ctk.CTkFont("Roboto", 24, "bold"),
+            content_center,
+            text="Sign in",
+            font=ctk.CTkFont("Inter", 24, "bold"),
             text_color="#000000"
         ).pack(pady=(30, 10))
-        
-        divider_container = ctk.CTkFrame(padding_frame, fg_color="transparent", height=3)
+
+        divider_container = ctk.CTkFrame(content_center, fg_color="transparent", height=3)
         divider_container.pack(fill="x")
         divider_container.pack_propagate(False)
-        
+
         center_frame = ctk.CTkFrame(divider_container, fg_color="transparent")
         center_frame.place(relx=0.5, rely=0.5, anchor="center")
-        
+
         left_divider = ctk.CTkFrame(
             center_frame,
             fg_color="#1E3A8A",
@@ -78,7 +107,7 @@ class InitialScreen(ctk.CTkFrame):
             height=3
         )
         left_divider.pack(side="left")
-        
+
         right_divider = ctk.CTkFrame(
             center_frame,
             fg_color="#10B981",
@@ -86,71 +115,71 @@ class InitialScreen(ctk.CTkFrame):
             height=3
         )
         right_divider.pack(side="left")
-        
+
         self.student_btn = ctk.CTkButton(
-            padding_frame,
-            text="Student",
+            content_center,
+            text="Admin",
             width=325,
             height=27,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Source Sans 3", 12),
             fg_color="#1E3A8A",
             hover_color="#1E3A8A",
             command=lambda: self.on_student_click(False) if self.on_student_click else None
         )
         self.student_btn.pack(pady=10)
-        
-        terms_container = ctk.CTkFrame(padding_frame, fg_color="transparent")
+
+        terms_container = ctk.CTkFrame(content_center, fg_color="transparent")
         terms_container.pack(pady=(15, 5))
-        
+
         first_line = ctk.CTkLabel(
             terms_container,
             text="By using this service, you understand and agree to the",
-            font=ctk.CTkFont("Roboto", 11),
+            font=ctk.CTkFont("Source Sans 3", 11),
             text_color="#666666"
         )
         first_line.pack()
-        
+
         second_line_container = ctk.CTkFrame(terms_container, fg_color="transparent")
         second_line_container.pack()
-        
+
         terms_link = tk.Label(
             second_line_container,
             text="Terms of Use",
-            font=("Roboto", 10),
+            font=("Source Sans 3", 10),
             fg="#1E3A8A",
             cursor="hand2",
             bg="#ffffff"
         )
         terms_link.pack(side="left")
         terms_link.bind("<Button-1>", lambda e: self.open_terms_modal())
-        
+
         and_label = ctk.CTkLabel(
             second_line_container,
             text=" and ",
-            font=ctk.CTkFont("Roboto", 11),
+            font=ctk.CTkFont("Source Sans 3", 11),
             text_color="#666666"
         )
         and_label.pack(side="left")
-        
+
         privacy_link = tk.Label(
             second_line_container,
             text="Privacy Statement",
-            font=("Roboto", 10),
+            font=("Source Sans 3", 10),
             fg="#1E3A8A",
             cursor="hand2",
             bg="#ffffff"
         )
         privacy_link.pack(side="left")
         privacy_link.bind("<Button-1>", lambda e: self.open_terms_modal())
-        
-        second_divider_container = ctk.CTkFrame(padding_frame, fg_color="transparent", height=1)
+
+        second_divider_container = ctk.CTkFrame(content_center, fg_color="transparent", height=1)
         second_divider_container.pack(fill="x", pady=(15, 15))
         second_divider_container.pack_propagate(False)
-        
+
         second_center_frame = ctk.CTkFrame(second_divider_container, fg_color="transparent")
         second_center_frame.place(relx=0.5, rely=0.5, anchor="center")
-        
+
         second_divider = ctk.CTkFrame(
             second_center_frame,
             fg_color="#1E3A8A",
@@ -158,32 +187,33 @@ class InitialScreen(ctk.CTkFrame):
             height=2
         )
         second_divider.pack()
-        
-        signup_container = ctk.CTkFrame(padding_frame, fg_color="transparent")
-        signup_container.pack(pady=(0, 15))
-        
-        account_label = ctk.CTkLabel(
-            signup_container,
-            text="Don't have an account yet?",
-            font=ctk.CTkFont("Roboto", 11),
-            text_color="#666666"
-        )
-        account_label.pack()
-        
-        signup_frame = ctk.CTkFrame(signup_container, fg_color="transparent")
-        signup_frame.pack(pady=(2, 0))
-        
-        signup_label = tk.Label(
-            signup_frame,
-            text="Sign up here",
-            font=("Roboto", 10, "underline"),
-            fg="#000000",
-            cursor="hand2",
-            bg="#ffffff"
-        )
-        signup_label.pack()
-        signup_label.bind("<Button-1>", lambda e: self.on_student_click(True) if self.on_student_click else None)
-    
+
+        # --- Removed the "Register Student" section below ---
+        # signup_container = ctk.CTkFrame(padding_frame, fg_color="transparent")
+        # signup_container.pack(pady=(0, 15))
+        #
+        # account_label = ctk.CTkLabel(
+        #     signup_container,
+        #     text="Need to register a student?",
+        #     font=ctk.CTkFont("Source Sans 3", 11),
+        #     text_color="#666666"
+        # )
+        # account_label.pack()
+        #
+        # signup_frame = ctk.CTkFrame(signup_container, fg_color="transparent")
+        # signup_frame.pack(pady=(2, 0))
+        #
+        # signup_label = tk.Label(
+        #     signup_frame,
+        #     text="Register Student",
+        #     font=("Source Sans 3", 10, "underline"),
+        #     fg="#000000",
+        #     cursor="hand2",
+        #     bg="#ffffff"
+        # )
+        # signup_label.pack()
+        # signup_label.bind("<Button-1>", lambda e: self.on_student_click(True) if self.on_student_click else None)
+
     def open_terms_modal(self):
         """Open the Terms of Use & Privacy Statement modal"""
         # Create modal dialog
@@ -302,7 +332,7 @@ By using this service, you acknowledge that you have read, understood, and agree
         terms_label = ctk.CTkLabel(
             text_frame,
             text=terms_content.strip(),
-            font=ctk.CTkFont("Roboto", 11),
+            font=ctk.CTkFont("Source Sans 3", 11),
             text_color="#333333",
             justify="left",
             wraplength=620  # Increased wrap length
@@ -321,7 +351,7 @@ By using this service, you acknowledge that you have read, understood, and agree
             width=120,
             height=35,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 12, "bold"),
+            font=ctk.CTkFont("Source Sans 3", 12, "bold"),
             fg_color="#666666",
             hover_color="#555555",
             command=self.close_terms_modal

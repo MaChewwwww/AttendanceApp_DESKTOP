@@ -6,9 +6,9 @@ from views.sections import SectionsView
 from views.programs import ProgramsView
 from views.courses import CoursesView
 
-class AdminDashboard(ctk.CTk):
-    def __init__(self, on_logout=None, db_manager=None):
-        super().__init__()
+class AdminDashboard(ctk.CTkToplevel):
+    def __init__(self, master=None, on_logout=None, db_manager=None):
+        super().__init__(master)
         
         self.on_logout = on_logout  # Store logout callback
         self.db_manager = db_manager  # Store database manager

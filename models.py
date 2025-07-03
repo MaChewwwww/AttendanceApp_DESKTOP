@@ -131,9 +131,19 @@ class AttendanceLog(Base):
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
+class SuspendedClassDates(Base):
+    __tablename__ = "suspended_class_dates"
+    id = Column(Integer, primary_key=True, index=True)
+    assigned_course_id = Column(Integer, ForeignKey("assigned_courses.id"), nullable=False)
+    date = Column(DateTime, nullable=False)  # Date of the suspended class
+    reason = Column(String(255), nullable=True)  # Reason for suspension
+    type = Column(String(50), nullable=False)  # e.g., "holiday", "emergency", "other"
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
 
     
 class LoginRequest(BaseModel):
     email: str
     password: str
+

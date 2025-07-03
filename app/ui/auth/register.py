@@ -53,15 +53,15 @@ class RegisterForm(ctk.CTkFrame):
         
         ctk.CTkLabel(
             title_frame,
-            text="Sign up as ",
-            font=ctk.CTkFont("Roboto", 20, "bold"),
+            text="Register a ",
+            font=ctk.CTkFont("Inter", 20, "bold"),
             text_color="#000000"
         ).pack(side="left")
         
         ctk.CTkLabel(
             title_frame,
             text="Student",
-            font=ctk.CTkFont("Roboto", 20, "bold"),
+            font=ctk.CTkFont("Inter", 20, "bold"),
             text_color="#1E3A8A"
         ).pack(side="left")
         
@@ -101,7 +101,7 @@ class RegisterForm(ctk.CTkFrame):
         ctk.CTkLabel(
             left_column,
             text="First Name",
-            font=ctk.CTkFont("Roboto", 11),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 11),  # Smaller font
             text_color="#707070"
         ).pack(anchor="w")
         
@@ -111,7 +111,7 @@ class RegisterForm(ctk.CTkFrame):
             height=26,  # Reduced height
             corner_radius=5,
             border_width=1,
-            font=ctk.CTkFont("Roboto", 11),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 11),  # Smaller font
             fg_color="#ffffff",
             border_color="#d1d1d1",
             text_color="#000000",
@@ -123,7 +123,7 @@ class RegisterForm(ctk.CTkFrame):
         ctk.CTkLabel(
             right_column,
             text="Last Name",
-            font=ctk.CTkFont("Roboto", 11),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 11),  # Smaller font
             text_color="#707070"
         ).pack(anchor="w")
         
@@ -133,7 +133,7 @@ class RegisterForm(ctk.CTkFrame):
             height=26,  # Reduced height
             corner_radius=5,
             border_width=1,
-            font=ctk.CTkFont("Roboto", 11),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 11),  # Smaller font
             fg_color="#ffffff",
             border_color="#d1d1d1",
             text_color="#000000",
@@ -149,7 +149,7 @@ class RegisterForm(ctk.CTkFrame):
         ctk.CTkLabel(
             dob_container,
             text="Date of Birth",
-            font=ctk.CTkFont("Roboto", 11),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 11),  # Smaller font
             text_color="#707070"
         ).pack(anchor="w")
         
@@ -180,7 +180,7 @@ class RegisterForm(ctk.CTkFrame):
             width=118,
             height=26,
             corner_radius=5,
-            font=ctk.CTkFont("Roboto", 10),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 10),  # Smaller font
             fg_color="#ffffff",
             button_color="#ffffff",
             button_hover_color="#f5f5f5",
@@ -212,7 +212,7 @@ class RegisterForm(ctk.CTkFrame):
             width=78,
             height=26,
             corner_radius=5,
-            font=ctk.CTkFont("Roboto", 10),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 10),  # Smaller font
             fg_color="#ffffff",
             button_color="#ffffff",
             button_hover_color="#f5f5f5",
@@ -250,7 +250,7 @@ class RegisterForm(ctk.CTkFrame):
             width=98,
             height=26,
             corner_radius=5,
-            font=ctk.CTkFont("Roboto", 10),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 10),  # Smaller font
             fg_color="#ffffff",
             button_color="#ffffff",
             button_hover_color="#f5f5f5",
@@ -285,7 +285,7 @@ class RegisterForm(ctk.CTkFrame):
         ctk.CTkLabel(
             contact_container,
             text="Contact Number",
-            font=ctk.CTkFont("Roboto", 11),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 11),  # Smaller font
             text_color="#707070"
         ).pack(anchor="w")
         
@@ -295,7 +295,7 @@ class RegisterForm(ctk.CTkFrame):
             height=26,  # Reduced height
             corner_radius=5,
             border_width=1,
-            font=ctk.CTkFont("Roboto", 11),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 11),  # Smaller font
             fg_color="#ffffff",
             border_color="#d1d1d1",
             text_color="#000000",
@@ -310,7 +310,7 @@ class RegisterForm(ctk.CTkFrame):
         ctk.CTkLabel(
             student_container,
             text="Student Number",
-            font=ctk.CTkFont("Roboto", 11),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 11),  # Smaller font
             text_color="#707070"
         ).pack(anchor="w")
         
@@ -320,7 +320,7 @@ class RegisterForm(ctk.CTkFrame):
             height=26,  # Reduced height
             corner_radius=5,
             border_width=1,
-            font=ctk.CTkFont("Roboto", 11),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 11),  # Smaller font
             fg_color="#ffffff",
             border_color="#d1d1d1",
             text_color="#000000",
@@ -335,7 +335,7 @@ class RegisterForm(ctk.CTkFrame):
         ctk.CTkLabel(
             webmail_container,
             text="Webmail Address",
-            font=ctk.CTkFont("Roboto", 11),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 11),  # Smaller font
             text_color="#707070"
         ).pack(anchor="w")
         
@@ -345,7 +345,7 @@ class RegisterForm(ctk.CTkFrame):
             height=26,  # Reduced height
             corner_radius=5,
             border_width=1,
-            font=ctk.CTkFont("Roboto", 11),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 11),  # Smaller font
             fg_color="#ffffff",
             border_color="#d1d1d1",
             text_color="#000000",
@@ -360,7 +360,7 @@ class RegisterForm(ctk.CTkFrame):
         ctk.CTkLabel(
             password_container,
             text="Password",
-            font=ctk.CTkFont("Roboto", 11),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 11),  # Smaller font
             text_color="#707070"
         ).pack(anchor="w")
         
@@ -370,7 +370,7 @@ class RegisterForm(ctk.CTkFrame):
             height=26,  # Reduced height
             corner_radius=5,
             border_width=1,
-            font=ctk.CTkFont("Roboto", 11),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 11),  # Smaller font
             fg_color="#ffffff",
             border_color="#d1d1d1",
             text_color="#000000",
@@ -386,7 +386,7 @@ class RegisterForm(ctk.CTkFrame):
         ctk.CTkLabel(
             confirm_container,
             text="Confirm Password",
-            font=ctk.CTkFont("Roboto", 11),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 11),  # Smaller font
             text_color="#707070"
         ).pack(anchor="w")
         
@@ -396,7 +396,7 @@ class RegisterForm(ctk.CTkFrame):
             height=26,  # Reduced height
             corner_radius=5,
             border_width=1,
-            font=ctk.CTkFont("Roboto", 11),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 11),  # Smaller font
             fg_color="#ffffff",
             border_color="#d1d1d1",
             text_color="#000000",
@@ -412,7 +412,7 @@ class RegisterForm(ctk.CTkFrame):
         self.terms_checkbox = ctk.CTkCheckBox(
             terms_container,
             text="I agree to the Terms and Conditions",
-            font=ctk.CTkFont("Roboto", 10),
+            font=ctk.CTkFont("Source Sans 3", 10),
             text_color="#1E3A8A",  # Changed to blue to highlight clickable text
             fg_color="#1E3A8A",
             hover_color="#1E3A8A",
@@ -429,7 +429,7 @@ class RegisterForm(ctk.CTkFrame):
         terms_clickable_label = ctk.CTkLabel(
             terms_container,
             text="I agree to the Terms and Conditions",
-            font=ctk.CTkFont("Roboto", 10),
+            font=ctk.CTkFont("Source Sans 3", 10),
             text_color="#1E3A8A",
             cursor="hand2",
             bg_color="transparent"
@@ -441,7 +441,7 @@ class RegisterForm(ctk.CTkFrame):
         self.validation_label = ctk.CTkLabel(
             self.card_frame,
             text="",
-            font=ctk.CTkFont("Roboto", 10),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 10),  # Smaller font
             text_color="#dc2626",
             wraplength=380,
             justify="left"
@@ -457,7 +457,7 @@ class RegisterForm(ctk.CTkFrame):
             height=34,  # Reduced height
             corner_radius=8,
             border_width=1,
-            font=ctk.CTkFont("Roboto", 11, "bold"),  # Smaller font
+            font=ctk.CTkFont("Source Sans 3", 11, "bold"),  # Smaller font
             fg_color="#1E3A8A",
             hover_color="#152a63",
             command=self.handle_register
@@ -718,7 +718,7 @@ class RegisterForm(ctk.CTkFrame):
             corner_radius=12, 
             fg_color="#f5f5f5", 
             text_color="#222", 
-            font=ctk.CTkFont("Roboto", 14, "bold"), 
+            font=ctk.CTkFont("Source Sans 3", 14, "bold"), 
             hover_color="#e0e0e0", 
             command=lambda: messagebox.showinfo("Info", "Please ensure you're in a well-lit environment before capturing your photo for the best image quality", parent=self.verification_dialog)
         )
@@ -741,7 +741,7 @@ class RegisterForm(ctk.CTkFrame):
         self.preview_label = ctk.CTkLabel(
             self.face_preview_frame,
             text="Camera will appear here\nClick 'Open Camera' to begin",
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Source Sans 3", 12),
             text_color="#a0a0a0"
         )
         self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
@@ -753,7 +753,7 @@ class RegisterForm(ctk.CTkFrame):
             width=410,
             height=32,
             corner_radius=6,
-            font=ctk.CTkFont("Roboto", 13, "bold"),
+            font=ctk.CTkFont("Source Sans 3", 13, "bold"),
             fg_color="#ffffff",
             text_color="#222",
             border_width=1,
@@ -770,7 +770,7 @@ class RegisterForm(ctk.CTkFrame):
             width=200,
             height=38,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 13, "bold"),
+            font=ctk.CTkFont("Source Sans 3", 13, "bold"),
             fg_color="#e5e5e5",
             text_color="#707070",
             border_width=0,
@@ -786,7 +786,7 @@ class RegisterForm(ctk.CTkFrame):
             width=200,
             height=38,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 13, "bold"),
+            font=ctk.CTkFont("Source Sans 3", 13, "bold"),
             fg_color="#1E3A8A",
             text_color="#fff",
             border_width=0,
@@ -803,7 +803,7 @@ class RegisterForm(ctk.CTkFrame):
             width=410,
             height=38,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 13, "bold"),
+            font=ctk.CTkFont("Source Sans 3", 13, "bold"),
             fg_color="#1E3A8A",
             text_color="#fff",
             border_width=0,
@@ -1025,7 +1025,7 @@ class RegisterForm(ctk.CTkFrame):
                 preview_text = ctk.CTkLabel(
                     self.face_preview_frame,
                     text="✓ Photo Captured Successfully!\nReady for registration",
-                    font=ctk.CTkFont("Roboto", 14, "bold"),
+                    font=ctk.CTkFont("Source Sans 3", 14, "bold"),
                     text_color="#4CAF50"
                 )
                 preview_text.place(relx=0.5, rely=0.5, anchor="center")
@@ -1210,7 +1210,7 @@ class RegisterForm(ctk.CTkFrame):
             self.preview_label = ctk.CTkLabel(
                 self.face_preview_frame,
                 text="Camera will appear here\nClick 'Open Camera' to begin",
-                font=ctk.CTkFont("Roboto", 12),
+                font=ctk.CTkFont("Source Sans 3", 12),
                 text_color="#a0a0a0"
             )
             self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
@@ -1307,7 +1307,7 @@ class RegisterForm(ctk.CTkFrame):
         self.preview_label = ctk.CTkLabel(
             self.face_preview_frame,
             text="Camera will appear here\nClick 'Open Camera' to begin",
-            font=ctk.CTkFont("Roboto", 12),
+            font=ctk.CTkFont("Source Sans 3", 12),
             text_color="#a0a0a0"
         )
         self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
@@ -1347,7 +1347,7 @@ class RegisterForm(ctk.CTkFrame):
             self.preview_label = ctk.CTkLabel(
                 self.face_preview_frame,
                 text="Camera will appear here\nClick 'Open Camera' to begin",
-                font=ctk.CTkFont("Roboto", 12),
+                font=ctk.CTkFont("Source Sans 3", 12),
                 text_color="#a0a0a0"
             )
             self.preview_label.place(relx=0.5, rely=0.5, anchor="center")
@@ -1501,7 +1501,7 @@ class RegisterForm(ctk.CTkFrame):
         ctk.CTkLabel(
             header_frame,
             text="Terms of Use & Privacy Statement",
-            font=ctk.CTkFont("Roboto", 20, "bold"),
+            font=ctk.CTkFont("Source Sans 3", 20, "bold"),
             text_color="#1E3A8A"
         ).pack(anchor="w")
         
@@ -1591,7 +1591,7 @@ By clicking "I Agree," you acknowledge that you have read, understood, and agree
         terms_label = ctk.CTkLabel(
             text_frame,
             text=terms_content.strip(),
-            font=ctk.CTkFont("Roboto", 11),
+            font=ctk.CTkFont("Source Sans 3", 11),
             text_color="#333333",
             justify="left",
             wraplength=620  # Increased wrap length
@@ -1614,7 +1614,7 @@ By clicking "I Agree," you acknowledge that you have read, understood, and agree
             width=120,
             height=35,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 12, "bold"),
+            font=ctk.CTkFont("Source Sans 3", 12, "bold"),
             fg_color="transparent",
             text_color="#666666",
             border_width=1,
@@ -1631,7 +1631,7 @@ By clicking "I Agree," you acknowledge that you have read, understood, and agree
             width=120,
             height=35,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 12, "bold"),
+            font=ctk.CTkFont("Source Sans 3", 12, "bold"),
             fg_color="#1E3A8A",
             hover_color="#152a63",
             command=self.agree_to_terms

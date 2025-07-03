@@ -225,20 +225,24 @@ class AddAssignmentModal(ctk.CTkToplevel):
     def create_assigned_course(self, assignment_data):
         try:
             from datetime import datetime
-            
+
             conn = self.db_manager.get_connection()
             try:
                 cursor = conn.cursor()
-                
-                # Check for existing assignment
+
+                # Check for existing assignment with same course_id, section_id, and academic_year
                 cursor.execute("""
                     SELECT id FROM assigned_courses 
-                    WHERE course_id = ? AND section_id = ? AND isDeleted = 0
-                """, (assignment_data['course_id'], assignment_data['section_id']))
-                
+                    WHERE course_id = ? AND section_id = ? AND academic_year = ? AND isDeleted = 0
+                """, (
+                    assignment_data['course_id'],
+                    assignment_data['section_id'],
+                    assignment_data['academic_year']
+                ))
+
                 if cursor.fetchone():
-                    return False, "Course is already assigned to this section"
-                
+                    return False, "Course is already assigned to this section for the selected academic year"
+
                 # Create new assignment
                 cursor.execute("""
                     INSERT INTO assigned_courses (faculty_id, course_id, section_id, academic_year, semester, room, isDeleted, created_at, updated_at)
@@ -254,16 +258,16 @@ class AddAssignmentModal(ctk.CTkToplevel):
                     datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
                     datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
                 ))
-                
+
                 conn.commit()
                 return True, "Assignment created successfully"
-                
+
             except Exception as e:
                 conn.rollback()
                 raise e
             finally:
                 conn.close()
-                
+
         except Exception as e:
             return False, str(e)
 
@@ -507,8 +511,8 @@ class EditAssignmentModal(ctk.CTkToplevel):
                     # Check for duplicate course assignment (excluding current assignment)
                     cursor.execute("""
                         SELECT id FROM assigned_courses 
-                        WHERE course_id = ? AND section_id = ? AND id != ? AND isDeleted = 0
-                    """, (course_id, section_id, self.assignment_data['assignment_id']))
+                        WHERE course_id = ? AND section_id = ? AND academic_year = ? AND id != ? AND isDeleted = 0
+                    """, (course_id, section_id, academic_year, self.assignment_data['assignment_id']))
                     
                     if cursor.fetchone():
                         return False, "Course is already assigned to this section"

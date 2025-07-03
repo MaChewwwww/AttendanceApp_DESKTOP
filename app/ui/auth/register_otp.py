@@ -90,7 +90,7 @@ class RegisterOTPDialog(ctk.CTkToplevel):
         title_label = ctk.CTkLabel(
             header_frame,
             text="Complete Registration",
-            font=ctk.CTkFont("Roboto", 18, "bold"),
+            font=ctk.CTkFont("Inter", 18, "bold"),
             text_color="#1E3A8A"
         )
         title_label.pack(anchor="w")
@@ -103,7 +103,7 @@ class RegisterOTPDialog(ctk.CTkToplevel):
         instruction_label = ctk.CTkLabel(
             content_frame,
             text=f"To complete your registration, we've sent a 6-digit verification code to:\n{self.email}",
-            font=ctk.CTkFont("Roboto", 11),
+            font=ctk.CTkFont("Source Sans 3", 11),
             text_color="#707070",
             wraplength=400,
             justify="center"
@@ -114,7 +114,7 @@ class RegisterOTPDialog(ctk.CTkToplevel):
         otp_label = ctk.CTkLabel(
             content_frame,
             text="Verification Code",
-            font=ctk.CTkFont("Roboto", 12, "bold"),
+            font=ctk.CTkFont("Source Sans 3", 12, "bold"),
             text_color="#333333"
         )
         otp_label.pack(pady=(0, 5))
@@ -125,7 +125,7 @@ class RegisterOTPDialog(ctk.CTkToplevel):
             textvariable=self.otp_var,
             height=35,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 14, "bold"),
+            font=ctk.CTkFont("Source Sans 3", 14, "bold"),
             fg_color="#ffffff",
             border_color="#d1d1d1",
             text_color="#000000",
@@ -139,7 +139,7 @@ class RegisterOTPDialog(ctk.CTkToplevel):
         self.status_label = ctk.CTkLabel(
             content_frame,
             text="Sending verification code...",
-            font=ctk.CTkFont("Roboto", 10),
+            font=ctk.CTkFont("Source Sans 3", 10),
             text_color="#10B981"
         )
         self.status_label.pack(pady=(0, 8))
@@ -151,7 +151,7 @@ class RegisterOTPDialog(ctk.CTkToplevel):
         resend_text = ctk.CTkLabel(
             resend_frame,
             text="Didn't receive the code?",
-            font=ctk.CTkFont("Roboto", 10),
+            font=ctk.CTkFont("Source Sans 3", 10),
             text_color="#707070"
         )
         resend_text.pack()
@@ -159,7 +159,7 @@ class RegisterOTPDialog(ctk.CTkToplevel):
         self.resend_btn = ctk.CTkButton(
             resend_frame,
             text="Resend Code",
-            font=ctk.CTkFont("Roboto", 10, "bold"),
+            font=ctk.CTkFont("Source Sans 3", 10, "bold"),
             text_color="#1E3A8A",
             fg_color="transparent",
             hover_color="#f0f0f0",
@@ -187,7 +187,7 @@ class RegisterOTPDialog(ctk.CTkToplevel):
             width=90,
             height=35,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 11),
+            font=ctk.CTkFont("Source Sans 3", 11),
             fg_color="transparent",
             text_color="#666666",
             border_width=1,
@@ -204,7 +204,7 @@ class RegisterOTPDialog(ctk.CTkToplevel):
             width=150,
             height=35,
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 11, "bold"),
+            font=ctk.CTkFont("Source Sans 3", 11, "bold"),
             fg_color="#1E3A8A",
             hover_color="#152a63",
             command=self.submit_otp
