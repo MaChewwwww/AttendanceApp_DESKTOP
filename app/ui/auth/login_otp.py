@@ -87,7 +87,7 @@ class LoginOTPDialog(ctk.CTkToplevel):
         instruction_label = ctk.CTkLabel(
             content_frame,
             text=f"For security purposes, we've sent a 6-digit verification code to:\n{self.email}",
-            font=ctk.CTkFont("Roboto", 11),  # Reduced font size
+            font=ctk.CTkFont("Source Sans 3", 11),  # Reduced font size
             text_color="#707070",
             wraplength=400,
             justify="center"
@@ -98,7 +98,7 @@ class LoginOTPDialog(ctk.CTkToplevel):
         otp_label = ctk.CTkLabel(
             content_frame,
             text="Verification Code",
-            font=ctk.CTkFont("Roboto", 12, "bold"),
+            font=ctk.CTkFont("Source Sans 3", 12, "bold"),
             text_color="#333333"
         )
         otp_label.pack(pady=(0, 5))
@@ -109,7 +109,7 @@ class LoginOTPDialog(ctk.CTkToplevel):
             textvariable=self.otp_var,
             height=35,  # Reduced height
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 14, "bold"),  # Reduced font size
+            font=ctk.CTkFont("Source Sans 3", 14, "bold"),  # Reduced font size
             fg_color="#ffffff",
             border_color="#d1d1d1",
             text_color="#000000",
@@ -123,7 +123,7 @@ class LoginOTPDialog(ctk.CTkToplevel):
         self.status_label = ctk.CTkLabel(
             content_frame,
             text="Sending verification code...",
-            font=ctk.CTkFont("Roboto", 10),  # Reduced font size
+            font=ctk.CTkFont("Source Sans 3", 10),  # Reduced font size
             text_color="#10B981"
         )
         self.status_label.pack(pady=(0, 8))  # Reduced padding
@@ -135,7 +135,7 @@ class LoginOTPDialog(ctk.CTkToplevel):
         resend_text = ctk.CTkLabel(
             resend_frame,
             text="Didn't receive the code?",
-            font=ctk.CTkFont("Roboto", 10),  # Reduced font size
+            font=ctk.CTkFont("Source Sans 3", 10),  # Reduced font size
             text_color="#707070"
         )
         resend_text.pack()
@@ -143,7 +143,7 @@ class LoginOTPDialog(ctk.CTkToplevel):
         self.resend_btn = ctk.CTkButton(
             resend_frame,
             text="Resend Code",
-            font=ctk.CTkFont("Roboto", 10, "bold"),  # Reduced font size
+            font=ctk.CTkFont("Source Sans 3", 10, "bold"),  # Reduced font size
             text_color="#1E3A8A",
             fg_color="transparent",
             hover_color="#f0f0f0",
@@ -171,7 +171,7 @@ class LoginOTPDialog(ctk.CTkToplevel):
             width=90,  # Reduced width
             height=35,  # Reduced height
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 11),  # Reduced font size
+            font=ctk.CTkFont("Source Sans 3", 11),  # Reduced font size
             fg_color="transparent",
             text_color="#666666",
             border_width=1,
@@ -188,7 +188,7 @@ class LoginOTPDialog(ctk.CTkToplevel):
             width=120,  # Reduced width
             height=35,  # Reduced height
             corner_radius=8,
-            font=ctk.CTkFont("Roboto", 11, "bold"),  # Reduced font size
+            font=ctk.CTkFont("Source Sans 3", 11, "bold"),  # Reduced font size
             fg_color="#1E3A8A",
             hover_color="#152a63",
             command=self.submit_otp
