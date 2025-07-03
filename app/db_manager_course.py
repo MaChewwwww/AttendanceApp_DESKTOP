@@ -647,7 +647,7 @@ class DatabaseCourseManager:
             JOIN assigned_courses ac ON s.id = ac.section_id
             INNER JOIN attendance_logs al ON al.assigned_course_id = ac.id
             WHERE ac.course_id = ? AND ac.isDeleted = 0
-            AND al.date IS NOT NULL
+            AND al.date IS NOT NULL 
             """
             
             params = [course_id]

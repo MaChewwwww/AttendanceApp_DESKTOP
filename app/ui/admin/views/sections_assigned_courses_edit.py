@@ -511,8 +511,8 @@ class EditAssignmentModal(ctk.CTkToplevel):
                     # Check for duplicate course assignment (excluding current assignment)
                     cursor.execute("""
                         SELECT id FROM assigned_courses 
-                        WHERE course_id = ? AND section_id = ? AND id != ? AND isDeleted = 0
-                    """, (course_id, section_id, self.assignment_data['assignment_id']))
+                        WHERE course_id = ? AND section_id = ? AND academic_year = ? AND id != ? AND isDeleted = 0
+                    """, (course_id, section_id, academic_year, self.assignment_data['assignment_id']))
                     
                     if cursor.fetchone():
                         return False, "Course is already assigned to this section"
