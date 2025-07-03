@@ -88,10 +88,16 @@ class LoginForm(ctk.CTkFrame):
             print(f"Error clearing remembered credentials: {e}")
 
     def _create_login_form(self):
-        # Create container frame
-        container = ctk.CTkFrame(self, fg_color="transparent")
-        container.place(relx=0.5, rely=0.5, anchor="center")
-        
+        # Create main container frame (single panel, full width)
+        main_container = ctk.CTkFrame(self, fg_color="transparent")
+        main_container.pack(expand=True, fill="both")
+        main_container.grid_rowconfigure(0, weight=1)
+        main_container.grid_columnconfigure(0, weight=1)
+
+        # --- Login card (now full width) ---
+        container = ctk.CTkFrame(main_container, fg_color="transparent")
+        container.grid(row=0, column=0, sticky="nsew", padx=40, pady=40)
+
         # Create card frame
         card = ctk.CTkFrame(
             container,
@@ -120,7 +126,7 @@ class LoginForm(ctk.CTkFrame):
         # Student label
         ctk.CTkLabel(
             padding_frame,
-            text="Student",
+            text="Admin",
             font=ctk.CTkFont("Inter", 24, "bold"),
             text_color="#1E3A8A"
         ).pack(pady=(0, 5))
